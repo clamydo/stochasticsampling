@@ -1,0 +1,82 @@
+use rand::distributions::{IndependentSample, Range};
+use stochasticsampling::random::NormalDistributionIterator;
+use stochasticsampling::coordinates::Particle;
+use stochasticsampling::coordinates::vector::ModVector64;
+use std::f64;
+use std::error::Error;
+use std::fmt::Display;
+use std::fmt;
+use settings::Settings;
+use mpi::traits::*;
+
+
+/// Error type that merges all errors that can happen during loading and parsing of the settings
+/// file.
+#[derive(Debug)]
+pub enum SimulationError {
+}
+
+impl Display for SimulationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "")
+    }
+}
+
+impl Error for SimulationError {
+    fn description(&self) -> &str {
+        "SimulationError"
+    }
+}
+
+
+pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
+    let universe = ::mpi::initialize().unwrap();
+    let world = universe.world();
+    let size = world.size();
+    let rank = world.rank();
+
+    // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then Y is normally
+    // distributed with variance t.
+    let sqrt_timestep = f64::sqrt(settings.simulation.timestep);
+    let stepsize = sqrt_timestep * settings.simulation.diffusion_constant;
+    let mut particles = Vec::with_capacity(settings.simulation.number_of_particles);
+
+
+    // initialise random particle position
+    let mut rng = ::rand::thread_rng();
+    let between = Range::new(-1f64, 1.);
+    for _ in 0..settings.simulation.number_of_particles {
+        particles.push(
+            Particle{ position: ModVector64::new(
+                between.ind_sample(&mut rng),
+                between.ind_sample(&mut rng),
+                between.ind_sample(&mut rng),
+                )}
+            )
+    }
+
+    assert_eq!(particles.len(), settings.simulation.number_of_particles);
+
+    // initialize normal distribution iterator, maybe not the most elegant way
+    let mut ndi = NormalDistributionIterator::new();
+
+    for step in 1..settings.simulation.number_of_timesteps {
+        for (i, p) in particles.iter_mut().enumerate() {
+            let ModVector64{ref mut x, ref mut y, ref mut z} = p.position;
+
+            *x = *x + ndi.sample() * stepsize;
+            *y = *y + ndi.sample() * stepsize;
+            *z = *z + ndi.sample() * stepsize;
+
+            println!("{}, {}, {}, {}, {}",
+                step,
+                i,
+                *x.tof64(),
+                *y.tof64(),
+                *z.tof64(),
+            );
+        }
+    }
+
+    Ok(())
+}

@@ -1,0 +1,5 @@
+[simulation]
+timestep = 0.1
+number_of_particles = 3
+number_of_timesteps = 5000
+diffusion_constant = 1.0
