@@ -12,7 +12,6 @@ mod simulation;
 
 use std::env;
 
-#[cfg_attr(test, allow(dead_code))]
 fn main() {
 
     // initialize the env_logger implementation

@@ -29,8 +29,21 @@ impl Error for SimulationError {
     }
 }
 
-fn init_positions() {
-    unimplemented!()
+fn randomly_placed_particles(n: usize) -> Vec<Particle> {
+    let mut particles = Vec::with_capacity(n);
+
+    // initialise random particle position
+    let mut rng = ::rand::thread_rng();
+    let between = Range::new(-1f64, 1.);
+    for _ in 0..n {
+        particles.push(Particle {
+            position: ModVector64::new(between.ind_sample(&mut rng),
+                                       between.ind_sample(&mut rng),
+                                       between.ind_sample(&mut rng)),
+        })
+    }
+
+    particles
 }
 
 pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
@@ -40,10 +53,21 @@ pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     let mpi_size = mpi_world.size();
     let mpi_rank = mpi_world.rank();
 
-    macro_rules! dlog {
-        ($msg:expr) => {
+    macro_rules! zinfo {
+        ($($arg:tt)*) => {
             if mpi_rank == 0 {
-                info!($msg);
+                info!($($arg)*);
+            }
+        }
+    }
+
+    macro_rules! zdebug {
+        ($($arg:tt)*) => {
+            // only compile this when in debug mode
+            if cfg!(debug_assertions) {
+                if mpi_rank == 0 {
+                    debug!($($arg)*);
+                }
             }
         }
     }
@@ -51,38 +75,38 @@ pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     // share particles evenly between all ranks
     let number_of_particles: usize = settings.simulation.number_of_particles / (mpi_size as usize);
 
+    zinfo!("Placing {} to their initial positions.",
+           settings.simulation.number_of_particles);
+    let mut particles = randomly_placed_particles(number_of_particles);
+
     // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
     // Y is normally distributed with variance t.
     let sqrt_timestep = f64::sqrt(settings.simulation.timestep);
     let stepsize = sqrt_timestep * settings.simulation.diffusion_constant;
-    let mut particles = Vec::with_capacity(settings.simulation.number_of_particles);
-
-
-    // initialise random particle position
-    let mut rng = ::rand::thread_rng();
-    let between = Range::new(-1f64, 1.);
-    for _ in 0..number_of_particles {
-        particles.push(Particle {
-            position: ModVector64::new(between.ind_sample(&mut rng),
-                                       between.ind_sample(&mut rng),
-                                       between.ind_sample(&mut rng)),
-        })
-    }
 
     assert_eq!(particles.len(), number_of_particles);
 
     // initialize normal distribution iterator, maybe not the most elegant way
     let mut ndi = NormalDistributionIterator::new();
 
-    // for step in 1..settings.simulation.number_of_timesteps {
-    //     for (i, p) in particles.iter_mut().enumerate() {
-    //         let ModVector64{ref mut x, ref mut y, ref mut z} = p.position;
-    //
-    //         *x = *x + ndi.sample() * stepsize;
-    //         *y = *y + ndi.sample() * stepsize;
-    //         *z = *z + ndi.sample() * stepsize;
-    //     }
-    // }
+    for step in 1..settings.simulation.number_of_timesteps {
+        for (i, p) in particles.iter_mut().enumerate() {
+            let ModVector64{ref mut x, ref mut y, ref mut z} = p.position;
+
+            *x = *x + ndi.sample() * stepsize;
+            *y = *y + ndi.sample() * stepsize;
+            *z = *z + ndi.sample() * stepsize;
+
+            zdebug!("{}, {}, {}, {}, {}",
+                step,
+                i,
+                *x.tof64(),
+                *y.tof64(),
+                *z.tof64(),
+            );
+
+        }
+    }
 
     Ok(())
 }
