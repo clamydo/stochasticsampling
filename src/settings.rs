@@ -20,6 +20,7 @@ pub struct SimulationSettings {
     pub timestep: f64,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
+    pub number_of_cells: usize,
     pub diffusion_constant: f64,
 }
 
@@ -94,8 +95,9 @@ mod tests {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
         assert_eq!(settings.simulation.timestep, 0.1);
-        assert_eq!(settings.simulation.number_of_particles, 3);
-        assert_eq!(settings.simulation.number_of_timesteps, 5000);
+        assert_eq!(settings.simulation.number_of_particles, 100);
+        assert_eq!(settings.simulation.number_of_timesteps, 500);
+        assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.diffusion_constant, 1.0);
     }
 }
