@@ -14,6 +14,10 @@ use std::env;
 
 #[cfg_attr(test, allow(dead_code))]
 fn main() {
+
+    // initialize the env_logger implementation
+    env_logger::init().unwrap();
+
     // parse command line arguments
     let args: Vec<String> = env::args().collect();
 
