@@ -30,8 +30,6 @@ impl Error for SimulationError {
 }
 
 
-fn init_positions
-
 pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     // initialise mpi and recive world size and current rank
     let mpiUniverse = mpi::initialize().unwrap();
@@ -48,28 +46,24 @@ pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     }
 
     // share particles evenly between all ranks
-    let number_of_particles: usize = settings.simulation.number_of_particles /
-        (mpi_size as usize);
+    let number_of_particles: usize = settings.simulation.number_of_particles / (mpi_size as usize);
 
     // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
     // Y is normally distributed with variance t.
     let sqrt_timestep = f64::sqrt(settings.simulation.timestep);
     let stepsize = sqrt_timestep * settings.simulation.diffusion_constant;
-    let mut particles =
-        Vec::with_capacity(settings.simulation.number_of_particles);
+    let mut particles = Vec::with_capacity(settings.simulation.number_of_particles);
 
 
     // initialise random particle position
     let mut rng = ::rand::thread_rng();
     let between = Range::new(-1f64, 1.);
     for _ in 0..settings.simulation.number_of_particles {
-        particles.push(
-            Particle{ position: ModVector64::new(
-                between.ind_sample(&mut rng),
-                between.ind_sample(&mut rng),
-                between.ind_sample(&mut rng),
-                )}
-            )
+        particles.push(Particle {
+            position: ModVector64::new(between.ind_sample(&mut rng),
+                                       between.ind_sample(&mut rng),
+                                       between.ind_sample(&mut rng)),
+        })
     }
 
     assert_eq!(particles.len(), settings.simulation.number_of_particles);

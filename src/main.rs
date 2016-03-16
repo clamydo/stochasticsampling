@@ -25,7 +25,7 @@ fn main() {
         1 => {
             error!("Please pass a parameter file.");
             std::process::exit(1)
-        },
+        }
         2 => {
             let settings = match settings::read_parameter_file(&args[1]) {
                 Ok(s) => s,
@@ -36,13 +36,13 @@ fn main() {
             };
 
             match simulation::simulate(&settings) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     error!("Error during simulation: {}", e);
                     std::process::exit(1)
-                },
+                }
             }
-        },
+        }
         _ => {
             error!("You've passed too many arguments. Please don't do that.");
             std::process::exit(1)

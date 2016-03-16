@@ -20,7 +20,9 @@ impl NormalDistributionIterator {
 }
 
 impl Default for NormalDistributionIterator {
-    fn default() -> NormalDistributionIterator { NormalDistributionIterator::new()}
+    fn default() -> NormalDistributionIterator {
+        NormalDistributionIterator::new()
+    }
 }
 
 // Implement iterator trait for `NormalDistributionIteratorIterator`

@@ -138,13 +138,14 @@ mod tests {
         let input = [0., -0., 1., -1.];
         let output = [0., 0., 0., 0.];
 
-        for (i,o) in input.into_iter().zip(output.into_iter()) {
+        for (i, o) in input.into_iter().zip(output.into_iter()) {
             let Mf64(a) = Mf64::new(*i);
             assert!(a == *o, "a = {}, b ={}", a, *o);
         }
     }
 
-    #[quickcheck] #[ignore]
+    #[quickcheck]
+    #[ignore]
     fn new_invariant_qc(f: f64) -> ::quickcheck::TestResult {
         if f > 1. || f < 0. {
             ::quickcheck::TestResult::discard()
@@ -154,7 +155,8 @@ mod tests {
         }
     }
 
-    #[quickcheck] #[ignore]
+    #[quickcheck]
+    #[ignore]
     fn new_range_qc(f: f64) -> bool {
         let Mf64(a) = Mf64::new(f);
         0. <= a && a < 1.
@@ -167,7 +169,7 @@ mod tests {
 
         assert_eq!(*((Mf64::new(-1.125) + 22.5).tof64()), 0.375);
 
-        for (l,r) in lhs.into_iter().zip(rhs.into_iter()) {
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
             let a = Mf64::new(*l);
             let b = Mf64::new(*r);
             let Mf64(c) = a + b;
@@ -178,7 +180,8 @@ mod tests {
         }
     }
 
-    #[quickcheck] #[ignore]
+    #[quickcheck]
+    #[ignore]
     fn addition_range_qc(lhs: f64, rhs: f64) -> bool {
         let a = Mf64::new(lhs);
         let b = Mf64::new(rhs);
@@ -191,7 +194,7 @@ mod tests {
         let lhs = [3.7, 0., 1., 1., 0.];
         let rhs = [6.7, 0., 1., 0., 1.];
 
-        for (l,r) in lhs.into_iter().zip(rhs.into_iter()) {
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
             let a = Mf64::new(*l);
             let b = Mf64::new(*r);
             let Mf64(c) = a - b;
@@ -202,7 +205,8 @@ mod tests {
         }
     }
 
-    #[quickcheck] #[ignore]
+    #[quickcheck]
+    #[ignore]
     fn substraction_range_qc(lhs: f64, rhs: f64) -> bool {
         let a = Mf64::new(lhs);
         let b = Mf64::new(rhs);
@@ -215,7 +219,8 @@ mod tests {
         assert_eq!(*(Mf64::new(-1.125) * -22.0).tof64(), 0.75);
     }
 
-    #[quickcheck] #[ignore]
+    #[quickcheck]
+    #[ignore]
     fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
         let a = Mf64::new(lhs);
         let Mf64(b) = a * rhs;

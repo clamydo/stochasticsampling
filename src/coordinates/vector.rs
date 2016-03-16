@@ -11,7 +11,7 @@ pub struct ModVector64 {
 }
 
 impl ModVector64 {
-    pub fn new(x: f64, y:f64, z: f64) -> ModVector64 {
+    pub fn new(x: f64, y: f64, z: f64) -> ModVector64 {
         ModVector64 {
             x: Mf64::new(x),
             y: Mf64::new(y),
