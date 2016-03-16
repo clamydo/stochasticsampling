@@ -1,3 +1,5 @@
+extern crate mpi;
+
 use rand::distributions::{IndependentSample, Range};
 use stochasticsampling::random::NormalDistributionIterator;
 use stochasticsampling::coordinates::Particle;
@@ -7,11 +9,14 @@ use std::error::Error;
 use std::fmt::Display;
 use std::fmt;
 use settings::Settings;
-use mpi::traits::*;
+use self::mpi::traits::*;
 
+macro_rules! dlog {
+    ($msg:expr) => (info!($msg);)
+}
 
-/// Error type that merges all errors that can happen during loading and parsing of the settings
-/// file.
+/// Error type that merges all errors that can happen during loading and parsing
+/// of the settings file.
 #[derive(Debug)]
 pub enum SimulationError {
 }
@@ -30,13 +35,18 @@ impl Error for SimulationError {
 
 
 pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
-    let universe = ::mpi::initialize().unwrap();
-    let world = universe.world();
-    let size = world.size();
-    let rank = world.rank();
+    // initialise mpi and recive world size and current rank
+    let mpi_universe = mpi::initialize().unwrap();
+    let mpi_world = mpi_universe.world();
+    let mpi_size = mpi_world.size();
+    let mpi_rank = mpi_world.rank();
 
-    // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then Y is normally
-    // distributed with variance t.
+    // share particles evenly between all ranks
+    let number_of_particles: usize = settings.simulation.number_of_particles /
+        (mpi_size as usize);
+
+    // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
+    // Y is normally distributed with variance t.
     let sqrt_timestep = f64::sqrt(settings.simulation.timestep);
     let stepsize = sqrt_timestep * settings.simulation.diffusion_constant;
     let mut particles = Vec::with_capacity(settings.simulation.number_of_particles);

@@ -8,9 +8,10 @@ doc = false
 name = "simulation"
 
 [dependencies]
+log = "0.3"
+env_logger = "0.3"
 rand = "0.3"
 toml = "0.1"
-serde = "*"
 rustc-serialize = "*"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
 

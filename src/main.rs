@@ -2,10 +2,10 @@
 
 extern crate stochasticsampling;
 extern crate rand;
-extern crate toml;
 extern crate rustc_serialize;
-extern crate mpi;
-
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 mod settings;
 mod simulation;
@@ -19,14 +19,14 @@ fn main() {
 
     match args.len() {
         1 => {
-            println!("Please pass a parameter file.");
+            error!("Please pass a parameter file.");
             std::process::exit(1)
         },
         2 => {
             let settings = match settings::read_parameter_file(&args[1]) {
                 Ok(s) => s,
                 Err(e) => {
-                    println!("Error reading parameter file: {}", e);
+                    error!("Error reading parameter file: {}", e);
                     std::process::exit(1)
                 }
             };
@@ -34,13 +34,13 @@ fn main() {
             match simulation::simulate(&settings) {
                 Ok(_) => {},
                 Err(e) => {
-                    println!("Error during simulation: {}", e);
+                    error!("Error during simulation: {}", e);
                     std::process::exit(1)
                 },
             }
         },
         _ => {
-            println!("You've passed too many arguments. Please don't do that.");
+            error!("You've passed too many arguments. Please don't do that.");
             std::process::exit(1)
         }
     }
