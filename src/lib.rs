@@ -7,5 +7,4 @@ extern crate quickcheck;
 
 extern crate rand;
 
-pub mod random;
 pub mod coordinates;

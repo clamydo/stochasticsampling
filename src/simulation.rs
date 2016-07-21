@@ -1,7 +1,6 @@
 extern crate mpi;
 
-use rand::distributions::{IndependentSample, Range};
-use stochasticsampling::random::NormalDistributionIterator;
+use rand::distributions::{Range, Normal, IndependentSample};
 use stochasticsampling::coordinates::Particle;
 use stochasticsampling::coordinates::vector::ModVector64;
 use std::f64;
@@ -46,6 +45,20 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
     particles
 }
 
+fn evolve<F>(pos: &Particle, stepsize: f64, mut c: F) -> Particle
+    where F: FnMut() -> f64 {
+
+    let ModVector64{ref x, ref y, ref z} = pos.position;
+
+    Particle{
+        position: ModVector64{
+            x: *x + c() * stepsize,
+            y: *y + c() * stepsize,
+            z: *z + c() * stepsize,
+        }
+    }
+}
+
 pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     // initialise mpi and recive world size and current rank
     let mpi_universe = mpi::initialize().unwrap();
@@ -75,7 +88,7 @@ pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     // share particles evenly between all ranks
     let number_of_particles: usize = settings.simulation.number_of_particles / (mpi_size as usize);
 
-    zinfo!("Placing {} to their initial positions.",
+    zinfo!("Placing {} particles at their initial positions.",
            settings.simulation.number_of_particles);
     let mut particles = randomly_placed_particles(number_of_particles);
 
@@ -87,22 +100,20 @@ pub fn simulate(settings: &Settings) -> Result<(), SimulationError> {
     assert_eq!(particles.len(), number_of_particles);
 
     // initialize normal distribution iterator, maybe not the most elegant way
-    let mut ndi = NormalDistributionIterator::new();
+    let mut rng = ::rand::thread_rng();
+    let normal = Normal::new(0.0, sqrt_timestep);
+    let mut normal_sample = move || normal.ind_sample(&mut rng);
 
     for step in 1..settings.simulation.number_of_timesteps {
         for (i, p) in particles.iter_mut().enumerate() {
-            let ModVector64{ref mut x, ref mut y, ref mut z} = p.position;
-
-            *x = *x + ndi.sample() * stepsize;
-            *y = *y + ndi.sample() * stepsize;
-            *z = *z + ndi.sample() * stepsize;
+            *p = evolve(p, stepsize, &mut normal_sample);
 
             zdebug!("{}, {}, {}, {}, {}",
                 step,
                 i,
-                *x.tof64(),
-                *y.tof64(),
-                *z.tof64(),
+                p.position.x.tof64(),
+                p.position.y.tof64(),
+                p.position.z.tof64(),
             );
 
         }
