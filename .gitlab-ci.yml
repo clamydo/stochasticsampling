@@ -1,0 +1,10 @@
+image: alpine
+
+pages:
+  script:
+  - curl https://sh.rustup.rs -sSf | sh
+  - rustup default nightly
+  - cargo test -- --ignored
+  only:
+  - master
+
