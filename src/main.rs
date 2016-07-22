@@ -1,7 +1,6 @@
 #![crate_type = "bin"]
 
 extern crate stochasticsampling;
-extern crate rand;
 extern crate rustc_serialize;
 #[macro_use]
 extern crate log;
@@ -11,11 +10,14 @@ mod settings;
 mod simulation;
 
 use std::env;
+use simulation::Simulation;
+
 
 fn main() {
 
     // initialize the env_logger implementation
     env_logger::init().unwrap();
+
 
     // parse command line arguments
     let args: Vec<String> = env::args().collect();
@@ -34,7 +36,11 @@ fn main() {
                 }
             };
 
-            match simulation::simulate(&settings) {
+            let mut simulation = Simulation::new(&settings);
+
+            simulation.init();
+
+            match simulation.run() {
                 Ok(_) => {}
                 Err(e) => {
                     error!("Error during simulation: {}", e);
