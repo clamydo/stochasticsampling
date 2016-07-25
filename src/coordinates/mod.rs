@@ -1,9 +1,9 @@
 pub mod modulofloat;
 pub mod vector;
 
-use self::vector::ModVector64;
+use self::vector::Mod64Vector2;
 
 #[derive(Copy, Clone)]
 pub struct Particle {
-    pub position: ModVector64,
+    pub position: Mod64Vector2,
 }

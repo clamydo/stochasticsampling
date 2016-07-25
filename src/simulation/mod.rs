@@ -3,7 +3,7 @@ extern crate rand;
 
 use self::rand::distributions::{Range, Normal, IndependentSample};
 use stochasticsampling::coordinates::Particle;
-use stochasticsampling::coordinates::vector::ModVector64;
+use stochasticsampling::coordinates::vector::Mod64Vector2;
 use std::f64;
 use std::error::Error;
 use std::fmt::Display;
@@ -40,8 +40,7 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
     let between = Range::new(-1f64, 1.);
     for _ in 0..n {
         particles.push(Particle {
-            position: ModVector64::new(between.ind_sample(&mut rng),
-                                       between.ind_sample(&mut rng),
+            position: Mod64Vector2::new(between.ind_sample(&mut rng),
                                        between.ind_sample(&mut rng)),
         })
     }
@@ -53,13 +52,12 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
 fn evolve<F>(pos: &Particle, stepsize: f64, mut c: F) -> Particle
     where F: FnMut() -> f64 {
 
-    let ModVector64{ref x, ref y, ref z} = pos.position;
+    let Mod64Vector2{ref x, ref y} = pos.position;
 
     Particle{
-        position: ModVector64{
+        position: Mod64Vector2{
             x: *x + c() * stepsize,
             y: *y + c() * stepsize,
-            z: *z + c() * stepsize,
         }
     }
 }
@@ -155,12 +153,11 @@ impl<'a> Simulation<'a> {
             for (i, p) in self.state.particles.iter_mut().enumerate() {
                 *p = evolve(p, stepsize, &mut normal_sample);
 
-                zdebug!(self.mpi.rank, "{}, {}, {}, {}, {}",
+                zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
                     i,
                     p.position.x.tof64(),
                     p.position.y.tof64(),
-                    p.position.z.tof64(),
                 );
 
             }
