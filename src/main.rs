@@ -1,7 +1,8 @@
 #![crate_type = "bin"]
 
-extern crate stochasticsampling;
 extern crate rustc_serialize;
+
+extern crate stochasticsampling;
 #[macro_use]
 extern crate log;
 extern crate env_logger;

@@ -14,6 +14,13 @@ pub struct Settings {
     pub simulation: SimulationSettings,
 }
 
+#[derive(RustcEncodable, RustcDecodable)]
+pub struct Time(f64);
+#[derive(RustcEncodable, RustcDecodable)]
+pub struct TDiff(f64);
+#[derive(RustcEncodable, RustcDecodable)]
+pub struct RDiff(f64);
+
 /// Holds simulation specific settings.
 #[derive(RustcEncodable, RustcDecodable)]
 pub struct SimulationSettings {
@@ -21,7 +28,8 @@ pub struct SimulationSettings {
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub number_of_cells: usize,
-    pub diffusion_constant: f64,
+    pub translational_diffusion_constant: f64,
+    pub rotational_diffusion_constant: f64,
 }
 
 /// Error type that merges all errors that can happen during loading and parsing of the settings
@@ -98,6 +106,7 @@ mod tests {
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.number_of_cells, 10);
-        assert_eq!(settings.simulation.diffusion_constant, 1.0);
+        assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
+        assert_eq!(settings.simulation.rotational_diffusion_constant, 0.5);
     }
 }

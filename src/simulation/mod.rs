@@ -31,17 +31,24 @@ impl Error for SimulationError {
     }
 }
 
+struct DiffusionParameter {
+    dt: f64,  // translational diffusion
+    dr: f64,  // rotational diffusion
+}
+
 /// Places n particles at random positions
 fn randomly_placed_particles(n: usize) -> Vec<Particle> {
     let mut particles = Vec::with_capacity(n);
 
     // initialise random particle position
     let mut rng = rand::thread_rng();
-    let between = Range::new(-1f64, 1.);
+    let between1 = Range::new(0f64, 1.);
+    let between2pi = Range::new(0f64, 2. * f64::consts::PI);
     for _ in 0..n {
         particles.push(Particle {
-            position: Mod64Vector2::new(between.ind_sample(&mut rng),
-                                       between.ind_sample(&mut rng)),
+            position: Mod64Vector2::new(between1.ind_sample(&mut rng),
+                                       between1.ind_sample(&mut rng)),
+            orientation: between2pi.ind_sample(&mut rng),
         })
     }
 
@@ -49,16 +56,22 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
 }
 
 
-fn evolve<F>(pos: &Particle, stepsize: f64, mut c: F) -> Particle
+fn evolve<F>(pos: &Particle, diffusion: &DiffusionParameter, timestep: f64, mut c: F) -> Particle
     where F: FnMut() -> f64 {
 
+
+    // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
+    // Y is normally distributed with variance t.
+    let trans_diff_step = timestep * diffusion.dt;
+    let rot_diff_step = timestep * diffusion.dr;
     let Mod64Vector2{ref x, ref y} = pos.position;
 
     Particle{
         position: Mod64Vector2{
-            x: *x + c() * stepsize,
-            y: *y + c() * stepsize,
-        }
+            x: *x + c() * trans_diff_step,
+            y: *y + c() * trans_diff_step,
+        },
+        orientation: pos.orientation + c() * rot_diff_step,
     }
 }
 
@@ -76,6 +89,7 @@ pub struct Simulation<'a> {
     mpi: MPIState,
     state: SimulationState,
     number_of_particles: usize,
+
 }
 
 struct SimulationState {
@@ -140,18 +154,20 @@ impl<'a> Simulation<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), SimulationError> {
-        // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
-        // Y is normally distributed with variance t.
-        let sqrt_timestep = f64::sqrt(self.settings.simulation.timestep);
-        let stepsize = sqrt_timestep * self.settings.simulation.diffusion_constant;
 
+        let sqrt_timestep = f64::sqrt(self.settings.simulation.timestep);
         let mut rng = rand::thread_rng();
         let normal = Normal::new(0.0, sqrt_timestep);
         let mut normal_sample = move || normal.ind_sample(&mut rng);
 
+        let diff = DiffusionParameter{
+            dt: self.settings.simulation.translational_diffusion_constant,
+            dr: self.settings.simulation.rotational_diffusion_constant,
+        };
+
         for step in 1..self.settings.simulation.number_of_timesteps {
             for (i, p) in self.state.particles.iter_mut().enumerate() {
-                *p = evolve(p, stepsize, &mut normal_sample);
+                *p = evolve(p, &diff, sqrt_timestep, &mut normal_sample);
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
