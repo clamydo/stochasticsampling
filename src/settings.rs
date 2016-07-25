@@ -14,12 +14,6 @@ pub struct Settings {
     pub simulation: SimulationSettings,
 }
 
-#[derive(RustcEncodable, RustcDecodable)]
-pub struct Time(f64);
-#[derive(RustcEncodable, RustcDecodable)]
-pub struct TDiff(f64);
-#[derive(RustcEncodable, RustcDecodable)]
-pub struct RDiff(f64);
 
 /// Holds simulation specific settings.
 #[derive(RustcEncodable, RustcDecodable)]
