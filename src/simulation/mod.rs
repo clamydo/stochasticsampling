@@ -1,6 +1,8 @@
 extern crate mpi;
 extern crate rand;
 
+mod integrator;
+
 use self::rand::distributions::{Range, Normal, IndependentSample};
 use stochasticsampling::coordinates::Particle;
 use stochasticsampling::coordinates::vector::Mod64Vector2;
@@ -31,7 +33,7 @@ impl Error for SimulationError {
     }
 }
 
-struct DiffusionParameter {
+pub struct DiffusionParameter {
     dt: f64,  // translational diffusion
     dr: f64,  // rotational diffusion
 }
@@ -56,25 +58,6 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
 }
 
 
-fn evolve<F>(pos: &Particle, diffusion: &DiffusionParameter, timestep: f64, mut c: F) -> Particle
-    where F: FnMut() -> f64 {
-
-
-    // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
-    // Y is normally distributed with variance t.
-    let trans_diff_step = timestep * diffusion.dt;
-    let rot_diff_step = timestep * diffusion.dr;
-    let Mod64Vector2{ref x, ref y} = pos.position;
-
-    Particle{
-        position: Mod64Vector2{
-            x: *x + c() * trans_diff_step,
-            y: *y + c() * trans_diff_step,
-        },
-        orientation: pos.orientation + c() * rot_diff_step,
-    }
-}
-
 
 #[allow(dead_code)]
 struct MPIState {
@@ -89,7 +72,6 @@ pub struct Simulation<'a> {
     mpi: MPIState,
     state: SimulationState,
     number_of_particles: usize,
-
 }
 
 struct SimulationState {
@@ -167,7 +149,7 @@ impl<'a> Simulation<'a> {
 
         for step in 1..self.settings.simulation.number_of_timesteps {
             for (i, p) in self.state.particles.iter_mut().enumerate() {
-                *p = evolve(p, &diff, sqrt_timestep, &mut normal_sample);
+                *p = integrator::evolve(p, &diff, sqrt_timestep, &mut normal_sample);
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
