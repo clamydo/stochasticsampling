@@ -1,0 +1,11 @@
+[package]
+name = "fftw3"
+version = "0.1.0"
+authors = ["fkoessel <fkoessel@uni-mainz.de>"]
+
+[dependencies]
+ndarray = "0.6"
+
+[lib]
+name = "fftw3"
+path = "fftw3.rs"
