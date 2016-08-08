@@ -18,3 +18,6 @@ mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
 [dev-dependencies]
 quickcheck = "*"
 quickcheck_macros = "*"
+
+[workspace]
+members = ["src/fftw3"]
