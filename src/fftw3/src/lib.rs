@@ -8,7 +8,8 @@ pub mod complex;
 #[cfg(test)]
 mod tests {
     use std::f64::EPSILON;
-    use fft::{FFTPlan, FFTDirection};
+    use fft;
+    use fft::FFTPlan;
     use fftw_ndarray::FFTData2D;
     use complex::Complex64;
 
@@ -33,8 +34,14 @@ mod tests {
         input.data[[6, 5]] = Complex64([1., 0.]);
         input.data[[6, 6]] = Complex64([1., 0.]);
 
-        let plan_forward = FFTPlan::new_c2c(&mut input.data, &mut fft.data, FFTDirection::Forward);
-        let plan_backward = FFTPlan::new_c2c(&mut fft.data, &mut ifft.data, FFTDirection::Backward);
+        let plan_forward = FFTPlan::new_c2c(&mut input.data,
+                                            &mut fft.data,
+                                            fft::FFTDirection::Forward,
+                                            fft::FFTFlags::Measure);
+        let plan_backward = FFTPlan::new_c2c(&mut fft.data,
+                                             &mut ifft.data,
+                                             fft::FFTDirection::Backward,
+                                             fft::FFTFlags::Measure);
 
         plan_forward.execute();
         plan_backward.execute();

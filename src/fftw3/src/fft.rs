@@ -8,10 +8,14 @@ pub struct FFTPlan {
     plan: ::fftw3_ffi::fftw_plan,
 }
 
-#[derive(Copy, Clone)]
 pub enum FFTDirection {
     Forward = ::fftw3_ffi::FFTW_FORWARD as isize,
     Backward = ::fftw3_ffi::FFTW_BACKWARD as isize,
+}
+
+pub enum FFTFlags {
+    Estimate = ::fftw3_ffi::FFTW_ESTIMATE as isize,
+    Measure = ::fftw3_ffi::FFTW_MEASURE as isize,
 }
 
 impl FFTPlan {
@@ -22,7 +26,8 @@ impl FFTPlan {
     /// of elements.
     pub fn new_c2c(ina: &mut ArrayViewMut<Complex64, (Ix, Ix)>,
                    outa: &mut ArrayViewMut<Complex64, (Ix, Ix)>,
-                   direction: FFTDirection)
+                   direction: FFTDirection,
+                   flags: FFTFlags)
                    -> FFTPlan {
 
         let (n0, n1) = ina.dim();
@@ -37,7 +42,7 @@ impl FFTPlan {
                                                  inp,
                                                  outp,
                                                  direction as i32,
-                                                 ::fftw3_ffi::FFTW_ESTIMATE as u32);
+                                                 flags as u32);
             // TODO: Use measure here
         }
 
