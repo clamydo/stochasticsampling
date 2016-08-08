@@ -51,12 +51,12 @@ mod tests {
 
             let Complex64(diff) = *left - *right / (shape.0 * shape.1) as f64;
             assert!(diff[0].abs() <= EPSILON,
-                    "Difference of real part: {:e} should be smaller than machine EPSILON = {:e}",
+                    "Difference of real parts: {:e} should be smaller than machine EPSILON = {:e}",
                     diff[0].abs(),
                     EPSILON);
             assert!(diff[1].abs() <= EPSILON,
-                    "Difference of imaginary part: {:e} should be smaller than machine EPSILON = \
-                     {:e}",
+                    "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
+                     = {:e}",
                     diff[1].abs(),
                     EPSILON);
         }

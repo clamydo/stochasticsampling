@@ -30,6 +30,14 @@ impl Mul<f64> for Complex64 {
     }
 }
 
+impl Mul<Complex64> for f64 {
+    type Output = Complex64;
+
+    fn mul(self, _rhs: Complex64) -> Complex64 {
+        _rhs * self
+    }
+}
+
 impl Div<f64> for Complex64 {
     type Output = Complex64;
 
@@ -82,6 +90,15 @@ mod tests {
         let a = Complex64([1.0f64, 2.0]);
         let Complex64(c) = a * 5.;
         assert_eq!(c, [5., 10.]);
+        let Complex64(d) = 5. * a;
+        assert_eq!(d, [5., 10.]);
+    }
+
+    #[test]
+    fn div_scalar() {
+        let a = Complex64([1.0f64, 2.0]);
+        let Complex64(c) = a / 2.;
+        assert_eq!(c, [0.5, 1.0]);
     }
 
     #[test]
