@@ -1,0 +1,12 @@
+[package]
+name = "fftw3"
+version = "0.1.0"
+authors = ["fkoessel <fkoessel@uni-mainz.de>"]
+
+[dependencies]
+ndarray = "0.6"
+num = "0.1"
+
+[dev-dependencies]
+quickcheck = "*"
+quickcheck_macros = "*"
