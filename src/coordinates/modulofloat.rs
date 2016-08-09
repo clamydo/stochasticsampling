@@ -114,6 +114,7 @@ impl Mul<f64> for Mf64 {
 mod tests {
     use super::*;
     use std::f64;
+    use quickcheck::TestResult;
 
     #[test]
     #[should_panic]
@@ -146,12 +147,12 @@ mod tests {
 
     #[quickcheck]
     #[ignore]
-    fn new_invariant_qc(f: f64) -> ::quickcheck::TestResult {
+    fn new_invariant_qc(f: f64) -> TestResult {
         if f > 1. || f < 0. {
-            ::quickcheck::TestResult::discard()
+            TestResult::discard()
         } else {
             let Mf64(a) = Mf64::new(f);
-            ::quickcheck::TestResult::from_bool(a == f)
+            TestResult::from_bool(a == f)
         }
     }
 
@@ -164,8 +165,8 @@ mod tests {
 
     #[test]
     fn addition() {
-        let lhs = [3.7, 1., 0., 0., 1.];
-        let rhs = [6.7, 1., 0., 1., 0.];
+        let lhs = [0.3, 1., 0., 0., 1.];
+        let rhs = [0.7, 1., 0., 1., 0.];
 
         assert_eq!(*((Mf64::new(-1.125) + 22.5).tof64()), 0.375);
 
@@ -177,6 +178,8 @@ mod tests {
 
             assert!(0. <= c && c < 1., "a = {:?}, b = {:?}, c = {}", a, b, c);
             assert!(0. <= d && d < 1., "a = {:?}, r = {}, d = {}", a, *r, d);
+            assert_eq!(c, 0.);
+            assert_eq!(d, 0.);
         }
     }
 
@@ -202,6 +205,8 @@ mod tests {
 
             assert!(0. <= c && c < 1., "a = {:?}, b = {:?}, c = {}", a, b, c);
             assert!(0. <= d && d < 1., "a = {:?}, r = {}, d = {}", a, *r, d);
+            assert_eq!(c, 0.);
+            assert_eq!(d, 0.);
         }
     }
 
