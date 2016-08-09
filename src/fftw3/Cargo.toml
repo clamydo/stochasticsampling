@@ -5,4 +5,4 @@ authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 
 [dependencies]
 ndarray = "0.6"
-num = "*"
+num = "0.1"
