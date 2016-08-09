@@ -5,7 +5,7 @@ use num::Float;
 /// layout.
 /// WARNING: Not guaranteed to has the same memory representation as [f64; 2],
 /// but it is likely.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Complex<T>(pub [T; 2]) where T: Float;
 
 impl<T: Float> Complex<T> {
@@ -85,30 +85,102 @@ impl<T: Float> Sub for Complex<T> {
 #[cfg(test)]
 mod tests {
     use super::Complex;
+    use num::Complex as NC;
 
-    #[test]
-    fn mul() {
-        let a = Complex::<f64>([1.0f64, 2.0]);
-        let b = Complex::<f64>([3.0f64, 4.0]);
-        let Complex::<f64>(c) = a * b;
-        assert_eq!(c, [-5., 10.]);
+    // check against different implementation
+    #[quickcheck]
+    fn mul_qc(re1: f64, im1: f64, re2: f64, im2: f64) -> bool {
+        let a = Complex::<f64>([re1, im1]);
+        let b = Complex::<f64>([re2, im2]);
+
+        let Complex::<f64>(res) = a * b;
+
+        let na = NC::<f64> { re: re1, im: im1 };
+        let nb = NC::<f64> { re: re2, im: im2 };
+
+        let NC { re: cmp_re, im: cmp_im } = na * nb;
+
+        cmp_re == res[0] && cmp_im == res[1]
     }
 
-    #[test]
-    fn mul_scalar() {
-        let a = Complex::<f64>([1.0f64, 2.0]);
-        let Complex::<f64>(c) = a * 5.;
-        assert_eq!(c, [5., 10.]);
-        let Complex::<f64>(d) = 5. * a;
-        assert_eq!(d, [5., 10.]);
+    #[quickcheck]
+    fn mul_scalar_qc(re: f64, im: f64, s: f64) -> bool {
+        let a = Complex::<f64>([re, im]);
+
+        let Complex::<f64>(res_right) = a * s;
+        let Complex::<f64>(res_left) = s * a;
+
+        let na = NC::<f64> { re: re, im: im };
+
+        let NC { re: cmp_re_right, im: cmp_im_right } = na * s;
+        let NC { re: cmp_re_left, im: cmp_im_left } = s * na;
+
+        cmp_re_right == res_right[0] && cmp_im_right == res_right[1] &&
+        cmp_re_left == res_left[0] && cmp_im_left == res_left[1]
+    }
+
+    #[quickcheck]
+    fn div_scalar_qc(re: f64, im: f64, s: f64) -> bool {
+        let a = Complex::<f64>([re, im]);
+        let Complex::<f64>(res) = a / s;
+
+        let na = NC::<f64> { re: re, im: im };
+        let NC { re: cmp_re, im: cmp_im } = na / s;
+
+        if s == 0. {
+            if res[0] == 0. || res[1] == 0. {
+                res[0].is_infinite() || res[1].is_infinite()
+            } else {
+                res[0].is_nan() || res[1].is_nan()
+            }
+        } else {
+            (cmp_re - res[0]).abs() < ::std::f64::EPSILON &&
+            (cmp_im - res[1]).abs() < ::std::f64::EPSILON
+        }
     }
 
     #[test]
     fn div_scalar() {
-        let a = Complex::<f64>([1.0f64, 2.0]);
-        let Complex::<f64>(c) = a / 2.;
-        assert_eq!(c, [0.5, 1.0]);
+        let re = 0.;
+        let im = 98.29372511785971;
+        let s = 25.;
+
+        let a = Complex::<f64>([re, im]);
+        let Complex::<f64>(res) = a / s;
+
+        let na = NC::<f64> { re: re, im: im };
+        let NC { re: cmp_re, im: cmp_im } = na / s;
+
+        if s == 0. {
+            if res[0] == 0. || res[1] == 0. {
+                assert!(res[0].is_infinite() || res[1].is_infinite(),
+                        "is ({}, {}) / {}",
+                        res[0],
+                        res[1],
+                        s);
+            } else {
+                assert!(res[0].is_nan() || res[1].is_nan(),
+                        "is ({}, {}) / {}",
+                        res[0],
+                        res[1],
+                        s);
+            }
+        } else {
+            assert!((cmp_re - res[0]).abs() < ::std::f64::EPSILON,
+                    "is ({}, {}) / {} = {}",
+                    res[0],
+                    res[1],
+                    s,
+                    (cmp_re - res[1]).abs());
+            assert!((cmp_im - res[1]).abs() < ::std::f64::EPSILON,
+                    "is ({}, {}) / {} = {}",
+                    res[0],
+                    res[1],
+                    s,
+                    (cmp_im - res[1]).abs());
+        }
     }
+
 
     #[test]
     fn add() {
