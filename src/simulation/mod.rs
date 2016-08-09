@@ -34,8 +34,8 @@ impl Error for SimulationError {
 }
 
 pub struct DiffusionParameter {
-    dt: f64,  // translational diffusion
-    dr: f64,  // rotational diffusion
+    dt: f64, // translational diffusion
+    dr: f64, // rotational diffusion
 }
 
 /// Places n particles at random positions
@@ -49,7 +49,7 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
     for _ in 0..n {
         particles.push(Particle {
             position: Mod64Vector2::new(between1.ind_sample(&mut rng),
-                                       between1.ind_sample(&mut rng)),
+                                        between1.ind_sample(&mut rng)),
             orientation: between2pi.ind_sample(&mut rng),
         })
     }
@@ -103,8 +103,8 @@ impl<'a> Simulation<'a> {
         let mpi_world = mpi_universe.world();
 
         // share particles evenly between all ranks
-        let ranklocal_number_of_particles: usize =
-            settings.simulation.number_of_particles / (mpi_world.size() as usize);
+        let ranklocal_number_of_particles: usize = settings.simulation.number_of_particles /
+                                                   (mpi_world.size() as usize);
 
         let mpi = MPIState {
             universe: mpi_universe,
@@ -113,9 +113,8 @@ impl<'a> Simulation<'a> {
             rank: mpi_world.rank(),
         };
 
-        let state = SimulationState {
-            particles: Vec::with_capacity(ranklocal_number_of_particles),
-        };
+        let state =
+            SimulationState { particles: Vec::with_capacity(ranklocal_number_of_particles) };
 
         Simulation {
             settings: settings,
@@ -127,7 +126,8 @@ impl<'a> Simulation<'a> {
 
 
     pub fn init(&mut self) {
-        zinfo!(self.mpi.rank, "Placing {} particles at their initial positions.",
+        zinfo!(self.mpi.rank,
+               "Placing {} particles at their initial positions.",
                self.settings.simulation.number_of_particles);
 
         self.state.particles = randomly_placed_particles(self.number_of_particles);
@@ -142,7 +142,7 @@ impl<'a> Simulation<'a> {
         let normal = Normal::new(0.0, sqrt_timestep);
         let mut normal_sample = move || normal.ind_sample(&mut rng);
 
-        let diff = DiffusionParameter{
+        let diff = DiffusionParameter {
             dt: self.settings.simulation.translational_diffusion_constant,
             dr: self.settings.simulation.rotational_diffusion_constant,
         };

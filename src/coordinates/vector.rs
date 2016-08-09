@@ -124,8 +124,7 @@ mod tests {
     fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
         let a = Mod64Vector3::new(x, y, z);
         let b = a * rhs;
-        0. <= *b.x.tof64() && *b.x.tof64() < 1. &&
-        0. <= *b.y.tof64() && *b.y.tof64() < 1. &&
+        0. <= *b.x.tof64() && *b.x.tof64() < 1. && 0. <= *b.y.tof64() && *b.y.tof64() < 1. &&
         0. <= *b.z.tof64() && *b.z.tof64() < 1.
     }
 
@@ -142,7 +141,6 @@ mod tests {
     fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
         let a = Mod64Vector2::new(x, y);
         let b = a * rhs;
-        0. <= *b.x.tof64() && *b.x.tof64() < 1. &&
-        0. <= *b.y.tof64() && *b.y.tof64() < 1.
+        0. <= *b.x.tof64() && *b.x.tof64() < 1. && 0. <= *b.y.tof64() && *b.y.tof64() < 1.
     }
 }

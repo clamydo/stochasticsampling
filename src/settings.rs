@@ -26,7 +26,8 @@ pub struct SimulationSettings {
     pub rotational_diffusion_constant: f64,
 }
 
-/// Error type that merges all errors that can happen during loading and parsing of the settings
+/// Error type that merges all errors that can happen during loading and
+/// parsing of the settings
 /// file.
 #[derive(Debug)]
 pub enum SettingsError {
@@ -76,7 +77,8 @@ fn read_from_file(filename: &str) -> Result<String, io::Error> {
 }
 
 
-/// Reads content of a file `param_file`, that should point to a valid TOML file, and Parsers it.
+/// Reads content of a file `param_file`, that should point to a valid TOML
+/// file, and Parsers it.
 /// Then returns the deserialised data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> {
     // read .toml file into string
