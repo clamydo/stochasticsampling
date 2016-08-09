@@ -1,5 +1,5 @@
 use ndarray::{ArrayViewMut, Ix};
-use complex::Complex64;
+use complex::Complex;
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 
@@ -24,8 +24,8 @@ impl FFTPlan {
     /// WARNING: This is an unormalized transformation. A forwards and
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
-    pub fn new_c2c(ina: &mut ArrayViewMut<Complex64, (Ix, Ix)>,
-                   outa: &mut ArrayViewMut<Complex64, (Ix, Ix)>,
+    pub fn new_c2c(ina: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
+                   outa: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
                    direction: FFTDirection,
                    flags: FFTFlags)
                    -> FFTPlan {
