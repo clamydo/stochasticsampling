@@ -14,6 +14,7 @@ pub struct Settings {
     pub simulation: SimulationSettings,
 }
 
+pub const BOXSIZE: (f64, f64) = (1., 1.);
 
 /// Holds simulation specific settings.
 #[derive(RustcEncodable, RustcDecodable)]
