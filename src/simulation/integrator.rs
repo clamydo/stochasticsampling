@@ -47,8 +47,8 @@ mod tests {
 
         p = evolve(&p, &d, t, c);
 
-        assert_eq!(*p.position.x.tof64(), 0.5);
-        assert_eq!(*p.position.y.tof64(), 0.6);
+        assert_eq!(*p.position.x.as_ref(), 0.5);
+        assert_eq!(*p.position.y.as_ref(), 0.6);
         assert_eq!(p.orientation, 1.2);
     }
 }

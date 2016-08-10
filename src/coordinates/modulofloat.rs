@@ -11,8 +11,8 @@
 //! let a = Mf64::new(-1.125);
 //! println!("{:?}", a);
 //!
-//! assert_eq!(*(a + 22.5).tof64(), 0.375);
-//! assert_eq!(*(a * -22.0).tof64(), 0.75);
+//! assert_eq!(*(a + 22.5).as_ref(), 0.375);
+//! assert_eq!(*(a * -22.0).as_ref(), 0.75);
 //! ```
 
 use std::ops::Add;
@@ -31,11 +31,6 @@ impl Mf64 {
         }
 
         if f >= 1. || f < 0. { Mf64(f - f.floor()) } else { Mf64(f) }
-    }
-
-    // Returns a reference to the underlying f64 value.
-    pub fn tof64(&self) -> &f64 {
-        &self.0 // return reference on field wrapped inside
     }
 }
 
@@ -105,6 +100,37 @@ impl Mul<f64> for Mf64 {
     }
 }
 
+/// Implement `From` trait for easy conversion.
+/// Converts into Mf64 from a f64 by copying it.
+impl From<f64> for Mf64 {
+    fn from(float: f64) -> Self {
+        Mf64::new(float)
+    }
+}
+
+/// Implement `Into` trait for easy conversion.
+/// Converts by value to an f64.
+impl Into<f64> for Mf64 {
+    fn into(self) -> f64 {
+        self.0
+    }
+}
+
+/// Implement `AsRef` for easy conversion.
+/// Converts a Mf64 into reference of enclosed f64.
+impl AsRef<f64> for Mf64 {
+    fn as_ref(&self) -> &f64 {
+        &self.0
+    }
+}
+
+/// Implement `AsMut` for easy conversion.
+/// Converts a Mf64 into mutable reference of enclosed f64.
+impl AsMut<f64> for Mf64 {
+    fn as_mut(&mut self) -> &mut f64 {
+        &mut self.0
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -164,7 +190,7 @@ mod tests {
         let lhs = [0.3, 1., 0., 0., 1.];
         let rhs = [0.7, 1., 0., 1., 0.];
 
-        assert_eq!(*((Mf64::new(-1.125) + 22.5).tof64()), 0.375);
+        assert_eq!(*((Mf64::new(-1.125) + 22.5).as_ref()), 0.375);
 
         for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
             let a = Mf64::new(*l);
@@ -217,7 +243,7 @@ mod tests {
 
     #[test]
     fn multiplication() {
-        assert_eq!(*(Mf64::new(-1.125) * -22.0).tof64(), 0.75);
+        assert_eq!(*(Mf64::new(-1.125) * -22.0).as_ref(), 0.75);
     }
 
     #[quickcheck]
