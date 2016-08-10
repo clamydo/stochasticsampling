@@ -30,11 +30,7 @@ impl Mf64 {
             panic!()
         }
 
-        if f >= 1. || f < 0. {
-            Mf64(f - f.floor())
-        } else {
-            Mf64(f)
-        }
+        if f >= 1. || f < 0. { Mf64(f - f.floor()) } else { Mf64(f) }
     }
 
     // Returns a reference to the underlying f64 value.

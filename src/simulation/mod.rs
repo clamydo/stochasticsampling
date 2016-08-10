@@ -1,18 +1,17 @@
-extern crate mpi;
-extern crate rand;
-
+mod distribution;
 mod integrator;
 
-use self::rand::distributions::{Range, Normal, IndependentSample};
-use stochasticsampling::coordinates::Particle;
-use stochasticsampling::coordinates::vector::Mod64Vector2;
-use std::f64;
+use coordinates::Particle;
+use coordinates::vector::Mod64Vector2;
+use self::distribution::Distribution;
+use mpi::topology::{SystemCommunicator, Universe};
+use mpi::traits::*;
+use rand::distributions::{IndependentSample, Normal, Range};
+use settings::Settings;
 use std::error::Error;
+use std::f64;
 use std::fmt::Display;
 use std::fmt;
-use settings::Settings;
-use self::mpi::traits::*;
-use self::mpi::topology::{Universe, SystemCommunicator};
 
 
 /// Error type that merges all errors that can happen during loading and parsing
@@ -43,7 +42,7 @@ fn randomly_placed_particles(n: usize) -> Vec<Particle> {
     let mut particles = Vec::with_capacity(n);
 
     // initialise random particle position
-    let mut rng = rand::thread_rng();
+    let mut rng = ::rand::thread_rng();
     let between1 = Range::new(0f64, 1.);
     let between2pi = Range::new(0f64, 2. * f64::consts::PI);
     for _ in 0..n {
@@ -76,6 +75,7 @@ pub struct Simulation<'a> {
 
 struct SimulationState {
     particles: Vec<Particle>,
+    distribution: Distribution,
 }
 
 macro_rules! zinfo {
@@ -99,7 +99,7 @@ macro_rules! zdebug {
 
 impl<'a> Simulation<'a> {
     pub fn new(settings: &Settings) -> Simulation {
-        let mpi_universe = mpi::initialize().unwrap();
+        let mpi_universe = ::mpi::initialize().unwrap();
         let mpi_world = mpi_universe.world();
 
         // share particles evenly between all ranks
@@ -114,7 +114,8 @@ impl<'a> Simulation<'a> {
         };
 
         let state =
-            SimulationState { particles: Vec::with_capacity(ranklocal_number_of_particles) };
+            SimulationState { particles: Vec::with_capacity(ranklocal_number_of_particles),
+            distribution: Distribution::new() };
 
         Simulation {
             settings: settings,
@@ -138,7 +139,7 @@ impl<'a> Simulation<'a> {
     pub fn run(&mut self) -> Result<(), SimulationError> {
 
         let sqrt_timestep = f64::sqrt(self.settings.simulation.timestep);
-        let mut rng = rand::thread_rng();
+        let mut rng = ::rand::thread_rng();
         let normal = Normal::new(0.0, sqrt_timestep);
         let mut normal_sample = move || normal.ind_sample(&mut rng);
 
@@ -150,6 +151,7 @@ impl<'a> Simulation<'a> {
         for step in 1..self.settings.simulation.number_of_timesteps {
             for (i, p) in self.state.particles.iter_mut().enumerate() {
                 *p = integrator::evolve(p, &diff, sqrt_timestep, &mut normal_sample);
+
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,

@@ -1,5 +1,5 @@
-use stochasticsampling::coordinates::Particle;
-use stochasticsampling::coordinates::vector::Mod64Vector2;
+use coordinates::Particle;
+use coordinates::vector::Mod64Vector2;
 use super::DiffusionParameter;
 
 
@@ -29,8 +29,8 @@ pub fn evolve<F>(pos: &Particle,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stochasticsampling::coordinates::Particle;
-    use stochasticsampling::coordinates::vector::Mod64Vector2;
+    use coordinates::Particle;
+    use coordinates::vector::Mod64Vector2;
     use super::super::DiffusionParameter;
 
     #[test]

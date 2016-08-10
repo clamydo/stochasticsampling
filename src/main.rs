@@ -1,17 +1,13 @@
 #![crate_type = "bin"]
 
-extern crate rustc_serialize;
-
 extern crate stochasticsampling;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
-mod settings;
-mod simulation;
-
 use std::env;
-use simulation::Simulation;
+use stochasticsampling::settings;
+use stochasticsampling::simulation::Simulation;
 
 
 fn main() {
