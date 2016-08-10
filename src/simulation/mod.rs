@@ -113,9 +113,10 @@ impl<'a> Simulation<'a> {
             rank: mpi_world.rank(),
         };
 
-        let state =
-            SimulationState { particles: Vec::with_capacity(ranklocal_number_of_particles),
-            distribution: Distribution::new() };
+        let state = SimulationState {
+            particles: Vec::with_capacity(ranklocal_number_of_particles),
+            distribution: Distribution::new(settings.simulation.grid_size),
+        };
 
         Simulation {
             settings: settings,

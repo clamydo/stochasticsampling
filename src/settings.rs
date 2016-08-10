@@ -24,6 +24,7 @@ pub struct SimulationSettings {
     pub number_of_cells: usize,
     pub translational_diffusion_constant: f64,
     pub rotational_diffusion_constant: f64,
+    pub grid_size: (usize, usize, usize),
 }
 
 /// Error type that merges all errors that can happen during loading and
@@ -104,5 +105,6 @@ mod tests {
         assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
         assert_eq!(settings.simulation.rotational_diffusion_constant, 0.5);
+        assert_eq!(settings.simulation.grid_size, (10, 10, 6));
     }
 }

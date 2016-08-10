@@ -5,3 +5,4 @@ number_of_timesteps = 500
 number_of_cells = 10
 translational_diffusion_constant = 1.0
 rotational_diffusion_constant = 0.5
+grid_size = [ 10, 10, 6 ]
