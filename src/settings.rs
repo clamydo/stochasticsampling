@@ -22,9 +22,9 @@ pub type GridSize = (usize, usize, usize);
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
+    pub number_of_cells: usize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub number_of_cells: usize,
     pub rotational_diffusion_constant: f64,
     pub timestep: f64,
     pub translational_diffusion_constant: f64,
@@ -104,9 +104,9 @@ mod tests {
 
         assert_eq!(settings.simulation.box_size, (1., 1.));
         assert_eq!(settings.simulation.grid_size, (10, 10, 6));
+        assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
-        assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.rotational_diffusion_constant, 0.5);
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
