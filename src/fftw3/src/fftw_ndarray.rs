@@ -1,6 +1,6 @@
-use std::mem;
-use ndarray::{ArrayViewMut, Ix};
 use complex::Complex;
+use ndarray::{ArrayViewMut, Ix};
+use std::mem;
 
 /// FFTW3 allocated `ArrayView` for 2D data.
 ///

@@ -1,5 +1,5 @@
-use ndarray::{ArrayViewMut, Ix};
 use complex::Complex;
+use ndarray::{ArrayViewMut, Ix};
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 

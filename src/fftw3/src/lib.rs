@@ -13,11 +13,11 @@ pub mod complex;
 
 #[cfg(test)]
 mod tests {
-    use std::f64::EPSILON;
+    use complex::Complex;
     use fft;
     use fft::FFTPlan;
     use fftw_ndarray::FFTData2D;
-    use complex::Complex;
+    use std::f64::EPSILON;
 
     /// Transforming for and back should be an identity operation (except for
     /// normalization factors)
