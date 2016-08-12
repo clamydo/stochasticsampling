@@ -12,7 +12,6 @@ pub struct Mod64Vector3 {
 }
 
 impl Mod64Vector3 {
-    /// Marked as unsafe, beacuse having `m <= 0` will lead to unwanted results.
     pub fn new(x: f64, y: f64, z: f64, m: (f64, f64, f64)) -> Mod64Vector3 {
         Mod64Vector3 {
             x: Mf64::new(x, m.0),
@@ -105,7 +104,6 @@ pub struct Mod64Vector2 {
 }
 
 impl Mod64Vector2 {
-    /// Marked as unsafe, beacuse having `m <= 0` will lead to unwanted results.
     pub fn new(x: f64, y: f64, m: (f64, f64)) -> Mod64Vector2 {
         Mod64Vector2 {
             x: Mf64::new(x, m.0),
@@ -196,7 +194,7 @@ mod tests {
 
     #[test]
     fn scalar_multiplication_3() {
-        let p = unsafe { Mod64Vector3::new(0.5, -1.25, 0.75, (1., 1., 1.)) };
+        let p = Mod64Vector3::new(0.5, -1.25, 0.75, (1., 1., 1.));
         let p3 = p * 3.;
         assert_eq!(*p3.x.as_ref(), 0.5);
         assert_eq!(*p3.y.as_ref(), 0.25);
@@ -208,7 +206,7 @@ mod tests {
     fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
         const DIV: f64 = 3.45;
         let boxsize = (3.45, 3.45, 3.45);
-        let a = unsafe { Mod64Vector3::new(x, y, z, boxsize) };
+        let a = Mod64Vector3::new(x, y, z, boxsize);
         let b = a * rhs;
         0. <= *b.x.as_ref() && *b.x.as_ref() < DIV && 0. <= *b.y.as_ref() &&
         *b.y.as_ref() < DIV && 0. <= *b.z.as_ref() && *b.z.as_ref() < DIV
@@ -216,7 +214,7 @@ mod tests {
 
     #[test]
     fn scalar_multiplication_2() {
-        let p = unsafe { Mod64Vector2::new(0.5, -1.5, (1., 1.)) };
+        let p = Mod64Vector2::new(0.5, -1.5, (1., 1.));
         let p3 = p * 3.;
         assert_eq!(*p3.x.as_ref(), 0.5);
         assert_eq!(*p3.y.as_ref(), 0.5);
@@ -225,7 +223,7 @@ mod tests {
     #[quickcheck]
     #[ignore]
     fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
-        let a = unsafe { Mod64Vector2::new(x, y, (1., 1.)) };
+        let a = Mod64Vector2::new(x, y, (1., 1.));
         let b = a * rhs;
         0. <= *b.x.as_ref() && *b.x.as_ref() < 1. && 0. <= *b.y.as_ref() && *b.y.as_ref() < 1.
     }

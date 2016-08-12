@@ -1,5 +1,4 @@
 use coordinates::Particle;
-use coordinates::vector::Mod64Vector2;
 use super::DiffusionParameter;
 
 
