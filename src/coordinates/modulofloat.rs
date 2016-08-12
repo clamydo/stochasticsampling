@@ -8,7 +8,7 @@
 //! # Examples
 //! ```
 //! use ::stochasticsampling::coordinates::modulofloat::Mf64;
-//! let a = Mf64::new(-1.125);
+//! let a = Mf64::new(-1.125, 1.0);
 //! println!("{:?}", a);
 //!
 //! assert_eq!(*(a + 22.5).as_ref(), 0.375);
@@ -16,34 +16,45 @@
 //! ```
 
 use std::ops::Add;
-use std::ops::Sub;
 use std::ops::Mul;
+use std::ops::Sub;
 
 
 #[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
-pub struct Mf64(f64);
+pub struct Mf64 {
+    pub v: f64, // value
+    pub m: f64, // divisor
+}
+
+fn modulo(f: f64, m: f64) -> f64 {
+    if m <= 0.0 {
+        panic!("Divisor must not be <= 0.0.")
+    }
+
+    f - (f / m).floor() * m
+}
 
 impl Mf64 {
     /// Construct a modulo float from a float.
-    pub fn new(f: f64) -> Mf64 {
+    pub fn new(f: f64, div: f64) -> Mf64 {
         if f.is_nan() || f.is_infinite() {
             panic!()
         }
 
-        if f >= 1. || f < 0. { Mf64(f - f.floor()) } else { Mf64(f) }
+        Mf64 {
+            v: modulo(f, div),
+            m: div,
+        }
     }
 }
 
-/// Implement + operator with modulo 1. This represents the periodic boundary
-/// condidtions. It implicitly assumes everyhing is normalised the size of the
-/// box.
+/// Implement + operator for modulo. **Caution**: This operation is not
+/// commutative: `a mod b + c mod d = (a + c)  mod b`!
 impl Add for Mf64 {
     type Output = Mf64;
 
     fn add(self, other: Mf64) -> Mf64 {
-        let Mf64(a) = self;
-        let Mf64(b) = other;
-        Mf64::new(a + b)
+        Mf64::new(self.v + other.v, self.m)
     }
 }
 
@@ -51,21 +62,17 @@ impl Add<f64> for Mf64 {
     type Output = Mf64;
 
     fn add(self, other: f64) -> Mf64 {
-        let Mf64(a) = self;
-        Mf64::new(a + other)
+        Mf64::new(self.v + other, self.m)
     }
 }
 
-/// Implement - operator with modulo 1. This represents the periodic boundary
-/// condidtions. It implicitly assumes everyhing is normalised the size of the
-/// box.
+/// Implement - operator for modulo. **Caution**: This operation is not
+/// commutative: `a mod b - c mod d = (a - c)  mod b`!
 impl Sub for Mf64 {
     type Output = Mf64;
 
     fn sub(self, rhs: Mf64) -> Mf64 {
-        let Mf64(a) = self;
-        let Mf64(b) = rhs;
-        Mf64::new(a - b)
+        Mf64::new(self.v - rhs.v, self.m)
     }
 }
 
@@ -73,21 +80,17 @@ impl Sub<f64> for Mf64 {
     type Output = Mf64;
 
     fn sub(self, rhs: f64) -> Mf64 {
-        let Mf64(a) = self;
-        Mf64::new(a - rhs)
+        Mf64::new(self.v - rhs, self.m)
     }
 }
 
-/// Implement * operator with modulo 1. This represents the periodic boundary
-/// condidtions. It implicitly assumes everyhing is normalised the size of the
-/// box.
+/// Implement * operator for modulo. **Caution**: This operation is not
+/// commutative: `a mod b * c mod d = (a * c)  mod b`!
 impl Mul for Mf64 {
     type Output = Mf64;
 
     fn mul(self, rhs: Mf64) -> Mf64 {
-        let Mf64(a) = self;
-        let Mf64(b) = rhs;
-        Mf64::new(a * b)
+        Mf64::new(self.v * rhs.v, self.m)
     }
 }
 
@@ -95,24 +98,16 @@ impl Mul<f64> for Mf64 {
     type Output = Mf64;
 
     fn mul(self, rhs: f64) -> Mf64 {
-        let Mf64(a) = self;
-        Mf64::new(a * rhs)
+        Mf64::new(self.v * rhs, self.m)
     }
 }
 
-/// Implement `From` trait for easy conversion.
-/// Converts into Mf64 from a f64 by copying it.
-impl From<f64> for Mf64 {
-    fn from(float: f64) -> Self {
-        Mf64::new(float)
-    }
-}
 
 /// Implement `Into` trait for easy conversion.
 /// Converts by value to an f64.
 impl Into<f64> for Mf64 {
     fn into(self) -> f64 {
-        self.0
+        self.v
     }
 }
 
@@ -120,7 +115,7 @@ impl Into<f64> for Mf64 {
 /// Converts a Mf64 into reference of enclosed f64.
 impl AsRef<f64> for Mf64 {
     fn as_ref(&self) -> &f64 {
-        &self.0
+        &self.v
     }
 }
 
@@ -128,42 +123,49 @@ impl AsRef<f64> for Mf64 {
 /// Converts a Mf64 into mutable reference of enclosed f64.
 impl AsMut<f64> for Mf64 {
     fn as_mut(&mut self) -> &mut f64 {
-        &mut self.0
+        &mut self.v
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::f64;
     use quickcheck::TestResult;
+    use std::f64;
+    use super::*;
 
     #[test]
     #[should_panic]
     fn new_nan_panic() {
-        Mf64::new(f64::NAN);
+        Mf64::new(f64::NAN, 1.);
     }
 
     #[test]
     #[should_panic]
     fn new_inf_panic() {
-        Mf64::new(f64::INFINITY);
+        Mf64::new(f64::INFINITY, 1.);
     }
 
     #[test]
     #[should_panic]
     fn new_neginf_panic() {
-        Mf64::new(f64::NEG_INFINITY);
+        Mf64::new(f64::NEG_INFINITY, 1.);
+    }
+
+    #[test]
+    #[should_panic]
+    fn new_negdiv_panic() {
+        Mf64::new(f64::NEG_INFINITY, 0.);
+        Mf64::new(f64::NEG_INFINITY, -1.);
     }
 
     #[test]
     fn new() {
-        let input = [0., -0., 1., -1.];
-        let output = [0., 0., 0., 0.];
+        let input = [0., -0., 1., -1., -0.3];
+        let output = [0., 0., 0., 0., 0.7];
 
         for (i, o) in input.into_iter().zip(output.into_iter()) {
-            let Mf64(a) = Mf64::new(*i);
-            assert!(a == *o, "a = {}, b ={}", a, *o);
+            let a = Mf64::new(*i, 1.);
+            assert!(a.v == *o, "a = {}, b ={}", a.v, *o);
         }
     }
 
@@ -173,16 +175,16 @@ mod tests {
         if f > 1. || f < 0. {
             TestResult::discard()
         } else {
-            let Mf64(a) = Mf64::new(f);
-            TestResult::from_bool(a == f)
+            let a = Mf64::new(f, 1.);
+            TestResult::from_bool(a.v == f)
         }
     }
 
     #[quickcheck]
     #[ignore]
     fn new_range_qc(f: f64) -> bool {
-        let Mf64(a) = Mf64::new(f);
-        0. <= a && a < 1.
+        let a = Mf64::new(f, 1.);
+        0. <= a.v && a.v < 1.
     }
 
     #[test]
@@ -190,28 +192,40 @@ mod tests {
         let lhs = [0.3, 1., 0., 0., 1.];
         let rhs = [0.7, 1., 0., 1., 0.];
 
-        assert_eq!(*((Mf64::new(-1.125) + 22.5).as_ref()), 0.375);
+        assert_eq!(*((Mf64::new(-1.125, 1.) + 22.5).as_ref()), 0.375);
 
         for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
-            let a = Mf64::new(*l);
-            let b = Mf64::new(*r);
-            let Mf64(c) = a + b;
-            let Mf64(d) = a + *r;
+            let a = Mf64::new(*l, 1.);
+            let b = Mf64::new(*r, 1.);
+            let c = a + b;
+            let d = a + *r;
 
-            assert!(0. <= c && c < 1., "a = {:?}, b = {:?}, c = {}", a, b, c);
-            assert!(0. <= d && d < 1., "a = {:?}, r = {}, d = {}", a, *r, d);
-            assert_eq!(c, 0.);
-            assert_eq!(d, 0.);
+            assert!(0. <= c.v && c.v < 1.,
+                    "a = {:?}, b = {:?}, c = {:?}",
+                    a,
+                    b,
+                    c);
+            assert!(0. <= d.v && d.v < 1.,
+                    "a = {:?}, r = {}, d = {:?}",
+                    a,
+                    *r,
+                    d);
+            assert_eq!(c.v, 0.);
+            assert_eq!(d.v, 0.);
         }
     }
 
     #[quickcheck]
     #[ignore]
-    fn addition_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs);
-        let b = Mf64::new(rhs);
-        let Mf64(c) = a + b;
-        0. <= c && c < 1.
+    fn addition_range_qc(lhs: f64, rhs: f64, range: f64) -> TestResult {
+        if range <= 0.0 {
+            TestResult::discard()
+        } else {
+            let a = Mf64::new(lhs, range);
+            let b = Mf64::new(rhs, range);
+            let c = a + b;
+            TestResult::from_bool(0. <= c.v && c.v < range)
+        }
     }
 
     #[test]
@@ -220,37 +234,45 @@ mod tests {
         let rhs = [6.7, 0., 1., 0., 1.];
 
         for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
-            let a = Mf64::new(*l);
-            let b = Mf64::new(*r);
-            let Mf64(c) = a - b;
-            let Mf64(d) = a - *r;
+            let a = Mf64::new(*l, 1.);
+            let b = Mf64::new(*r, 1.);
+            let c = a - b;
+            let d = a - *r;
 
-            assert!(0. <= c && c < 1., "a = {:?}, b = {:?}, c = {}", a, b, c);
-            assert!(0. <= d && d < 1., "a = {:?}, r = {}, d = {}", a, *r, d);
-            assert_eq!(c, 0.);
-            assert_eq!(d, 0.);
+            assert!(0. <= c.v && c.v < 1.,
+                    "a = {:?}, b = {:?}, c = {:?}",
+                    a,
+                    b,
+                    c);
+            assert!(0. <= d.v && d.v < 1.,
+                    "a = {:?}, r = {}, d = {:?}",
+                    a,
+                    *r,
+                    d);
+            assert_eq!(c.v, 0.);
+            assert_eq!(d.v, 0.);
         }
     }
 
     #[quickcheck]
     #[ignore]
     fn substraction_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs);
-        let b = Mf64::new(rhs);
-        let Mf64(c) = a - b;
-        0. <= c && c < 1.
+        let a = Mf64::new(lhs, 1.);
+        let b = Mf64::new(rhs, 1.);
+        let c = a - b;
+        0. <= c.v && c.v < 1.
     }
 
     #[test]
     fn multiplication() {
-        assert_eq!(*(Mf64::new(-1.125) * -22.0).as_ref(), 0.75);
+        assert_eq!(*(Mf64::new(-1.125, 1.) * -22.0).as_ref(), 0.75);
     }
 
     #[quickcheck]
     #[ignore]
     fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs);
-        let Mf64(b) = a * rhs;
-        0. <= b && b < 1.
+        let a = Mf64::new(lhs, 1.);
+        let b = a * rhs;
+        0. <= b.v && b.v < 1.
     }
 }
