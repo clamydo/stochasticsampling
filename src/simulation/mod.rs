@@ -133,9 +133,8 @@ impl<'a> Simulation<'a> {
         };
 
         for step in 1..self.settings.simulation.number_of_timesteps {
-            for (i, p) in self.state.particles.iter_mut().enumerate() {
-                *p = integrator::evolve(p, &diff, sqrt_timestep, &mut normal_sample);
-
+            for (i, mut p) in self.state.particles.iter_mut().enumerate() {
+                integrator::evolve_inplace(&mut p, &diff, sqrt_timestep, &mut normal_sample);
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,

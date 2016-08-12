@@ -1,9 +1,9 @@
 [simulation]
-timestep = 0.1
+box_size = [ 1.0, 1.0 ]
+grid_size = [ 10, 10, 6 ]
 number_of_particles = 100
 number_of_timesteps = 500
 number_of_cells = 10
-translational_diffusion_constant = 1.0
 rotational_diffusion_constant = 0.5
-grid_size = [ 10, 10, 6 ]
-box_size = [1., 1.]
+timestep = 0.1
+translational_diffusion_constant = 1.0

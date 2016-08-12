@@ -46,7 +46,7 @@ impl Distribution {
 
         let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as usize;
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as usize;
-        let ga = (p.orientation / self.grid_width.a).floor() as usize;
+        let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as usize;
 
         (gx, gy, ga)
     }
@@ -65,6 +65,7 @@ impl Distribution {
 mod tests {
     use super::*;
     use coordinates::{Particle, randomly_placed_particles};
+    use coordinates::modulofloat::Mf64;
     use coordinates::vector::Mod64Vector2;
 
     #[test]
@@ -91,8 +92,8 @@ mod tests {
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
-                position: unsafe{ Mod64Vector2::new(i.0, i.1, boxsize) },
-                orientation: i.2,
+                position: Mod64Vector2::new(i.0, i.1, boxsize),
+                orientation: Mf64::new(i.2, 2. * ::std::f64::consts::PI),
             };
 
             let mut dist = Distribution::new((10, 10, 6), boxsize);
