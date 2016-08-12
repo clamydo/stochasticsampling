@@ -3,15 +3,15 @@ mod distribution;
 mod integrator;
 
 use coordinates::{Particle, randomly_placed_particles};
-use self::distribution::Distribution;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
 use rand::distributions::{IndependentSample, Normal};
+use self::distribution::Distribution;
 use settings::Settings;
 use std::error::Error;
 use std::f64;
-use std::fmt::Display;
 use std::fmt;
+use std::fmt::Display;
 
 
 /// Error type that merges all errors that can happen during loading and parsing
@@ -96,7 +96,8 @@ impl<'a> Simulation<'a> {
 
         let state = SimulationState {
             particles: Vec::with_capacity(ranklocal_number_of_particles),
-            distribution: Distribution::new(settings.simulation.grid_size),
+            distribution: Distribution::new(settings.simulation.grid_size,
+                                            settings.simulation.box_size),
         };
 
         Simulation {
@@ -113,7 +114,8 @@ impl<'a> Simulation<'a> {
                "Placing {} particles at their initial positions.",
                self.settings.simulation.number_of_particles);
 
-        self.state.particles = randomly_placed_particles(self.number_of_particles);
+        self.state.particles = randomly_placed_particles(self.number_of_particles,
+                                                         self.settings.simulation.box_size);
 
         assert_eq!(self.state.particles.len(), self.number_of_particles);
     }

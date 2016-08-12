@@ -2,7 +2,7 @@
 
 use coordinates::Particle;
 use ndarray::{Array, Ix};
-use settings::BOXSIZE;
+use settings::{BoxSize, GridSize};
 
 #[derive(Debug)]
 struct GridWidth {
@@ -25,10 +25,10 @@ type GridCoordinate = (usize, usize, usize);
 const TWOPI: f64 = 2. * ::std::f64::consts::PI;
 
 impl Distribution {
-    pub fn new(grid: (Ix, Ix, Ix)) -> Distribution {
+    pub fn new(grid: GridSize, boxdim: BoxSize) -> Distribution {
         let grid_width = GridWidth {
-            x: BOXSIZE.0 / grid.0 as f64,
-            y: BOXSIZE.1 / grid.1 as f64,
+            x: boxdim.0 as f64 / grid.0 as f64,
+            y: boxdim.1 as f64 / grid.1 as f64,
             a: TWOPI / grid.2 as f64,
         };
 
@@ -69,8 +69,9 @@ mod tests {
 
     #[test]
     fn sample() {
-        let p = randomly_placed_particles(100);
-        let mut dist = Distribution::new((10, 10, 6));
+        let boxsize = (1., 1.);
+        let p = randomly_placed_particles(100, boxsize);
+        let mut dist = Distribution::new((10, 10, 6), boxsize);
 
         dist.sample(p);
 
@@ -81,6 +82,8 @@ mod tests {
 
     #[test]
     fn coord_to_grid() {
+        let boxsize = (1., 1.);
+
         let input =
             [(0., 0., 0.), (1., 0., 0.), (0., 1., 0.), (0., 0., 1.), (0., 0., 7.), (0., 0., -1.)];
 
@@ -88,11 +91,11 @@ mod tests {
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
-                position: Mod64Vector2::new(i.0, i.1),
+                position: Mod64Vector2::new(i.0, i.1, boxsize),
                 orientation: i.2,
             };
 
-            let mut dist = Distribution::new((10, 10, 6));
+            let mut dist = Distribution::new((10, 10, 6), boxsize);
 
             let g = dist.coord_to_grid(p);
 

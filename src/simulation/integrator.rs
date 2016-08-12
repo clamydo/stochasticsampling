@@ -15,28 +15,24 @@ pub fn evolve<F>(pos: &Particle,
     // Y is normally distributed with variance t.
     let trans_diff_step = timestep * diffusion.dt;
     let rot_diff_step = timestep * diffusion.dr;
-    let Mod64Vector2 { ref x, ref y } = pos.position;
 
     Particle {
-        position: Mod64Vector2 {
-            x: *x + c() * trans_diff_step,
-            y: *y + c() * trans_diff_step,
-        },
+        position: pos.position + c() * trans_diff_step,
         orientation: pos.orientation + c() * rot_diff_step,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use coordinates::Particle;
     use coordinates::vector::Mod64Vector2;
+    use super::*;
     use super::super::DiffusionParameter;
 
     #[test]
     fn test_evolve() {
         let mut p = Particle {
-            position: Mod64Vector2::new(0.4, 0.5),
+            position: Mod64Vector2::new(0.4, 0.5, (1., 1.)),
             orientation: 1.,
         };
 

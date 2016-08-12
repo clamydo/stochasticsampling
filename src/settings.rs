@@ -1,12 +1,12 @@
 extern crate toml;
 
+use std::convert::From;
+use std::error::Error;
+use std::fmt;
+use std::fmt::Display;
+use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::fs::File;
-use std::error::Error;
-use std::convert::From;
-use std::fmt::Display;
-use std::fmt;
 
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(RustcEncodable, RustcDecodable)]
@@ -14,18 +14,20 @@ pub struct Settings {
     pub simulation: SimulationSettings,
 }
 
-pub const BOXSIZE: (f64, f64) = (1., 1.);
+pub type BoxSize = (f64, f64);
+pub type GridSize = (usize, usize, usize);
 
 /// Holds simulation specific settings.
 #[derive(RustcEncodable, RustcDecodable)]
 pub struct SimulationSettings {
-    pub timestep: f64,
+    pub box_size: BoxSize,
+    pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub number_of_cells: usize,
-    pub translational_diffusion_constant: f64,
     pub rotational_diffusion_constant: f64,
-    pub grid_size: (usize, usize, usize),
+    pub timestep: f64,
+    pub translational_diffusion_constant: f64,
 }
 
 /// Error type that merges all errors that can happen during loading and
@@ -100,12 +102,13 @@ mod tests {
     fn read_settings() {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
-        assert_eq!(settings.simulation.timestep, 0.1);
+        assert_eq!(settings.simulation.box_size, (1., 1.));
+        assert_eq!(settings.simulation.grid_size, (10, 10, 6));
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.number_of_cells, 10);
-        assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
         assert_eq!(settings.simulation.rotational_diffusion_constant, 0.5);
-        assert_eq!(settings.simulation.grid_size, (10, 10, 6));
+        assert_eq!(settings.simulation.timestep, 0.1);
+        assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
     }
 }
