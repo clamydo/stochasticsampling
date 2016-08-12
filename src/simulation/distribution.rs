@@ -91,7 +91,7 @@ mod tests {
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
-                position: Mod64Vector2::new(i.0, i.1, boxsize),
+                position: unsafe{ Mod64Vector2::new(i.0, i.1, boxsize) },
                 orientation: i.2,
             };
 

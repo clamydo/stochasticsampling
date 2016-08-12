@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_evolve() {
         let mut p = Particle {
-            position: Mod64Vector2::new(0.4, 0.5, (1., 1.)),
+            position: unsafe { Mod64Vector2::new(0.4, 0.5, (1., 1.)) },
             orientation: 1.,
         };
 
