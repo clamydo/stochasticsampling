@@ -2,14 +2,15 @@ pub mod modulofloat;
 pub mod vector;
 
 use rand::distributions::{IndependentSample, Range};
+use self::modulofloat::Mf64;
 use self::vector::Mod64Vector2;
 use settings::BoxSize;
-use std::f64;
+use std::f64::consts::PI;
 
 #[derive(Copy, Clone)]
 pub struct Particle {
     pub position: Mod64Vector2,
-    pub orientation: f64,
+    pub orientation: Mf64,
 }
 
 
@@ -28,7 +29,7 @@ pub fn randomly_placed_particles(n: usize, boxdim: BoxSize) -> Vec<Particle> {
                                   boxdim.1 * between.ind_sample(&mut rng),
                                   boxdim)
             },
-            orientation: 2. * f64::consts::PI * between.ind_sample(&mut rng),
+            orientation: Mf64::new(2. * PI * between.ind_sample(&mut rng), 2. * PI),
         })
     }
 

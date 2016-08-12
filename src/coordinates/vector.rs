@@ -1,7 +1,5 @@
-use std::ops::Add;
-use std::ops::Mul;
-use std::ops::Sub;
-use super::modulofloat::Mf64;
+use coordinates::modulofloat::Mf64;
+use std::ops::{Add, AddAssign, Mul, Sub};
 
 #[derive(Copy, Clone)]
 pub struct Mod64Vector3 {
@@ -15,7 +13,7 @@ pub struct Mod64Vector3 {
 
 impl Mod64Vector3 {
     /// Marked as unsafe, beacuse having `m <= 0` will lead to unwanted results.
-    pub unsafe fn new(x: f64, y: f64, z: f64, m: (f64, f64, f64)) -> Mod64Vector3 {
+    pub fn new(x: f64, y: f64, z: f64, m: (f64, f64, f64)) -> Mod64Vector3 {
         Mod64Vector3 {
             x: Mf64::new(x, m.0),
             y: Mf64::new(y, m.1),
@@ -41,6 +39,24 @@ impl Add for Mod64Vector3 {
             my: self.my,
             mz: self.mz,
         }
+    }
+}
+
+
+// Implement inplace adding a value
+impl AddAssign for Mod64Vector3 {
+    fn add_assign(&mut self, _rhs: Mod64Vector3) {
+        self.x += _rhs.x;
+        self.y += _rhs.y;
+        self.z += _rhs.z;
+    }
+}
+
+impl AddAssign<f64> for Mod64Vector3 {
+    fn add_assign(&mut self, _rhs: f64) {
+        self.x += _rhs;
+        self.y += _rhs;
+        self.z += _rhs;
     }
 }
 
@@ -90,7 +106,7 @@ pub struct Mod64Vector2 {
 
 impl Mod64Vector2 {
     /// Marked as unsafe, beacuse having `m <= 0` will lead to unwanted results.
-    pub unsafe fn new(x: f64, y: f64, m: (f64, f64)) -> Mod64Vector2 {
+    pub fn new(x: f64, y: f64, m: (f64, f64)) -> Mod64Vector2 {
         Mod64Vector2 {
             x: Mf64::new(x, m.0),
             y: Mf64::new(y, m.1),
@@ -126,6 +142,21 @@ impl Add<f64> for Mod64Vector2 {
             mx: self.mx,
             my: self.my,
         }
+    }
+}
+
+// Implement inplace adding a value
+impl AddAssign for Mod64Vector2 {
+    fn add_assign(&mut self, _rhs: Mod64Vector2) {
+        self.x += _rhs.x;
+        self.y += _rhs.y;
+    }
+}
+
+impl AddAssign<f64> for Mod64Vector2 {
+    fn add_assign(&mut self, _rhs: f64) {
+        self.x += _rhs;
+        self.y += _rhs;
     }
 }
 
