@@ -23,9 +23,11 @@ pub fn randomly_placed_particles(n: usize, boxdim: BoxSize) -> Vec<Particle> {
 
     for _ in 0..n {
         particles.push(Particle {
-            position: Mod64Vector2::new(boxdim.0 * between.ind_sample(&mut rng),
-                                        boxdim.1 * between.ind_sample(&mut rng),
-                                        boxdim),
+            position: unsafe {
+                Mod64Vector2::new(boxdim.0 * between.ind_sample(&mut rng),
+                                  boxdim.1 * between.ind_sample(&mut rng),
+                                  boxdim)
+            },
             orientation: 2. * f64::consts::PI * between.ind_sample(&mut rng),
         })
     }

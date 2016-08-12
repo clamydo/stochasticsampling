@@ -26,20 +26,24 @@ pub struct Mf64 {
     pub m: f64, // divisor
 }
 
-fn modulo(f: f64, m: f64) -> f64 {
-    if m <= 0.0 {
-        panic!("Divisor must not be <= 0.0.")
-    }
+/// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.
+/// Make sure, not to do that!
+unsafe fn modulo(f: f64, m: f64) -> f64 {
+    // if m <= 0.0 {
+    //     panic!("Divisor must not be <= 0.0.")
+    // }
 
     f - (f / m).floor() * m
 }
 
 impl Mf64 {
     /// Construct a modulo float from a float.
-    pub fn new(f: f64, div: f64) -> Mf64 {
-        if f.is_nan() || f.is_infinite() {
-            panic!()
-        }
+    /// Unsafe because having NAN, INFINITE for `f` or a value `div <= 0` for
+    /// the divisor will lead to unwanted results.
+    pub unsafe fn new(f: f64, div: f64) -> Mf64 {
+        // if f.is_nan() || f.is_infinite() {
+        // panic!()
+        // }
 
         Mf64 {
             v: modulo(f, div),
@@ -54,7 +58,7 @@ impl Add for Mf64 {
     type Output = Mf64;
 
     fn add(self, other: Mf64) -> Mf64 {
-        Mf64::new(self.v + other.v, self.m)
+        unsafe { Mf64::new(self.v + other.v, self.m) }
     }
 }
 
@@ -62,7 +66,7 @@ impl Add<f64> for Mf64 {
     type Output = Mf64;
 
     fn add(self, other: f64) -> Mf64 {
-        Mf64::new(self.v + other, self.m)
+        unsafe { Mf64::new(self.v + other, self.m) }
     }
 }
 
@@ -72,7 +76,7 @@ impl Sub for Mf64 {
     type Output = Mf64;
 
     fn sub(self, rhs: Mf64) -> Mf64 {
-        Mf64::new(self.v - rhs.v, self.m)
+        unsafe { Mf64::new(self.v - rhs.v, self.m) }
     }
 }
 
@@ -80,7 +84,7 @@ impl Sub<f64> for Mf64 {
     type Output = Mf64;
 
     fn sub(self, rhs: f64) -> Mf64 {
-        Mf64::new(self.v - rhs, self.m)
+        unsafe { Mf64::new(self.v - rhs, self.m) }
     }
 }
 
@@ -90,7 +94,7 @@ impl Mul for Mf64 {
     type Output = Mf64;
 
     fn mul(self, rhs: Mf64) -> Mf64 {
-        Mf64::new(self.v * rhs.v, self.m)
+        unsafe { Mf64::new(self.v * rhs.v, self.m) }
     }
 }
 
@@ -98,7 +102,7 @@ impl Mul<f64> for Mf64 {
     type Output = Mf64;
 
     fn mul(self, rhs: f64) -> Mf64 {
-        Mf64::new(self.v * rhs, self.m)
+        unsafe { Mf64::new(self.v * rhs, self.m) }
     }
 }
 
@@ -133,30 +137,31 @@ mod tests {
     use std::f64;
     use super::*;
 
-    #[test]
-    #[should_panic]
-    fn new_nan_panic() {
-        Mf64::new(f64::NAN, 1.);
-    }
-
-    #[test]
-    #[should_panic]
-    fn new_inf_panic() {
-        Mf64::new(f64::INFINITY, 1.);
-    }
-
-    #[test]
-    #[should_panic]
-    fn new_neginf_panic() {
-        Mf64::new(f64::NEG_INFINITY, 1.);
-    }
-
-    #[test]
-    #[should_panic]
-    fn new_negdiv_panic() {
-        Mf64::new(f64::NEG_INFINITY, 0.);
-        Mf64::new(f64::NEG_INFINITY, -1.);
-    }
+    // #[test]
+    // #[should_panic]
+    // fn new_nan_panic() {
+    // Mf64::new(f64::NAN, 1.);
+    // }
+    //
+    // #[test]
+    // #[should_panic]
+    // fn new_inf_panic() {
+    // Mf64::new(f64::INFINITY, 1.);
+    // }
+    //
+    // #[test]
+    // #[should_panic]
+    // fn new_neginf_panic() {
+    // Mf64::new(f64::NEG_INFINITY, 1.);
+    // }
+    //
+    // #[test]
+    // #[should_panic]
+    // fn new_negdiv_panic() {
+    // Mf64::new(f64::NEG_INFINITY, 0.);
+    // Mf64::new(f64::NEG_INFINITY, -1.);
+    // }
+    //
 
     #[test]
     fn new() {
@@ -164,7 +169,7 @@ mod tests {
         let output = [0., 0., 0., 0., 0.7];
 
         for (i, o) in input.into_iter().zip(output.into_iter()) {
-            let a = Mf64::new(*i, 1.);
+            let a = unsafe { Mf64::new(*i, 1.) };
             assert!(a.v == *o, "a = {}, b ={}", a.v, *o);
         }
     }
@@ -175,7 +180,7 @@ mod tests {
         if f > 1. || f < 0. {
             TestResult::discard()
         } else {
-            let a = Mf64::new(f, 1.);
+            let a = unsafe { Mf64::new(f, 1.) };
             TestResult::from_bool(a.v == f)
         }
     }
@@ -183,7 +188,7 @@ mod tests {
     #[quickcheck]
     #[ignore]
     fn new_range_qc(f: f64) -> bool {
-        let a = Mf64::new(f, 1.);
+        let a = unsafe { Mf64::new(f, 1.) };
         0. <= a.v && a.v < 1.
     }
 
@@ -192,11 +197,11 @@ mod tests {
         let lhs = [0.3, 1., 0., 0., 1.];
         let rhs = [0.7, 1., 0., 1., 0.];
 
-        assert_eq!(*((Mf64::new(-1.125, 1.) + 22.5).as_ref()), 0.375);
+        assert_eq!(*((unsafe { Mf64::new(-1.125, 1.) } + 22.5).as_ref()), 0.375);
 
         for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
-            let a = Mf64::new(*l, 1.);
-            let b = Mf64::new(*r, 1.);
+            let a = unsafe { Mf64::new(*l, 1.) };
+            let b = unsafe { Mf64::new(*r, 1.) };
             let c = a + b;
             let d = a + *r;
 
@@ -221,8 +226,8 @@ mod tests {
         if range <= 0.0 {
             TestResult::discard()
         } else {
-            let a = Mf64::new(lhs, range);
-            let b = Mf64::new(rhs, range);
+            let a = unsafe { Mf64::new(lhs, range) };
+            let b = unsafe { Mf64::new(rhs, range) };
             let c = a + b;
             TestResult::from_bool(0. <= c.v && c.v < range)
         }
@@ -234,8 +239,8 @@ mod tests {
         let rhs = [6.7, 0., 1., 0., 1.];
 
         for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
-            let a = Mf64::new(*l, 1.);
-            let b = Mf64::new(*r, 1.);
+            let a = unsafe { Mf64::new(*l, 1.) };
+            let b = unsafe { Mf64::new(*r, 1.) };
             let c = a - b;
             let d = a - *r;
 
@@ -257,21 +262,21 @@ mod tests {
     #[quickcheck]
     #[ignore]
     fn substraction_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs, 1.);
-        let b = Mf64::new(rhs, 1.);
+        let a = unsafe { Mf64::new(lhs, 1.) };
+        let b = unsafe { Mf64::new(rhs, 1.) };
         let c = a - b;
         0. <= c.v && c.v < 1.
     }
 
     #[test]
     fn multiplication() {
-        assert_eq!(*(Mf64::new(-1.125, 1.) * -22.0).as_ref(), 0.75);
+        assert_eq!(*(unsafe { Mf64::new(-1.125, 1.) } * -22.0).as_ref(), 0.75);
     }
 
     #[quickcheck]
     #[ignore]
     fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs, 1.);
+        let a = unsafe { Mf64::new(lhs, 1.) };
         let b = a * rhs;
         0. <= b.v && b.v < 1.
     }
