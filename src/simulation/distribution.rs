@@ -53,11 +53,7 @@ impl Distribution {
 
     /// Naive implementation of a binning and counting algorithm.
     pub fn sample(&mut self, particles: Vec<Particle>) {
-
-        // split into subtasks
-
-
-
+        unimplemented!()
     }
 }
 
