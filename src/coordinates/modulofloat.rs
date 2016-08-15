@@ -26,11 +26,21 @@ pub struct Mf64 {
 
 /// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.
 /// Make sure, not to do that!
-unsafe fn modulo(f: f64, m: f64) -> f64 {
+fn modulo(f: f64, m: f64) -> f64 {
     f - (f / m).floor() * m
 }
 
 impl Mf64 {
+    /// Construct a modulo float from a float.
+    /// Unsafe because having NAN, INFINITE for `f` or a value `div <= 0` for
+    /// the divisor will lead to unwanted results.
+    fn unchecked_new(f: f64, div: f64) -> Mf64 {
+        Mf64 {
+            v: modulo(f, div),
+            m: div,
+        }
+    }
+
     /// Construct a modulo float from a float.
     pub fn new(f: f64, div: f64) -> Mf64 {
         if f.is_nan() || f.is_infinite() {
@@ -40,20 +50,7 @@ impl Mf64 {
             panic!("Divisor must not be <= 0.0.")
         }
 
-        Mf64 {
-            v: unsafe { modulo(f, div) },
-            m: div,
-        }
-    }
-
-    /// Construct a modulo float from a float.
-    /// Unsafe because having NAN, INFINITE for `f` or a value `div <= 0` for
-    /// the divisor will lead to unwanted results.
-    pub unsafe fn unchecked_new(f: f64, div: f64) -> Mf64 {
-        Mf64 {
-            v: modulo(f, div),
-            m: div,
-        }
+        Mf64::unchecked_new(f, div)
     }
 }
 
@@ -63,7 +60,7 @@ impl Add for Mf64 {
     type Output = Mf64;
 
     fn add(self, other: Mf64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v + other.v, self.m) }
+        Mf64::unchecked_new(self.v + other.v, self.m)
     }
 }
 
@@ -71,20 +68,20 @@ impl Add<f64> for Mf64 {
     type Output = Mf64;
 
     fn add(self, other: f64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v + other, self.m) }
+        Mf64::unchecked_new(self.v + other, self.m)
     }
 }
 
 // Implement inplace adding a value
 impl AddAssign for Mf64 {
     fn add_assign(&mut self, _rhs: Mf64) {
-        self.v = unsafe { modulo(self.v + _rhs.v, self.m) };
+        self.v = modulo(self.v + _rhs.v, self.m);
     }
 }
 
 impl AddAssign<f64> for Mf64 {
     fn add_assign(&mut self, _rhs: f64) {
-        self.v = unsafe { modulo(self.v + _rhs, self.m) };
+        self.v = modulo(self.v + _rhs, self.m);
     }
 }
 
@@ -94,7 +91,7 @@ impl Sub for Mf64 {
     type Output = Mf64;
 
     fn sub(self, rhs: Mf64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v - rhs.v, self.m) }
+        Mf64::unchecked_new(self.v - rhs.v, self.m)
     }
 }
 
@@ -102,7 +99,20 @@ impl Sub<f64> for Mf64 {
     type Output = Mf64;
 
     fn sub(self, rhs: f64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v - rhs, self.m) }
+        Mf64::unchecked_new(self.v - rhs, self.m)
+    }
+}
+
+// Implement inplace subtraction
+impl SubAssign for Mf64 {
+    fn sub_assign(&mut self, _rhs: Mf64) {
+        self.v = modulo(self.v - _rhs.v, self.m);
+    }
+}
+
+impl SubAssign<f64> for Mf64 {
+    fn sub_assign(&mut self, _rhs: f64) {
+        self.v = modulo(self.v - _rhs, self.m);
     }
 }
 
@@ -112,7 +122,7 @@ impl Mul for Mf64 {
     type Output = Mf64;
 
     fn mul(self, rhs: Mf64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v * rhs.v, self.m) }
+        Mf64::unchecked_new(self.v * rhs.v, self.m)
     }
 }
 
@@ -120,7 +130,20 @@ impl Mul<f64> for Mf64 {
     type Output = Mf64;
 
     fn mul(self, rhs: f64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v * rhs, self.m) }
+        Mf64::unchecked_new(self.v * rhs, self.m)
+    }
+}
+
+// Implement inplace multiplication
+impl MulAssign for Mf64 {
+    fn mul_assign(&mut self, _rhs: Mf64) {
+        self.v = modulo(self.v * _rhs.v, self.m);
+    }
+}
+
+impl MulAssign<f64> for Mf64 {
+    fn mul_assign(&mut self, _rhs: f64) {
+        self.v = modulo(self.v * _rhs, self.m);
     }
 }
 
@@ -130,7 +153,7 @@ impl Div for Mf64 {
     type Output = Mf64;
 
     fn div(self, rhs: Mf64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v / rhs.v, self.m) }
+        Mf64::unchecked_new(self.v / rhs.v, self.m)
     }
 }
 
@@ -138,7 +161,20 @@ impl Div<f64> for Mf64 {
     type Output = Mf64;
 
     fn div(self, rhs: f64) -> Mf64 {
-        unsafe { Mf64::unchecked_new(self.v / rhs, self.m) }
+        Mf64::unchecked_new(self.v / rhs, self.m)
+    }
+}
+
+// Implement inplace multiplication
+impl DivAssign for Mf64 {
+    fn div_assign(&mut self, _rhs: Mf64) {
+        self.v = modulo(self.v / _rhs.v, self.m);
+    }
+}
+
+impl DivAssign<f64> for Mf64 {
+    fn div_assign(&mut self, _rhs: f64) {
+        self.v = modulo(self.v / _rhs, self.m);
     }
 }
 
@@ -300,7 +336,7 @@ mod tests {
     }
 
     #[test]
-    fn substraction() {
+    fn subtraction() {
         let lhs = [3.7, 0., 1., 1., 0.];
         let rhs = [6.7, 0., 1., 0., 1.];
 
@@ -325,9 +361,39 @@ mod tests {
         }
     }
 
+    #[test]
+    fn subtraction_assign() {
+        let lhs = [3.7, 0., 1., 1., 0.];
+        let rhs = [6.7, 0., 1., 0., 1.];
+
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
+            let mut a = Mf64::new(*l, 1.);
+            let b = Mf64::new(*r, 1.);
+
+            a -= b;
+
+            assert!(0. <= a.v && a.v < 1., "a = {:?}, b = {:?}", a, b);
+            assert_eq!(a.v, 0.);
+        }
+    }
+
+    #[test]
+    fn subtraction_scalar_assign() {
+        let lhs = [3.7, 0., 1., 1., 0.];
+        let rhs = [6.7, 0., 1., 0., 1.];
+
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
+            let mut a = Mf64::new(*l, 1.);
+            a -= *r;
+
+            assert!(0. <= a.v && a.v < 1., "a = {:?}", a);
+            assert_eq!(a.v, 0.);
+        }
+    }
+
     #[quickcheck]
     #[ignore]
-    fn substraction_range_qc(lhs: f64, rhs: f64) -> bool {
+    fn subtraction_range_qc(lhs: f64, rhs: f64) -> bool {
         let a = Mf64::new(lhs, 1.);
         let b = Mf64::new(rhs, 1.);
         let c = a - b;
@@ -339,11 +405,73 @@ mod tests {
         assert_eq!(*(Mf64::new(-1.125, 1.) * -22.0).as_ref(), 0.75);
     }
 
+    #[test]
+    fn multiplication_assign() {
+        let lhs = [1., 0., 1.];
+        let rhs = [2., 2., 1.];
+
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
+            let mut a = Mf64::new(*l, 1.);
+            let b = Mf64::new(*r, 1.);
+
+            a *= b;
+
+            assert!(0. <= a.v && a.v < 1., "a = {:?}, b = {:?}", a, b);
+            assert_eq!(a.v, 0.);
+        }
+    }
+
+    #[test]
+    fn multiplication_scalar_assign() {
+        let lhs = [1., 0., 1.];
+        let rhs = [2., 2., 1.];
+
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
+            let mut a = Mf64::new(*l, 1.);
+
+            a *= *r;
+
+            assert!(0. <= a.v && a.v < 1., "a = {:?}", a);
+            assert_eq!(a.v, 0.);
+        }
+    }
+
     #[quickcheck]
     #[ignore]
     fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
         let a = Mf64::new(lhs, 1.);
         let b = a * rhs;
         0. <= b.v && b.v < 1.
+    }
+
+    #[test]
+    fn division_assign() {
+        let lhs = [0.];
+        let rhs = [0.5];
+
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
+            let mut a = Mf64::new(*l, 1.);
+            let b = Mf64::new(*r, 1.);
+
+            a /= b;
+
+            assert!(0. <= a.v && a.v < 1., "a = {:?}, b = {:?}", a, b);
+            assert_eq!(a.v, 0.);
+        }
+    }
+
+    #[test]
+    fn division_scalar_assign() {
+        let lhs = [2., 0., 1.];
+        let rhs = [2., 2., 1.];
+
+        for (l, r) in lhs.into_iter().zip(rhs.into_iter()) {
+            let mut a = Mf64::new(*l, 1.);
+
+            a /= *r;
+
+            assert!(0. <= a.v && a.v < 1., "a = {:?}", a);
+            assert_eq!(a.v, 0.);
+        }
     }
 }
