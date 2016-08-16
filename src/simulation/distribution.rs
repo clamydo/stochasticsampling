@@ -45,6 +45,7 @@ impl Distribution {
     }
 
     /// Maps particle coordinate onto grid coordinate/index (starting from zero).
+    /// Caution: It's a bit quiry, because of floating point arithmetics.
     fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
 
         let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as usize;
@@ -65,6 +66,7 @@ impl Distribution {
         }
     }
 
+    /// Returns a normalised distribution array
     pub fn normalized(&self) -> Bins {
         let n = self.dist.fold(0., |sum, x| sum + x);
         self.dist.clone() / n
@@ -108,15 +110,17 @@ mod tests {
         let boxsize = (1., 1.);
         let mut d = Distribution::new((5, 5, 2), boxsize);
         let p2 = vec!{
-            Particle::new(0.6, 0.3, 0., boxsize),
-            Particle::new(0.65, 0.3, 2., boxsize),
+            // Caution, 0.6 / 0.2 = 0.29999 in floating point arithmetic
+            Particle::new(0.55, 0.3, 0., boxsize),
+            Particle::new(0.61, 0.3, 2., boxsize),
         };
         assert_eq!(p2.len(), 2);
 
         d.sample_from(&p2);
 
         println!("{}", d.normalized());
-        assert_eq!(d.normalized()[[2, 1, 0]], 1.);
+        assert_eq!(d.normalized()[[2, 1, 0]], 0.5);
+        assert_eq!(d.normalized()[[3, 1, 0]], 0.5);
     }
 
     #[test]
