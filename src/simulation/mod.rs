@@ -1,17 +1,17 @@
+
 mod distribution;
 mod integrator;
 
-use coordinates::Particle;
-use coordinates::vector::Mod64Vector2;
-use self::distribution::Distribution;
+use coordinates::particle::Particle;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
-use rand::distributions::{IndependentSample, Normal, Range};
+use rand::distributions::{IndependentSample, Normal};
+use self::distribution::Distribution;
 use settings::Settings;
 use std::error::Error;
 use std::f64;
-use std::fmt::Display;
 use std::fmt;
+use std::fmt::Display;
 
 
 /// Error type that merges all errors that can happen during loading and parsing
@@ -35,25 +35,6 @@ impl Error for SimulationError {
 pub struct DiffusionParameter {
     dt: f64, // translational diffusion
     dr: f64, // rotational diffusion
-}
-
-/// Places n particles at random positions
-fn randomly_placed_particles(n: usize) -> Vec<Particle> {
-    let mut particles = Vec::with_capacity(n);
-
-    // initialise random particle position
-    let mut rng = ::rand::thread_rng();
-    let between1 = Range::new(0f64, 1.);
-    let between2pi = Range::new(0f64, 2. * f64::consts::PI);
-    for _ in 0..n {
-        particles.push(Particle {
-            position: Mod64Vector2::new(between1.ind_sample(&mut rng),
-                                        between1.ind_sample(&mut rng)),
-            orientation: between2pi.ind_sample(&mut rng),
-        })
-    }
-
-    particles
 }
 
 
@@ -113,9 +94,11 @@ impl<'a> Simulation<'a> {
             rank: mpi_world.rank(),
         };
 
-        let state =
-            SimulationState { particles: Vec::with_capacity(ranklocal_number_of_particles),
-            distribution: Distribution::new() };
+        let state = SimulationState {
+            particles: Vec::with_capacity(ranklocal_number_of_particles),
+            distribution: Distribution::new(settings.simulation.grid_size,
+                                            settings.simulation.box_size),
+        };
 
         Simulation {
             settings: settings,
@@ -131,7 +114,9 @@ impl<'a> Simulation<'a> {
                "Placing {} particles at their initial positions.",
                self.settings.simulation.number_of_particles);
 
-        self.state.particles = randomly_placed_particles(self.number_of_particles);
+        self.state.particles =
+            Particle::randomly_placed_particles(self.number_of_particles,
+                                                self.settings.simulation.box_size);
 
         assert_eq!(self.state.particles.len(), self.number_of_particles);
     }
@@ -149,15 +134,14 @@ impl<'a> Simulation<'a> {
         };
 
         for step in 1..self.settings.simulation.number_of_timesteps {
-            for (i, p) in self.state.particles.iter_mut().enumerate() {
-                *p = integrator::evolve(p, &diff, sqrt_timestep, &mut normal_sample);
-
+            for (i, mut p) in self.state.particles.iter_mut().enumerate() {
+                integrator::evolve_inplace(&mut p, &diff, sqrt_timestep, &mut normal_sample);
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
                     i,
-                    p.position.x.tof64(),
-                    p.position.y.tof64(),
+                    p.position.x.as_ref(),
+                    p.position.y.as_ref(),
                 );
 
             }

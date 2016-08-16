@@ -1,10 +1,7 @@
 pub mod modulofloat;
+pub mod particle;
 pub mod vector;
 
-use self::vector::Mod64Vector2;
+use std::f64::consts::PI;
 
-#[derive(Copy, Clone)]
-pub struct Particle {
-    pub position: Mod64Vector2,
-    pub orientation: f64,
-}
+pub const TWOPI: f64 = 2. * PI;

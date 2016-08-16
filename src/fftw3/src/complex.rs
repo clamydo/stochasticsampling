@@ -1,5 +1,5 @@
-use std::ops::{Add, Sub, Mul, Div};
 use num::Float;
+use std::ops::{Add, Div, Mul, Sub};
 
 /// Implement own complex representation in order to be conform with C99 memory
 /// layout.
@@ -84,8 +84,8 @@ impl<T: Float> Sub for Complex<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::Complex;
     use num::Complex as NC;
+    use super::Complex;
 
     // check against different implementation
     #[quickcheck]
