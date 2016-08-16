@@ -1,7 +1,7 @@
 /// A representation for the probability distribution function.
 
-use coordinates::Particle;
-use ndarray::{Array, Ix};
+use coordinates::particle::Particle;
+use ndarray::{Array, Ix, ArrayBase};
 use settings::{BoxSize, GridSize};
 
 #[derive(Debug)]
@@ -38,11 +38,12 @@ impl Distribution {
         }
     }
 
-    pub fn grid_size(&self) -> (Ix, Ix, Ix) {
+    pub fn shape(&self) -> (Ix, Ix, Ix) {
         self.dist.dim()
     }
-    // map particle coordinate onto grid coordinate
-    fn coord_to_grid(&self, p: Particle) -> GridCoordinate {
+
+    /// Maps particle coordinate onto grid coordinate/index (starting from zero).
+    fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
 
         let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as usize;
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as usize;
@@ -52,29 +53,46 @@ impl Distribution {
     }
 
     /// Naive implementation of a binning and counting algorithm.
-    pub fn sample(&mut self, particles: Vec<Particle>) {
-        unimplemented!()
+    pub fn sample_from(&mut self, particles: &Vec<Particle>) {
+        // zero out distribution
+        self.dist = ArrayBase::zeros(self.shape());
+
+        for p in particles {
+            let c = self.coord_to_grid(p);
+            self.dist[[c.0, c.1, c.2]] += 1.;
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use coordinates::{Particle, randomly_placed_particles};
+    use coordinates::particle::Particle;
     use coordinates::modulofloat::Mf64;
     use coordinates::vector::Mod64Vector2;
+    use ndarray::{aview0, Axis};
 
     #[test]
-    fn sample() {
+    fn new() {
+        let dist = Distribution::new((10, 10, 6), (1., 1.));
+        assert_eq!(dist.shape(), (10, 10, 6));
+    }
+
+    #[test]
+    fn sample_from() {
         let boxsize = (1., 1.);
-        let p = randomly_placed_particles(100, boxsize);
-        let mut dist = Distribution::new((10, 10, 6), boxsize);
+        let p = Particle::randomly_placed_particles(1000, boxsize);
+        let mut d = Distribution::new((5, 5, 2), boxsize);
 
-        dist.sample(p);
+        d.sample_from(&p);
 
-        for f in dist.dist.iter() {
-            println!("{}", f);
-        }
+        println!("{}", d.dist);
+
+        let sum = d.dist.sum(Axis(0)).sum(Axis(0)).sum(Axis(0));
+
+        assert_eq!(sum, aview0(&1000.));
+
+        let p = Particle::new(0.6, 0.3, 0., boxsize);
     }
 
     #[test]
@@ -92,9 +110,9 @@ mod tests {
                 orientation: Mf64::new(i.2, 2. * ::std::f64::consts::PI),
             };
 
-            let mut dist = Distribution::new((10, 10, 6), boxsize);
+            let dist = Distribution::new((10, 10, 6), boxsize);
 
-            let g = dist.coord_to_grid(p);
+            let g = dist.coord_to_grid(&p);
 
             assert!(g.0 == o.0,
                     "For input {:?}. Expected '{}', got '{}'.",

@@ -2,7 +2,7 @@
 mod distribution;
 mod integrator;
 
-use coordinates::{Particle, randomly_placed_particles};
+use coordinates::particle::Particle;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
 use rand::distributions::{IndependentSample, Normal};
@@ -114,8 +114,9 @@ impl<'a> Simulation<'a> {
                "Placing {} particles at their initial positions.",
                self.settings.simulation.number_of_particles);
 
-        self.state.particles = randomly_placed_particles(self.number_of_particles,
-                                                         self.settings.simulation.box_size);
+        self.state.particles =
+            Particle::randomly_placed_particles(self.number_of_particles,
+                                                self.settings.simulation.box_size);
 
         assert_eq!(self.state.particles.len(), self.number_of_particles);
     }
