@@ -1,7 +1,7 @@
 /// A representation for the probability distribution function.
 
 use coordinates::particle::Particle;
-use ndarray::{Array, Ix, ArrayBase, Axis};
+use ndarray::{Array, Ix, ArrayBase};
 use settings::{BoxSize, GridSize};
 
 #[derive(Debug)]
@@ -66,8 +66,7 @@ impl Distribution {
     }
 
     pub fn normalized(&self) -> Bins {
-        let n = self.dist.sum(Axis(0)).sum(Axis(0)).sum(Axis(0));
-
+        let n = self.dist.fold(0., |sum, x| sum + x);
         self.dist.clone() / n
     }
 }
@@ -78,7 +77,6 @@ mod tests {
     use coordinates::particle::Particle;
     use coordinates::modulofloat::Mf64;
     use coordinates::vector::Mod64Vector2;
-    use ndarray::{aview0, Axis};
 
     #[test]
     fn new() {
@@ -94,8 +92,8 @@ mod tests {
 
         d.sample_from(&p);
 
-        let sum = d.dist.sum(Axis(0)).sum(Axis(0)).sum(Axis(0));
-        assert_eq!(sum, aview0(&1000.));
+        let sum = d.dist.fold(0., |sum, x| sum + x);
+        assert_eq!(sum, 1000.);
 
         let p2 = vec!{Particle::new(0.6, 0.3, 0., boxsize)};
 
@@ -111,7 +109,7 @@ mod tests {
         let mut d = Distribution::new((5, 5, 2), boxsize);
         let p2 = vec!{
             Particle::new(0.6, 0.3, 0., boxsize),
-            Particle::new(0.6, 0.3, 0., boxsize),
+            Particle::new(0.65, 0.3, 2., boxsize),
         };
         assert_eq!(p2.len(), 2);
 
