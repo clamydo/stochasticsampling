@@ -1,7 +1,7 @@
 /// A representation for the probability distribution function.
 
 use coordinates::particle::Particle;
-use ndarray::{Array, Ix, ArrayBase};
+use ndarray::{Array, Ix, ArrayBase, Axis};
 use settings::{BoxSize, GridSize};
 
 #[derive(Debug)]
@@ -11,12 +11,14 @@ struct GridWidth {
     a: f64,
 }
 
+pub type Bins = Array<f64, (Ix, Ix, Ix)>;
+
 /// _Normalised_ discrete distribution. *dist* contains the probability for a
 /// particle in the box at position of first two axis and the direction of the
 /// last axis.
 #[derive(Debug)]
 pub struct Distribution {
-    pub dist: Array<f64, (Ix, Ix, Ix)>,
+    pub dist: Bins,
     grid_width: GridWidth,
 }
 
@@ -62,6 +64,12 @@ impl Distribution {
             self.dist[[c.0, c.1, c.2]] += 1.;
         }
     }
+
+    pub fn normalized(&self) -> Bins {
+        let n = self.dist.sum(Axis(0)).sum(Axis(0)).sum(Axis(0));
+
+        self.dist.clone() / n
+    }
 }
 
 #[cfg(test)]
@@ -86,13 +94,31 @@ mod tests {
 
         d.sample_from(&p);
 
-        println!("{}", d.dist);
-
         let sum = d.dist.sum(Axis(0)).sum(Axis(0)).sum(Axis(0));
-
         assert_eq!(sum, aview0(&1000.));
 
-        let p = Particle::new(0.6, 0.3, 0., boxsize);
+        let p2 = vec!{Particle::new(0.6, 0.3, 0., boxsize)};
+
+        d.sample_from(&p2);
+        println!("{}", d.dist);
+
+        assert_eq!(d.dist[[2, 1, 0]], 1.);
+    }
+
+    #[test]
+    fn normalized() {
+        let boxsize = (1., 1.);
+        let mut d = Distribution::new((5, 5, 2), boxsize);
+        let p2 = vec!{
+            Particle::new(0.6, 0.3, 0., boxsize),
+            Particle::new(0.6, 0.3, 0., boxsize),
+        };
+        assert_eq!(p2.len(), 2);
+
+        d.sample_from(&p2);
+
+        println!("{}", d.normalized());
+        assert_eq!(d.normalized()[[2, 1, 0]], 1.);
     }
 
     #[test]
