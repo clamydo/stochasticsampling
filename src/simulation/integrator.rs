@@ -16,9 +16,7 @@ pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionParameter, times
 
 #[cfg(test)]
 mod tests {
-    use coordinates::modulofloat::Mf64;
     use coordinates::particle::Particle;
-    use coordinates::vector::Mod64Vector2;
     use super::*;
     use super::super::DiffusionParameter;
 
