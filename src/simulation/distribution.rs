@@ -15,9 +15,8 @@ struct GridWidth {
 
 pub type Bins = Array<f64, (Ix, Ix, Ix)>;
 
-/// _Normalised_ discrete distribution. *dist* contains the probability for a
-/// particle in the box at position of first two axis and the direction of the
-/// last axis.
+/// Discrete distribution. *dist* contains the probability for a particle in the
+/// box at position of first two axis and the direction of the last axis.
 #[derive(Debug)]
 pub struct Distribution {
     pub dist: Bins,
