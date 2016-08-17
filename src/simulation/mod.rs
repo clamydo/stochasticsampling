@@ -1,3 +1,5 @@
+//! Module that defines data structures and algorithms for the integration of
+//! the simulation.
 mod distribution;
 mod integrator;
 
@@ -31,6 +33,7 @@ impl Error for SimulationError {
     }
 }
 
+/// Holds rotational and translational difussion parameters.
 pub struct DiffusionParameter {
     dt: f64, // translational diffusion
     dr: f64, // rotational diffusion
@@ -38,6 +41,7 @@ pub struct DiffusionParameter {
 
 
 
+/// Structure that holds state variables needed for MPI.
 #[allow(dead_code)]
 struct MPIState {
     universe: Universe,
@@ -46,6 +50,7 @@ struct MPIState {
     rank: i32,
 }
 
+/// Main data structure representing the simulation.
 pub struct Simulation<'a> {
     settings: &'a Settings,
     mpi: MPIState,
@@ -53,6 +58,8 @@ pub struct Simulation<'a> {
     number_of_particles: usize,
 }
 
+
+/// Holds the current state of the simulation.
 struct SimulationState {
     particles: Vec<Particle>,
     distribution: Distribution,
@@ -78,6 +85,8 @@ macro_rules! zdebug {
 }
 
 impl<'a> Simulation<'a> {
+    /// Return a new simulation data structure, holding the state of the
+    /// simulation.
     pub fn new(settings: &Settings) -> Simulation {
         let mpi_universe = ::mpi::initialize().unwrap();
         let mpi_world = mpi_universe.world();
@@ -108,6 +117,8 @@ impl<'a> Simulation<'a> {
     }
 
 
+    /// Initialise the initial condition of the simulation. At the moment it is
+    /// sampled from a uniform random distribution.
     pub fn init(&mut self) {
         zinfo!(self.mpi.rank,
                "Placing {} particles at their initial positions.",
@@ -120,6 +131,8 @@ impl<'a> Simulation<'a> {
         assert_eq!(self.state.particles.len(), self.number_of_particles);
     }
 
+    /// Run the simulation for the number of timesteps specified in the
+    /// settings file.
     pub fn run(&mut self) -> Result<(), SimulationError> {
 
         let sqrt_timestep = f64::sqrt(self.settings.simulation.timestep);

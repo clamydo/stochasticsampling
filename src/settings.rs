@@ -1,3 +1,4 @@
+//! This module handles a TOML settings file.
 extern crate toml;
 
 use std::convert::From;
@@ -14,7 +15,9 @@ pub struct Settings {
     pub simulation: SimulationSettings,
 }
 
+/// Size of the simulation box an arbitary physical dimensions.
 pub type BoxSize = (f64, f64);
+/// Size of the discrete grid.
 pub type GridSize = (usize, usize, usize);
 
 /// Holds simulation specific settings.

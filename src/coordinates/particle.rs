@@ -1,16 +1,22 @@
+//! Data structure representing the coordinates of a particle.
+
 use rand::distributions::{IndependentSample, Range};
 use settings::BoxSize;
 use super::TWOPI;
 use super::modulofloat::Mf64;
 use super::vector::Mod64Vector2;
 
+/// Coordinates (including the orientation) of a particle in 2D.
 #[derive(Copy, Clone)]
 pub struct Particle {
+    /// spatial position
     pub position: Mod64Vector2,
+    /// orientation of particle as an angle
     pub orientation: Mf64,
 }
 
 impl Particle {
+    /// Returns a `Particle` with given coordinates.
     pub fn new(x: f64, y: f64, a: f64, box_size: BoxSize) -> Particle {
         Particle {
             position: Mod64Vector2::new(x, y, box_size),

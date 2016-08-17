@@ -18,10 +18,13 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 
+/// This structure represents a modulo type, with modulus m.
 #[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
 pub struct Mf64 {
-    pub v: f64, // value
-    pub m: f64, // divisor
+    /// value
+    pub v: f64,
+    /// divisor/modulus
+    pub m: f64,
 }
 
 /// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.

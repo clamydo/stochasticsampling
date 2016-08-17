@@ -1,17 +1,27 @@
+//! 2D and 3D modulo vector types.
+
 use coordinates::modulofloat::Mf64;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
+/// 3D modulo vector type
 #[derive(Copy, Clone)]
 pub struct Mod64Vector3 {
+    /// x-coordinate
     pub x: Mf64,
+    /// y-coordinate
     pub y: Mf64,
+    /// z-coordinate
     pub z: Mf64,
-    pub mx: f64, // divisor
-    pub my: f64, // divisor
-    pub mz: f64, // divisor
+    /// quotient in x direction, typically the box size
+    pub mx: f64,
+    /// quotient in y direction, typically the box size
+    pub my: f64,
+    /// quotient in z direction, typically the box size
+    pub mz: f64,
 }
 
 impl Mod64Vector3 {
+    /// Returns a modulo 3D vector with the given coordinates and quotients.
     pub fn new(x: f64, y: f64, z: f64, m: (f64, f64, f64)) -> Mod64Vector3 {
         Mod64Vector3 {
             x: Mf64::new(x, m.0),
@@ -95,15 +105,22 @@ impl Mul<f64> for Mod64Vector3 {
 
 // implement 2D version
 
+/// 2D modulo vector type
 #[derive(Copy, Clone)]
 pub struct Mod64Vector2 {
+    /// x-coordinate
     pub x: Mf64,
+    /// y-coordinate
     pub y: Mf64,
+    /// quotient in x direction, typically the box size
     pub mx: f64,
+    /// quotient in y direction, typically the box size
     pub my: f64,
 }
 
+
 impl Mod64Vector2 {
+    /// Returns a modulo 3D vector with the given coordinates and quotients.
     pub fn new(x: f64, y: f64, m: (f64, f64)) -> Mod64Vector2 {
         Mod64Vector2 {
             x: Mf64::new(x, m.0),
