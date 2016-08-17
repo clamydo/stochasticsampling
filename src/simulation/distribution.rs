@@ -13,10 +13,16 @@ struct GridWidth {
     a: f64,
 }
 
+/// Array type, that holds the bins. Since the distribution can be normalised,
+/// and thus contain non-integer values, the type f64 was choses for ergnomic
+/// reasons.
 pub type Bins = Array<f64, (Ix, Ix, Ix)>;
 
-/// Discrete distribution. *dist* contains the probability for a particle in the
-/// box at position of first two axis and the direction of the last axis.
+/// Discrete distribution.
+///
+/// `dist` contains the probability for a particle in the box at position of
+/// first two axis and the direction of the last axis.
+/// `grid_width` contains the size of a unit cell of the grid.
 #[derive(Debug)]
 pub struct Distribution {
     pub dist: Bins,
@@ -26,6 +32,7 @@ pub struct Distribution {
 type GridCoordinate = [usize; 3];
 
 impl Distribution {
+    /// Returns a zero initialised instance of Distribution.
     pub fn new(grid: GridSize, boxdim: BoxSize) -> Distribution {
         let grid_width = GridWidth {
             x: boxdim.0 as f64 / grid.0 as f64,
@@ -54,7 +61,8 @@ impl Distribution {
         [gx, gy, ga]
     }
 
-    /// Naive implementation of a binning and counting algorithm.
+    /// Builts up a histogram in space and orientation for a give particle
+    /// configuration `particles`.
     pub fn sample_from(&mut self, particles: &Vec<Particle>) {
         // zero out distribution
         self.dist = ArrayBase::zeros(self.shape());
@@ -72,7 +80,13 @@ impl Distribution {
         self.dist.clone() / n
     }
 
-    /// Returns spatial gradient as an array
+    /// Returns spatial gradient as an array.
+    /// The first axis specifies the direction of the derivative, the component
+    /// of the gradient, whereas the other axises are the same as for the
+    /// distribution.
+    ///
+    /// The derivative is implemented as a symmetric finite differential
+    /// quotient with wrap around coordinates.
     pub fn spatgrad(&self) -> Array<f64, (Ix, Ix, Ix, Ix)> {
         let (sx, sy, sa) = self.shape();
         let mut res = ArrayBase::zeros((2, sx, sy, sa));
@@ -84,7 +98,7 @@ impl Distribution {
         for (i, _) in self.dist.indexed_iter() {
             let (ix, iy, ia) = i;
 
-            // Make index wraparound because of periodic boundary conditions.
+            // Make index wrap around because of periodic boundary conditions.
             // Does not use index operation of Distribution, because this is
             // cheaper as it only has to wrap around one dimension at a time.
             let xm = (ix + sx - 1) % sx;
@@ -180,19 +194,18 @@ mod tests {
         let boxsize = (1., 1.);
 
         let input = [[0., 0., 0.],
-             [1., 0., 0.],
-             [0., 1., 0.],
-             [0., 0., 1.],
-             [0., 0., 7.],
-             [0., 0., -1.]];
+                     [1., 0., 0.],
+                     [0., 1., 0.],
+                     [0., 0., 1.],
+                     [0., 0., 7.],
+                     [0., 0., -1.]];
 
-        let result = [
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 5]];
+        let result = [[0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 5]];
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
@@ -228,11 +241,13 @@ mod tests {
         let shape = (5, 5, 1);
         let mut d = Distribution::new(shape, boxsize);
 
-        d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
-                        [[2.], [3.], [4.], [5.], [6.]],
-                        [[3.], [4.], [5.], [6.], [7.]],
-                        [[4.], [5.], [6.], [7.], [8.]],
-                        [[5.], [6.], [7.], [8.], [9.]]]);
+        d.dist = arr3(&
+            [[[1.], [2.], [3.], [4.], [5.]],
+             [[2.], [3.], [4.], [5.], [6.]],
+             [[3.], [4.], [5.], [6.], [7.]],
+             [[4.], [5.], [6.], [7.], [8.]],
+             [[5.], [6.], [7.], [8.], [9.]]]
+         );
 
         let res_x = arr3(&
             [[[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]],
@@ -271,13 +286,13 @@ mod tests {
         d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]],
                         [[4., 4.5], [5., 5.5], [6., 6.5]]]);
 
-        assert_eq!(d[[0, 0, 0]], 1.);
-        assert_eq!(d[[-1, 0, 0]], 4.);
-        assert_eq!(d[[-9, 0, 0]], 4.);
-        assert_eq!(d[[-9, -3, 0]], 4.);
-        assert_eq!(d[[0, -3, 0]], 1.);
-        assert_eq!(d[[21, -3, 0]], 4.);
+        assert_eq!(d[[ 0,  0, 0]], 1.0);
+        assert_eq!(d[[-1,  0, 0]], 4.0);
+        assert_eq!(d[[-9,  0, 0]], 4.0);
+        assert_eq!(d[[-9, -3, 0]], 4.0);
+        assert_eq!(d[[ 0, -3, 0]], 1.0);
+        assert_eq!(d[[21, -3, 0]], 4.0);
         assert_eq!(d[[21, -3, 3]], 4.5);
-        assert_eq!(d[[21, -3, 4]], 4.);
+        assert_eq!(d[[21, -3, 4]], 4.0);
     }
 }
