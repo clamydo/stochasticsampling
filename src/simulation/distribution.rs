@@ -3,6 +3,7 @@
 use coordinates::particle::Particle;
 use ndarray::{Array, Ix, ArrayBase};
 use settings::{BoxSize, GridSize};
+use std::ops::Index;
 
 #[derive(Debug)]
 struct GridWidth {
@@ -100,6 +101,26 @@ impl Distribution {
         }
 
         res
+    }
+}
+
+/// Implement index operator that wraps around for periodic boundaries.
+impl Index<[i32; 3]> for Distribution {
+    type Output = f64;
+
+    fn index<'a>(&'a self, index: [i32; 3]) -> &'a f64 {
+
+        fn wrap(i: i32, b: i32) -> usize {
+            (((i % b) + b) % b) as usize
+        }
+
+        let (sx, sy, sa) = self.shape();
+        unsafe {
+            self.dist.uget((
+            wrap(index[0], sx as i32),
+            wrap(index[1], sy as i32),
+            wrap(index[2], sa as i32),
+        )) }
     }
 }
 
@@ -229,5 +250,24 @@ mod tests {
 
         d.dist = Array::zeros(shape) + 1.;
         assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
+    }
+
+    #[test]
+    fn index() {
+        let boxsize = (1., 1.);
+        let shape = (2, 3, 2);
+        let mut d = Distribution::new(shape, boxsize);
+
+        d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]],
+                        [[4., 4.5], [5., 5.5], [6., 6.5]]]);
+
+        assert_eq!(d[[0, 0, 0]], 1.);
+        assert_eq!(d[[-1, 0, 0]], 4.);
+        assert_eq!(d[[-9, 0, 0]], 4.);
+        assert_eq!(d[[-9, -3, 0]], 4.);
+        assert_eq!(d[[0, -3, 0]], 1.);
+        assert_eq!(d[[21, -3, 0]], 4.);
+        assert_eq!(d[[21, -3, 3]], 4.5);
+        assert_eq!(d[[21, -3, 4]], 4.);
     }
 }
