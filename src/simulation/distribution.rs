@@ -48,9 +48,9 @@ impl Distribution {
     /// Caution: It's a bit quiry, because of floating point arithmetics.
     fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
 
-        let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as usize;
-        let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as usize;
-        let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as usize;
+        let gx = (*p.position.x.as_ref() / self.grid_width.x).floor() as usize;
+        let gy = (*p.position.y.as_ref() / self.grid_width.y).floor() as usize;
+        let ga = (*p.orientation.as_ref() / self.grid_width.a).floor() as usize;
 
         (gx, gy, ga)
     }
@@ -68,8 +68,38 @@ impl Distribution {
 
     /// Returns a normalised distribution array
     pub fn normalized(&self) -> Bins {
+        // number of particles
         let n = self.dist.fold(0., |sum, x| sum + x);
         self.dist.clone() / n
+    }
+
+    /// Returns spatial gradient as an array
+    pub fn spatgrad(&self) -> Array<f64, (Ix, Ix, Ix, Ix)> {
+        let (sx, sy, sa) = self.shape();
+        let mut res = ArrayBase::zeros((2, sx, sy, sa));
+
+        let ref h = self.grid_width;
+        let hx = 2. * h.x;
+        let hy = 2. * h.y;
+
+        for (i, _) in self.dist.indexed_iter() {
+            let (ix, iy, ia) = i;
+
+            // make index wraparound because of periodic boundary conditions
+            let xm = (ix + sx - 1) % sx;
+            let xp = (ix + 1) % sx;
+            res[(0, ix, iy, ia)] = unsafe {
+                (self.dist.uget((xp, iy, ia)) - self.dist.uget((xm, iy, ia))) / hx
+            };
+
+            let ym = (iy + sy - 1) % sy;
+            let yp = (iy + 1) % sy;
+            res[(1, ix, iy, ia)] = unsafe {
+                (self.dist.uget((ix, yp, ia)) - self.dist.uget((ix, ym, ia))) / hy
+            };
+        }
+
+        res
     }
 }
 
@@ -79,6 +109,7 @@ mod tests {
     use coordinates::particle::Particle;
     use coordinates::modulofloat::Mf64;
     use coordinates::vector::Mod64Vector2;
+    use ndarray::{Array, arr3, Axis};
 
     #[test]
     fn new() {
@@ -158,5 +189,45 @@ mod tests {
                     o.2,
                     g.2);
         }
+    }
+
+    #[test]
+    fn spatgrad() {
+        let boxsize = (1., 1.);
+        let shape = (5, 5, 1);
+        let mut d = Distribution::new(shape, boxsize);
+
+        d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
+                        [[2.], [3.], [4.], [5.], [6.]],
+                        [[3.], [4.], [5.], [6.], [7.]],
+                        [[4.], [5.], [6.], [7.], [8.]],
+                        [[5.], [6.], [7.], [8.], [9.]]]);
+
+        let res_x = arr3(&
+            [[[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]],
+             [[ 5.0], [ 5.0], [ 5.0], [ 5.0], [ 5.0]],
+             [[ 5.0], [ 5.0], [ 5.0], [ 5.0], [ 5.0]],
+             [[ 5.0], [ 5.0], [ 5.0], [ 5.0], [ 5.0]],
+             [[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]]]
+        );
+
+        let res_y = arr3(&
+            [[[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+             [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+             [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+             [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+             [[-7.5], [5.0], [5.0], [5.0], [-7.5]]]
+        );
+
+        let grad = d.spatgrad();
+
+        assert!(grad.subview(Axis(0), 0) == res_x);
+        assert!(grad.subview(Axis(0), 1) == res_y);
+
+        d.dist = Array::zeros(shape);
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
+
+        d.dist = Array::zeros(shape) + 1.;
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
     }
 }

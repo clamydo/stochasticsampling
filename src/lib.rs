@@ -9,6 +9,7 @@ extern crate quickcheck;
 extern crate log;
 
 extern crate mpi;
+#[macro_use(s)]
 extern crate ndarray;
 extern crate rand;
 extern crate rustc_serialize;
