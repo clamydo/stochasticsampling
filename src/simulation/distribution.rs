@@ -1,8 +1,8 @@
-/// A representation for the probability distribution function.
+//! A representation for the probability distribution function.
 
-use coordinates::particle::Particle;
 use coordinates::TWOPI;
-use ndarray::{Array, Ix, ArrayBase};
+use coordinates::particle::Particle;
+use ndarray::{Array, ArrayBase, Ix};
 use settings::{BoxSize, GridSize};
 use std::ops::Index;
 
@@ -50,7 +50,8 @@ impl Distribution {
         self.dist.dim()
     }
 
-    /// Maps particle coordinate onto grid coordinate/index (starting from zero).
+    /// Maps particle coordinate onto grid coordinate/index (starting from
+    /// zero).
     /// Caution: It's a bit quiry, because of floating point arithmetics.
     fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
 
@@ -103,15 +104,13 @@ impl Distribution {
             // cheaper as it only has to wrap around one dimension at a time.
             let xm = (ix + sx - 1) % sx;
             let xp = (ix + 1) % sx;
-            res[(0, ix, iy, ia)] = unsafe {
-                (self.dist.uget((xp, iy, ia)) - self.dist.uget((xm, iy, ia))) / hx
-            };
+            res[(0, ix, iy, ia)] =
+                unsafe { (self.dist.uget((xp, iy, ia)) - self.dist.uget((xm, iy, ia))) / hx };
 
             let ym = (iy + sy - 1) % sy;
             let yp = (iy + 1) % sy;
-            res[(1, ix, iy, ia)] = unsafe {
-                (self.dist.uget((ix, yp, ia)) - self.dist.uget((ix, ym, ia))) / hy
-            };
+            res[(1, ix, iy, ia)] =
+                unsafe { (self.dist.uget((ix, yp, ia)) - self.dist.uget((ix, ym, ia))) / hy };
         }
 
         res
@@ -130,21 +129,20 @@ impl Index<[i32; 3]> for Distribution {
 
         let (sx, sy, sa) = self.shape();
         unsafe {
-            self.dist.uget((
-            wrap(index[0], sx as i32),
-            wrap(index[1], sy as i32),
-            wrap(index[2], sa as i32),
-        )) }
+            self.dist.uget((wrap(index[0], sx as i32),
+                            wrap(index[1], sy as i32),
+                            wrap(index[2], sa as i32)))
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use coordinates::particle::Particle;
     use coordinates::modulofloat::Mf64;
+    use coordinates::particle::Particle;
     use coordinates::vector::Mod64Vector2;
-    use ndarray::{Array, arr3, Axis};
+    use ndarray::{Array, Axis, arr3};
+    use super::*;
 
     #[test]
     fn new() {
@@ -163,7 +161,7 @@ mod tests {
         let sum = d.dist.fold(0., |s, x| s + x);
         assert_eq!(sum, 1000.);
 
-        let p2 = vec!{Particle::new(0.6, 0.3, 0., boxsize)};
+        let p2 = vec![Particle::new(0.6, 0.3, 0., boxsize)];
 
         d.sample_from(&p2);
         println!("{}", d.dist);
@@ -193,19 +191,10 @@ mod tests {
     fn coord_to_grid() {
         let boxsize = (1., 1.);
 
-        let input = [[0., 0., 0.],
-                     [1., 0., 0.],
-                     [0., 1., 0.],
-                     [0., 0., 1.],
-                     [0., 0., 7.],
-                     [0., 0., -1.]];
+        let input =
+            [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.], [0., 0., 7.], [0., 0., -1.]];
 
-        let result = [[0, 0, 0],
-                      [0, 0, 0],
-                      [0, 0, 0],
-                      [0, 0, 0],
-                      [0, 0, 0],
-                      [0, 0, 5]];
+        let result = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 5]];
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
@@ -241,29 +230,23 @@ mod tests {
         let shape = (5, 5, 1);
         let mut d = Distribution::new(shape, boxsize);
 
-        d.dist = arr3(&
-            [[[1.], [2.], [3.], [4.], [5.]],
-             [[2.], [3.], [4.], [5.], [6.]],
-             [[3.], [4.], [5.], [6.], [7.]],
-             [[4.], [5.], [6.], [7.], [8.]],
-             [[5.], [6.], [7.], [8.], [9.]]]
-         );
+        d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
+                        [[2.], [3.], [4.], [5.], [6.]],
+                        [[3.], [4.], [5.], [6.], [7.]],
+                        [[4.], [5.], [6.], [7.], [8.]],
+                        [[5.], [6.], [7.], [8.], [9.]]]);
 
-        let res_x = arr3(&
-            [[[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]],
-             [[ 5.0], [ 5.0], [ 5.0], [ 5.0], [ 5.0]],
-             [[ 5.0], [ 5.0], [ 5.0], [ 5.0], [ 5.0]],
-             [[ 5.0], [ 5.0], [ 5.0], [ 5.0], [ 5.0]],
-             [[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]]]
-        );
+        let res_x = arr3(&[[[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]],
+                           [[5.0], [5.0], [5.0], [5.0], [5.0]],
+                           [[5.0], [5.0], [5.0], [5.0], [5.0]],
+                           [[5.0], [5.0], [5.0], [5.0], [5.0]],
+                           [[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]]]);
 
-        let res_y = arr3(&
-            [[[-7.5], [5.0], [5.0], [5.0], [-7.5]],
-             [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
-             [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
-             [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
-             [[-7.5], [5.0], [5.0], [5.0], [-7.5]]]
-        );
+        let res_y = arr3(&[[[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+                           [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+                           [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+                           [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+                           [[-7.5], [5.0], [5.0], [5.0], [-7.5]]]);
 
         let grad = d.spatgrad();
 
@@ -283,14 +266,13 @@ mod tests {
         let shape = (2, 3, 2);
         let mut d = Distribution::new(shape, boxsize);
 
-        d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]],
-                        [[4., 4.5], [5., 5.5], [6., 6.5]]]);
+        d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]], [[4., 4.5], [5., 5.5], [6., 6.5]]]);
 
-        assert_eq!(d[[ 0,  0, 0]], 1.0);
-        assert_eq!(d[[-1,  0, 0]], 4.0);
-        assert_eq!(d[[-9,  0, 0]], 4.0);
+        assert_eq!(d[[0, 0, 0]], 1.0);
+        assert_eq!(d[[-1, 0, 0]], 4.0);
+        assert_eq!(d[[-9, 0, 0]], 4.0);
         assert_eq!(d[[-9, -3, 0]], 4.0);
-        assert_eq!(d[[ 0, -3, 0]], 1.0);
+        assert_eq!(d[[0, -3, 0]], 1.0);
         assert_eq!(d[[21, -3, 0]], 4.0);
         assert_eq!(d[[21, -3, 3]], 4.5);
         assert_eq!(d[[21, -3, 4]], 4.0);
