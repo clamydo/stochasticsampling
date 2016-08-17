@@ -86,7 +86,9 @@ impl Distribution {
         for (i, _) in self.dist.indexed_iter() {
             let (ix, iy, ia) = i;
 
-            // make index wraparound because of periodic boundary conditions
+            // Make index wraparound because of periodic boundary conditions.
+            // Does not use index operation of Distribution, because this is
+            // cheaper as it only has to wrap around one dimension at a time.
             let xm = (ix + sx - 1) % sx;
             let xp = (ix + 1) % sx;
             res[(0, ix, iy, ia)] = unsafe {
