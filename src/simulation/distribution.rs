@@ -64,7 +64,7 @@ impl Distribution {
 
     /// Builts up a histogram in space and orientation for a give particle
     /// configuration `particles`.
-    pub fn sample_from(&mut self, particles: &Vec<Particle>) {
+    pub fn sample_from(&mut self, particles: &[Particle]) {
         // zero out distribution
         self.dist = ArrayBase::zeros(self.shape());
 
@@ -92,7 +92,7 @@ impl Distribution {
         let (sx, sy, sa) = self.shape();
         let mut res = ArrayBase::zeros((2, sx, sy, sa));
 
-        let ref h = self.grid_width;
+        let h = &self.grid_width;
         let hx = 2. * h.x;
         let hy = 2. * h.y;
 
@@ -121,7 +121,7 @@ impl Distribution {
 impl Index<[i32; 3]> for Distribution {
     type Output = f64;
 
-    fn index<'a>(&'a self, index: [i32; 3]) -> &'a f64 {
+    fn index(&self, index: [i32; 3]) -> &f64 {
 
         fn wrap(i: i32, b: i32) -> usize {
             (((i % b) + b) % b) as usize
