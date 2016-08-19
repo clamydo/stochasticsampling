@@ -1,6 +1,27 @@
+
+use coordinates::TWOPI;
 use coordinates::particle::Particle;
+use ndarray::{Array, Ix};
+use settings::GridSize;
 use super::DiffusionParameter;
 
+/// Holds precomuted values
+pub struct Integrator {
+    /// First axis holds submatrices for different discrete angles.
+    stress: Array<f64, (Ix, Ix, Ix)>,
+}
+
+impl Integrator {
+    pub fn init(grid_size: GridSize) {
+        let s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
+        let angles = Array::linspace(0., TWOPI, grid_size.2);
+
+        // s.slice_mut(s![.., 0, 0]) = angles.map(|x| 0.5 * f64::cos(2. * x));
+        // s.slice_mut(s![.., 0, 1]) = angles.map(|x| 0.5 * f64::cos(2. * x));
+        // s.slice_mut(s![.., 0, 0]) = angles.map(|x| 0.5 * f64::cos(2. * x));
+        // s.slice_mut(s![.., 0, 0]) = angles.map(|x| 0.5 * f64::cos(2. * x));
+    }
+}
 
 pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionParameter, timestep: f64, mut c: F)
     where F: FnMut() -> f64
@@ -13,6 +34,8 @@ pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionParameter, times
     p.position += c() * trans_diff_step;
     p.orientation += c() * rot_diff_step;
 }
+
+
 
 
 

@@ -33,13 +33,13 @@ impl Error for SimulationError {
     }
 }
 
+
+
 /// Holds rotational and translational difussion parameters.
 pub struct DiffusionParameter {
     dt: f64, // translational diffusion
     dr: f64, // rotational diffusion
 }
-
-
 
 /// Structure that holds state variables needed for MPI.
 #[allow(dead_code)]

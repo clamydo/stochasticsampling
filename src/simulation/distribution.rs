@@ -18,14 +18,17 @@ struct GridWidth {
 /// reasons.
 pub type Bins = Array<f64, (Ix, Ix, Ix)>;
 
-/// Discrete distribution.
-///
-/// `dist` contains the probability for a particle in the box at position of
-/// first two axis and the direction of the last axis.
-/// `grid_width` contains the size of a unit cell of the grid.
+/// Holds a sampled distribution function on a grid, assuming the sampling
+/// points to be centered in a grid cell. This means, that the value at
+/// position `x_j` (for `j=0,...,N-1`, on a grid with `N` cells and
+/// `x_0 = w/2``) is the average of particles in the interval `[x_j -
+/// w/2, x_j + w/2]`, with the grid width `w`.
 #[derive(Debug)]
 pub struct Distribution {
+    /// `dist` contains the probability for a particle in the box at position of
+    /// first two axis and the direction of the last axis.
     pub dist: Bins,
+    /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
 }
 
@@ -50,35 +53,43 @@ impl Distribution {
         self.dist.dim()
     }
 
-    /// Maps particle coordinate onto grid coordinate/index (starting from
-    /// zero).
-    /// Caution: It's a bit quiry, because of floating point arithmetics.
-    fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
-
-        let gx = (*p.position.x.as_ref() / self.grid_width.x).floor() as usize;
-        let gy = (*p.position.y.as_ref() / self.grid_width.y).floor() as usize;
-        let ga = (*p.orientation.as_ref() / self.grid_width.a).floor() as usize;
+    /// Transforms a continous particle coorinate into a discrete grid
+    /// coordinate. Maps particle inside an volume *centered* around the grid
+    /// point to that grid point.
+    /// The first grid point does not lie on the box border, but a half cell
+    /// width from it.
+    pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
+        let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as usize;
+        let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as usize;
+        let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as usize;
 
         [gx, gy, ga]
     }
 
-    /// Builts up a histogram in space and orientation for a give particle
-    /// configuration `particles`.
-    pub fn sample_from(&mut self, particles: &[Particle]) {
+    fn histogram_from(&mut self, particles: &[Particle]) {
         // zero out distribution
-        self.dist = ArrayBase::zeros(self.shape());
+        for i in self.dist.iter_mut() {
+            *i = 0.0;
+        }
 
+        // build histogram
         for p in particles {
             let c = self.coord_to_grid(p);
             self.dist[c] += 1.;
         }
     }
 
-    /// Returns a normalised distribution array
-    pub fn normalized(&self) -> Bins {
-        // number of particles
-        let n = self.dist.fold(0., |sum, x| sum + x);
-        self.dist.clone() / n
+    /// Estimates the approximate values for the distribution function at the
+    /// grid points using grid cell averages.
+    pub fn sample_from(&mut self, particles: &[Particle]) {
+        self.histogram_from(&particles);
+
+        // Scale by grid cell volume, in order to arrive at a sampled function,
+        // averaged over a grid cell. Missing this would result into the
+        // integral over/ the grid cell volume at a given grid coordinate and
+        // not the approximate value of the distribution function.
+        let GridWidth { x: gx, y: gy, a: ga } = self.grid_width;
+        self.dist /= gx * gy * ga;
     }
 
     /// Returns spatial gradient as an array.
@@ -142,6 +153,7 @@ mod tests {
     use coordinates::particle::Particle;
     use coordinates::vector::Mod64Vector2;
     use ndarray::{Array, Axis, arr3};
+    use std::f64::EPSILON;
     use super::*;
 
     #[test]
@@ -151,57 +163,74 @@ mod tests {
     }
 
     #[test]
+    fn histogram() {
+        let boxsize = (1., 1.);
+        let grid_size = (5, 5, 2);
+        let n = 1000;
+        let p = Particle::randomly_placed_particles(n, boxsize);
+        let mut d = Distribution::new(grid_size, boxsize);
+
+        d.histogram_from(&p);
+
+        let sum = d.dist.fold(0., |s, x| s + x);
+        assert_eq!(sum, n as f64);
+
+        let p2 = vec![Particle::new(0.6, 0.3, 0., boxsize)];
+
+        d.histogram_from(&p2);
+        println!("{}", d.dist);
+
+        assert_eq!(d.dist[[2, 1, 0]], 1.0);
+    }
+
+    #[test]
     fn sample_from() {
         let boxsize = (1., 1.);
-        let p = Particle::randomly_placed_particles(1000, boxsize);
-        let mut d = Distribution::new((5, 5, 2), boxsize);
+        let grid_size = (5, 5, 2);
+        let n = 1000;
+        let p = Particle::randomly_placed_particles(n, boxsize);
+        let mut d = Distribution::new(grid_size, boxsize);
 
         d.sample_from(&p);
 
-        let sum = d.dist.fold(0., |s, x| s + x);
-        assert_eq!(sum, 1000.);
+        // calculate approximate integral over the distribution function//
+        // interpreted as a step function
+        let super::GridWidth { x: gx, y: gy, a: ga } = d.grid_width;
+        let vol = gx * gy * ga;
+        // Naive integration
+        let sum = vol * d.dist.fold(0., |s, x| s + x);
+        assert!((sum - n as f64).abs() <= n as f64 * EPSILON,
+                "Sum is: {}, but expected: {}.",
+                sum,
+                n);
 
         let p2 = vec![Particle::new(0.6, 0.3, 0., boxsize)];
 
         d.sample_from(&p2);
         println!("{}", d.dist);
 
-        assert_eq!(d.dist[[2, 1, 0]], 1.);
-    }
-
-    #[test]
-    fn normalized() {
-        let boxsize = (1., 1.);
-        let mut d = Distribution::new((5, 5, 2), boxsize);
-        let p2 = vec!{
-            // Caution, 0.6 / 0.2 = 0.29999 in floating point arithmetic
-            Particle::new(0.55, 0.3, 0., boxsize),
-            Particle::new(0.61, 0.3, 2., boxsize),
-        };
-        assert_eq!(p2.len(), 2);
-
-        d.sample_from(&p2);
-
-        println!("{}", d.normalized());
-        assert_eq!(d.normalized()[[2, 1, 0]], 0.5);
-        assert_eq!(d.normalized()[[3, 1, 0]], 0.5);
+        assert!((d.dist[[2, 1, 0]] * vol - 1.0).abs() <= EPSILON,
+                "Sum is: {}, but expected: {}.",
+                d.dist[[2, 1, 0]] * vol,
+                1.0);
     }
 
     #[test]
     fn coord_to_grid() {
         let boxsize = (1., 1.);
 
-        let input =
-            [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.], [0., 0., 7.], [0., 0., -1.]];
+        let input = [[0., 0., 0.],
+                     [1., 0., 0.],
+                     [0., 1., 0.],
+                     [0., 0., 0.5],
+                     [0., 0., 7.],
+                     [0., 0., -1.],
+                     [0.96, 0., 0.]];
 
-        let result = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 5]];
+        let result = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 5], [9, 0, 0]];
 
         for (i, o) in input.iter().zip(result.iter()) {
-            let p = Particle {
-                position: Mod64Vector2::new(i[0], i[1], boxsize),
-                orientation: Mf64::new(i[2], 2. * ::std::f64::consts::PI),
-            };
-
+            let p = Particle::new(i[0], i[1], i[2], boxsize);
             let dist = Distribution::new((10, 10, 6), boxsize);
 
             let g = dist.coord_to_grid(&p);
