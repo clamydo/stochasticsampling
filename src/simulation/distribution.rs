@@ -199,7 +199,7 @@ mod tests {
         let vol = gx * gy * ga;
         // Naive integration
         let sum = vol * d.dist.fold(0., |s, x| s + x);
-        assert!((sum - n as f64).abs() <= n as f64 * EPSILON,
+        assert!((sum - n as f64).abs() <= 2. * n as f64 * EPSILON,
                 "Sum is: {}, but expected: {}.",
                 sum,
                 n);

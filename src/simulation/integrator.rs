@@ -13,13 +13,20 @@ pub struct Integrator {
 
 impl Integrator {
     pub fn init(grid_size: GridSize) {
-        let s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
+        let mut s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
         let angles = Array::linspace(0., TWOPI, grid_size.2);
 
-        // s.slice_mut(s![.., 0, 0]) = angles.map(|x| 0.5 * f64::cos(2. * x));
-        // s.slice_mut(s![.., 0, 1]) = angles.map(|x| 0.5 * f64::cos(2. * x));
-        // s.slice_mut(s![.., 0, 0]) = angles.map(|x| 0.5 * f64::cos(2. * x));
-        // s.slice_mut(s![.., 0, 0]) = angles.map(|x| 0.5 * f64::cos(2. * x));
+        // hi, that should be relatively easy to do with subviews. A bit verbose maybe.
+        // .subview(Axis(1), 1).subview(Axis(1), 1) is a one-dimensional array of all
+        // the ten A_11 entries. You can also do that with slicing. .slice(s![.., 1..,
+        // 1..]) is a 3D array with dimensions 10x1x1
+
+        for (mut e, a) in s.outer_iter_mut().zip(&angles) {
+            e[[0, 0]] = 0.5 * (2. * a).cos();
+            e[[0, 1]] = -a.sin() * a.sin() * a.cos();
+            e[[1, 0]] = -e[[0, 1]];
+            e[[1, 1]] = -e[[0, 0]];
+        }
     }
 }
 
