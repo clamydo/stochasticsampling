@@ -30,6 +30,7 @@ pub struct SimulationSettings {
     pub number_of_timesteps: usize,
     pub rotational_diffusion_constant: f64,
     pub timestep: f64,
+    pub stress_prefactors: [f64; 2],
     pub translational_diffusion_constant: f64,
 }
 
@@ -111,6 +112,7 @@ mod tests {
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.rotational_diffusion_constant, 0.5);
+        assert_eq!(settings.simulation.stress_prefactors, [1.0, 1.0]);
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
     }
