@@ -30,6 +30,7 @@ pub struct Distribution {
     pub dist: Bins,
     /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
+    number_of_particles: usize,
 }
 
 type GridCoordinate = [usize; 3];
@@ -46,6 +47,7 @@ impl Distribution {
         Distribution {
             dist: Array::default(grid),
             grid_width: grid_width,
+            number_of_particles: 0,
         }
     }
 
@@ -67,6 +69,8 @@ impl Distribution {
     }
 
     fn histogram_from(&mut self, particles: &[Particle]) {
+        self.number_of_particles = particles.len();
+
         // zero out distribution
         for i in self.dist.iter_mut() {
             *i = 0.0;
@@ -83,13 +87,15 @@ impl Distribution {
     /// grid points using grid cell averages.
     pub fn sample_from(&mut self, particles: &[Particle]) {
         self.histogram_from(&particles);
+        let number_of_particles = self.dist.fold(0., |s, x| s + x);
 
         // Scale by grid cell volume, in order to arrive at a sampled function,
         // averaged over a grid cell. Missing this would result into the
         // integral over/ the grid cell volume at a given grid coordinate and
         // not the approximate value of the distribution function.
+        // Also normalise to one.
         let GridWidth { x: gx, y: gy, a: ga } = self.grid_width;
-        self.dist /= gx * gy * ga;
+        self.dist /= gx * gy * ga * self.number_of_particles as f64;
     }
 
     /// Returns spatial gradient as an array.
@@ -199,8 +205,8 @@ mod tests {
         let vol = gx * gy * ga;
         // Naive integration
         let sum = vol * d.dist.fold(0., |s, x| s + x);
-        assert!((sum - n as f64).abs() <= 2. * n as f64 * EPSILON,
-                "Sum is: {}, but expected: {}.",
+        assert!((sum - 1.).abs() <= n as f64 * EPSILON,
+                "Step function sum is: {}, but expected: {}. Should be normalised.",
                 sum,
                 n);
 
