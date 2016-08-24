@@ -2,7 +2,7 @@
 use coordinates::TWOPI;
 use coordinates::particle::Particle;
 use ndarray::{Array, Ix};
-use settings::GridSize;
+use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use super::DiffusionParameter;
 
 /// Holds precomuted values
@@ -12,7 +12,7 @@ pub struct Integrator {
 }
 
 impl Integrator {
-    pub fn init(grid_size: GridSize) {
+    pub fn init(grid_size: GridSize, stresses: &StressPrefactors) {
         let mut s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
         let angles = Array::linspace(0., TWOPI, grid_size.2);
 
@@ -22,21 +22,21 @@ impl Integrator {
         // 1..]) is a 3D array with dimensions 10x1x1
 
         for (mut e, a) in s.outer_iter_mut().zip(&angles) {
-            e[[0, 0]] = 0.5 * (2. * a).cos();
-            e[[0, 1]] = -a.sin() * a.sin() * a.cos();
-            e[[1, 0]] = -e[[0, 1]];
+            e[[0, 0]] = stresses.active * 0.5 * (2. * a).cos();
+            e[[0, 1]] = stresses.active * a.sin() * a.cos() - stresses.magnetic * a.sin();
+            e[[1, 0]] = stresses.active * a.sin() * a.cos() + stresses.magnetic * a.sin();
             e[[1, 1]] = -e[[0, 0]];
         }
     }
 }
 
-pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionParameter, timestep: f64, mut c: F)
+pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionConstants, timestep: f64, mut c: F)
     where F: FnMut() -> f64
 {
     // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
     // Y is normally distributed with variance t.
-    let trans_diff_step = timestep * diffusion.dt;
-    let rot_diff_step = timestep * diffusion.dr;
+    let trans_diff_step = timestep * diffusion.translational;
+    let rot_diff_step = timestep * diffusion.rotational;
 
     p.position += c() * trans_diff_step;
     p.orientation += c() * rot_diff_step;
@@ -49,13 +49,16 @@ pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionParameter, times
 #[cfg(test)]
 mod tests {
     use coordinates::particle::Particle;
+    use settings::DiffusionConstants;
     use super::*;
-    use super::super::DiffusionParameter;
 
     #[test]
     fn test_evolve() {
         let mut p = Particle::new(0.4, 0.5, 1., (1., 1.));
-        let d = DiffusionParameter { dt: 1., dr: 2. };
+        let d = DiffusionConstants {
+            translational: 1.,
+            rotational: 2.,
+        };
 
         let t = 1.;
         let c = || 0.1;

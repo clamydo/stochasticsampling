@@ -18,6 +18,7 @@ extern crate mpi;
 extern crate ndarray;
 extern crate rand;
 extern crate rustc_serialize;
+extern crate toml;
 
 pub mod coordinates;
 pub mod settings;

@@ -140,14 +140,13 @@ impl<'a> Simulation<'a> {
         let normal = Normal::new(0.0, sqrt_timestep);
         let mut normal_sample = move || normal.ind_sample(&mut rng);
 
-        let diff = DiffusionParameter {
-            dt: self.settings.simulation.translational_diffusion_constant,
-            dr: self.settings.simulation.rotational_diffusion_constant,
-        };
 
         for step in 1..self.settings.simulation.number_of_timesteps {
             for (i, mut p) in self.state.particles.iter_mut().enumerate() {
-                integrator::evolve_inplace(&mut p, &diff, sqrt_timestep, &mut normal_sample);
+                integrator::evolve_inplace(&mut p,
+                                           &self.settings.parameters.diffusion,
+                                           sqrt_timestep,
+                                           &mut normal_sample);
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
