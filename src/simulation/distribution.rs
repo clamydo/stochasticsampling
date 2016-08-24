@@ -6,11 +6,11 @@ use ndarray::{Array, ArrayBase, Ix};
 use settings::{BoxSize, GridSize};
 use std::ops::Index;
 
-#[derive(Debug)]
-struct GridWidth {
-    x: f64,
-    y: f64,
-    a: f64,
+#[derive(Debug, Clone, Copy)]
+pub struct GridWidth {
+    pub x: f64,
+    pub y: f64,
+    pub a: f64,
 }
 
 /// Array type, that holds the sampled function values.
@@ -45,6 +45,11 @@ impl Distribution {
             dist: Array::default(grid),
             grid_width: grid_width,
         }
+    }
+
+    /// Returns the width of on cell for every axis
+    pub fn get_grid_width(&self) -> GridWidth {
+        self.grid_width
     }
 
     pub fn shape(&self) -> (Ix, Ix, Ix) {

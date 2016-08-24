@@ -22,7 +22,6 @@ pub type BoxSize = (f64, f64);
 pub type GridSize = (usize, usize, usize);
 
 
-
 /// Holds rotational and translational diffusion constants
 #[derive(RustcEncodable, RustcDecodable)]
 pub struct DiffusionConstants {
