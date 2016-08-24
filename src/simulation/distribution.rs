@@ -13,16 +13,14 @@ struct GridWidth {
     a: f64,
 }
 
-/// Array type, that holds the bins. Since the distribution can be normalised,
-/// and thus contain non-integer values, the type f64 was choses for ergnomic
-/// reasons.
+/// Array type, that holds the sampled function values.
 pub type Bins = Array<f64, (Ix, Ix, Ix)>;
 
-/// Holds a sampled distribution function on a grid, assuming the sampling
-/// points to be centered in a grid cell. This means, that the value at
-/// position `x_j` (for `j=0,...,N-1`, on a grid with `N` cells and
-/// `x_0 = w/2``) is the average of particles in the interval `[x_j -
-/// w/2, x_j + w/2]`, with the grid width `w`.
+/// Holds a normalised sampled distribution function on a grid, assuming the
+/// sampling points to be centered in a grid cell. This means, that the value
+/// at position `x_j` (for `j=0,...,N-1`, on a grid with `N` cells and `x_0 =
+/// w/2``) is the average of particles in the interval `[x_j - w/2, x_j +
+/// w/2]`, with the grid width `w`.
 #[derive(Debug)]
 pub struct Distribution {
     /// `dist` contains the probability for a particle in the box at position of
@@ -30,7 +28,6 @@ pub struct Distribution {
     pub dist: Bins,
     /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
-    number_of_particles: usize,
 }
 
 type GridCoordinate = [usize; 3];
@@ -47,7 +44,6 @@ impl Distribution {
         Distribution {
             dist: Array::default(grid),
             grid_width: grid_width,
-            number_of_particles: 0,
         }
     }
 
@@ -68,9 +64,10 @@ impl Distribution {
         [gx, gy, ga]
     }
 
-    fn histogram_from(&mut self, particles: &[Particle]) {
-        self.number_of_particles = particles.len();
-
+    /// Initialises the distribution with a number histogram. It counts the
+    /// `particles` inside a bin of the grid. Returns the overall number of
+    /// particles counted.
+    fn histogram_from(&mut self, particles: &[Particle]) -> usize {
         // zero out distribution
         for i in self.dist.iter_mut() {
             *i = 0.0;
@@ -81,13 +78,14 @@ impl Distribution {
             let c = self.coord_to_grid(p);
             self.dist[c] += 1.;
         }
+
+        particles.len()
     }
 
     /// Estimates the approximate values for the distribution function at the
     /// grid points using grid cell averages.
     pub fn sample_from(&mut self, particles: &[Particle]) {
-        self.histogram_from(&particles);
-        let number_of_particles = self.dist.fold(0., |s, x| s + x);
+        let n = self.histogram_from(&particles) as f64;
 
         // Scale by grid cell volume, in order to arrive at a sampled function,
         // averaged over a grid cell. Missing this would result into the
@@ -95,7 +93,7 @@ impl Distribution {
         // not the approximate value of the distribution function.
         // Also normalise to one.
         let GridWidth { x: gx, y: gy, a: ga } = self.grid_width;
-        self.dist /= gx * gy * ga * self.number_of_particles as f64;
+        self.dist /= gx * gy * ga * n;
     }
 
     /// Returns spatial gradient as an array.
