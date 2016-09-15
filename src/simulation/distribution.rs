@@ -104,13 +104,14 @@ impl Distribution {
     /// Returns spatial gradient as an array.
     /// The first axis specifies the direction of the derivative, the component
     /// of the gradient, whereas the other axises are the same as for the
-    /// distribution.
+    /// distribution. So effectively the result is an array of dimension ´n+1´
+    /// if the input was of dimension ´n´.
     ///
     /// The derivative is implemented as a symmetric finite differential
     /// quotient with wrap around coordinates.
     pub fn spatgrad(&self) -> Array<f64, (Ix, Ix, Ix, Ix)> {
         let (sx, sy, sa) = self.shape();
-        let mut res = ArrayBase::zeros((2, sx, sy, sa));
+        let mut res = ArrayBase::zeros((sx, sy, sa, 2));
 
         let h = &self.grid_width;
         let hx = 2. * h.x;
@@ -124,12 +125,12 @@ impl Distribution {
             // cheaper as it only has to wrap around one dimension at a time.
             let xm = (ix + sx - 1) % sx;
             let xp = (ix + 1) % sx;
-            res[(0, ix, iy, ia)] =
+            res[(ix, iy, ia, 0)] =
                 unsafe { (self.dist.uget((xp, iy, ia)) - self.dist.uget((xm, iy, ia))) / hx };
 
             let ym = (iy + sy - 1) % sy;
             let yp = (iy + 1) % sy;
-            res[(1, ix, iy, ia)] =
+            res[(ix, iy, ia, 0)] =
                 unsafe { (self.dist.uget((ix, yp, ia)) - self.dist.uget((ix, ym, ia))) / hy };
         }
 
@@ -288,8 +289,8 @@ mod tests {
 
         let grad = d.spatgrad();
 
-        assert!(grad.subview(Axis(0), 0) == res_x);
-        assert!(grad.subview(Axis(0), 1) == res_y);
+        assert!(grad.subview(Axis(3), 0) == res_x);
+        assert!(grad.subview(Axis(3), 1) == res_y);
 
         d.dist = Array::zeros(shape);
         assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
