@@ -130,7 +130,7 @@ impl Distribution {
 
             let ym = (iy + sy - 1) % sy;
             let yp = (iy + 1) % sy;
-            res[(ix, iy, ia, 0)] =
+            res[(ix, iy, ia, 1)] =
                 unsafe { (self.dist.uget((ix, yp, ia)) - self.dist.uget((ix, ym, ia))) / hy };
         }
 
@@ -289,14 +289,15 @@ mod tests {
 
         let grad = d.spatgrad();
 
-        assert!(grad.subview(Axis(3), 0) == res_x);
-        assert!(grad.subview(Axis(3), 1) == res_y);
+
+        assert_eq!(grad.subview(Axis(3), 0), res_x);
+        assert_eq!(grad.subview(Axis(3), 1), res_y);
 
         d.dist = Array::zeros(shape);
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((shape.0, shape.1, shape.2, 2)));
 
         d.dist = Array::zeros(shape) + 1.;
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((shape.0, shape.1, shape.2, 2)));
     }
 
     #[test]
