@@ -218,15 +218,16 @@ mod tests {
         assert_eq!(*p3.z.as_ref(), 0.25);
     }
 
-    #[quickcheck]
     #[ignore]
-    fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
-        const DIV: f64 = 3.45;
-        let boxsize = (3.45, 3.45, 3.45);
-        let a = Mod64Vector3::new(x, y, z, boxsize);
-        let b = a * rhs;
-        0. <= *b.x.as_ref() && *b.x.as_ref() < DIV && 0. <= *b.y.as_ref() &&
-        *b.y.as_ref() < DIV && 0. <= *b.z.as_ref() && *b.z.as_ref() < DIV
+    quickcheck!{
+        fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
+            const DIV: f64 = 3.45;
+            let boxsize = (3.45, 3.45, 3.45);
+            let a = Mod64Vector3::new(x, y, z, boxsize);
+            let b = a * rhs;
+            0. <= *b.x.as_ref() && *b.x.as_ref() < DIV && 0. <= *b.y.as_ref() &&
+            *b.y.as_ref() < DIV && 0. <= *b.z.as_ref() && *b.z.as_ref() < DIV
+        }
     }
 
     #[test]
@@ -237,11 +238,12 @@ mod tests {
         assert_eq!(*p3.y.as_ref(), 0.5);
     }
 
-    #[quickcheck]
     #[ignore]
-    fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
-        let a = Mod64Vector2::new(x, y, (1., 1.));
-        let b = a * rhs;
-        0. <= *b.x.as_ref() && *b.x.as_ref() < 1. && 0. <= *b.y.as_ref() && *b.y.as_ref() < 1.
+    quickcheck!{
+        fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
+            let a = Mod64Vector2::new(x, y, (1., 1.));
+            let b = a * rhs;
+            0. <= *b.x.as_ref() && *b.x.as_ref() < 1. && 0. <= *b.y.as_ref() && *b.y.as_ref() < 1.
+        }
     }
 }

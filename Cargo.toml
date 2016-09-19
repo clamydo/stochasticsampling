@@ -19,7 +19,6 @@ ndarray = "0.6"
 
 [dev-dependencies]
 quickcheck = "*"
-quickcheck_macros = "*"
 
 [workspace]
 members = ["src/fftw3"]

@@ -1,6 +1,4 @@
 #![crate_type = "staticlib"]
-#![cfg_attr(test, feature(plugin))]
-#![cfg_attr(test, plugin(quickcheck_macros))]
 
 //! This crate implements a Monte-Carlo method for solving a (specific)
 //! Fokker-Planck type equation. Most of the implementation is rather general.
@@ -8,6 +6,7 @@
 //! `simulation::integrator` module. TODO Missing docs.
 
 #[cfg(test)]
+#[macro_use]
 extern crate quickcheck;
 
 #[macro_use]
