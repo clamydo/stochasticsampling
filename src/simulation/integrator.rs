@@ -1,6 +1,6 @@
 use coordinates::TWOPI;
 use coordinates::particle::Particle;
-use ndarray::{Array, Axis, Ix};
+use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use super::DiffusionParameter;
 use super::distribution::GridWidth;
@@ -95,15 +95,16 @@ impl Integrator {
         let sh_a = (sh.0, sh.1, sh.2, sh.3, 1);
         let sh_b = (sh.0, sh.1, sh.2, sh.3, 2);
 
-        let fun = (g.into_shape(sh).unwrap().broadcast(sh_b).unwrap().to_owned() * sk).sum(Axis(3));
+        let int = (g.into_shape(sh).unwrap().broadcast(sh_b).unwrap().to_owned() * sk).sum(Axis(3));
 
-        unimplemented!()
+        // Implement Simpson's rule integration as a fold. Maybe do this in loops.
+        int.map_axis(Axis(2), |v| periodic_simpson_integrate(v, h.a))
     }
 }
 
 /// Implements Simpon's Rule integration on an array, representing sampled points of a periodic
 /// function.
-fn periodic_simpson_integrate(samples: &Array<f64, (Ix)>, h: f64) -> f64 {
+fn periodic_simpson_integrate(samples: ArrayView<f64, Ix>, h: f64) -> f64 {
     let len = samples.dim();
 
     assert!(len % 2 == 0,
@@ -140,7 +141,7 @@ pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionConstants, times
 mod tests {
     use coordinates::TWOPI;
     use coordinates::particle::Particle;
-    use ndarray::Array;
+    use ndarray::{Array, Axis};
     use settings::{DiffusionConstants, GridSize, StressPrefactors};
     use super::*;
     use super::super::distribution::GridWidth;
@@ -187,7 +188,7 @@ mod tests {
     fn test_simpson() {
         let h = PI / 100.;
         let f = Array::range(0., PI, h).map(|x| x.sin());
-        let integral = super::periodic_simpson_integrate(&f, h);
+        let integral = super::periodic_simpson_integrate(f.view(), h);
 
         assert!((integral - 2.000000010824505).abs() < EPSILON,
                 "h: {}, result: {}",
@@ -197,10 +198,25 @@ mod tests {
 
         let h = 4. / 100.;
         let f = Array::range(0., 4., h).map(|x| x * x);
-        let integral = super::periodic_simpson_integrate(&f, h);
+        let integral = super::periodic_simpson_integrate(f.view(), h);
         assert!((integral - 21.120000000000001).abs() < EPSILON,
                 "h: {}, result: {}",
                 h,
                 integral);
+    }
+
+    #[test]
+    fn test_simpson_map_axis() {
+        let points = 100;
+        let h = PI / points as f64;
+        let f = Array::range(0., PI, h).map(|x| x.sin())
+            .into_shape((1, 1, points)).unwrap()
+            .broadcast((10, 10, points)).unwrap().to_owned();
+
+        let integral = f.map_axis(Axis(2), |v| super::periodic_simpson_integrate(v, h));
+
+        for e in integral.iter() {
+            assert!((e - 2.000000010824505).abs() < EPSILON);
+        }
     }
 }

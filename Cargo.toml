@@ -15,7 +15,7 @@ rand = "0.3"
 toml = "0.1"
 rustc-serialize = "*"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
-ndarray = "0.6"
+ndarray = { git = "https://github.com/bluss/rust-ndarray", branch = "master" }
 
 [dev-dependencies]
 quickcheck = "*"
