@@ -3,8 +3,8 @@ use coordinates::particle::Particle;
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use super::DiffusionParameter;
-use super::distribution::GridWidth;
 use super::distribution::Distribution;
+use super::distribution::GridWidth;
 
 /// Holds precomuted values
 #[derive(Debug)]
@@ -46,10 +46,12 @@ impl Integrator {
     /// Want to calculate the matrix product of the transpose of the first to
     /// axies of self.stress and the first axis of dist.
     ///
-    /// In Python's numpy, I'd do
+    /// In Python's numpy, I could do
     /// ´´´
-    /// t[0, nx, ny, :] = s[:, 0, 0] * d[0, nx, ny, :] + s[:, 1, 0] * d[1, nx, ny, :]
-    /// t[1, nx, ny, :] = s[:, 0, 1] * d[0, nx, ny, :] + s[:, 1, 1] * d[1, nx, ny, :]
+    /// t[0, nx, ny, :] =
+    ///     s[:, 0, 0] * d[0, nx, ny, :] + s[:, 1, 0] * d[1, nx, ny, :]
+    /// t[1, nx, ny, :] =
+    ///     s[:, 0, 1] * d[0, nx, ny, :] + s[:, 1, 1] * d[1, nx, ny, :]
     /// ´´´
     ///
     /// Followed by an simpson rule integration along the angular axis for
@@ -74,11 +76,13 @@ impl Integrator {
 
         // Calculate just first component
 
-        // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the grid and j = 0.
-        // This makes implicit and explicit use of broadcasting. Implicetly the stress kernel ´sk´
-        // is broadcasted for all points in space. Then, explicetly, the gradient ´g´ is
-        // broadcasted along the last axis. This effectively repeats the gradient along the second
-        // index of the stress kernel ´sk´. Multiplying it elementwise results in
+        // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the
+        // grid and j = 0.
+        // This makes implicit and explicit use of broadcasting. Implicetly the
+        // stress/ kernel ´sk´ is broadcasted for all points in space. Then,
+        // explicetly, the gradient ´g´ is broadcasted along the last axis. This
+        // effectively repeats the gradient along the second index of the stress
+        // kernel ´sk´. Multiplying it elementwise results in
         //
         //  [[g_1, g_1],  *  [[sk_11, sk_12],  =  [[g_1 * sk_11, g_1 * sk_12],
         //   [g_2, g_2]]      [sk_21, sk_22]]      [g_2 * sk_21, g_2 * sk_22]
@@ -89,20 +93,25 @@ impl Integrator {
         // This is done for every point (x, y, alpha).
 
         let g = dist.spatgrad();
-        let ref sk = self.stress_kernel;
+        let sk = &self.stress_kernel;
 
         let sh = g.dim();
+        // Haven't found a better way to do this, since ndarray uses tuples for
+        // encoding shapes.
         let sh_a = (sh.0, sh.1, sh.2, sh.3, 1);
         let sh_b = (sh.0, sh.1, sh.2, sh.3, 2);
 
-        let int = (g.into_shape(sh).unwrap().broadcast(sh_b).unwrap().to_owned() * sk).sum(Axis(3));
+        // TODO: Error handling
+        let int = (g.into_shape(sh_a).unwrap().broadcast(sh_b).unwrap().to_owned() * sk)
+            .sum(Axis(3));
 
         // Implement Simpson's rule integration as a fold. Maybe do this in loops.
         int.map_axis(Axis(2), |v| periodic_simpson_integrate(v, h.a))
     }
 }
 
-/// Implements Simpon's Rule integration on an array, representing sampled points of a periodic
+/// Implements Simpon's Rule integration on an array, representing sampled
+/// points of a periodic
 /// function.
 fn periodic_simpson_integrate(samples: ArrayView<f64, Ix>, h: f64) -> f64 {
     let len = samples.dim();
@@ -143,10 +152,11 @@ mod tests {
     use coordinates::particle::Particle;
     use ndarray::{Array, Axis};
     use settings::{DiffusionConstants, GridSize, StressPrefactors};
-    use super::*;
-    use super::super::distribution::GridWidth;
-    use std::f64::consts::PI;
     use std::f64::EPSILON;
+    use std::f64::consts::PI;
+    use super::*;
+    use super::super::distribution::Distribution;
+    use super::super::distribution::GridWidth;
 
     #[test]
     fn new() {
@@ -163,7 +173,7 @@ mod tests {
 
         let i = Integrator::new(gs, gw, &s);
 
-        unimplemented!();
+        unimplemented!()
     }
 
     #[test]
@@ -209,14 +219,43 @@ mod tests {
     fn test_simpson_map_axis() {
         let points = 100;
         let h = PI / points as f64;
-        let f = Array::range(0., PI, h).map(|x| x.sin())
-            .into_shape((1, 1, points)).unwrap()
-            .broadcast((10, 10, points)).unwrap().to_owned();
+        let f = Array::range(0., PI, h)
+            .map(|x| x.sin())
+            .into_shape((1, 1, points))
+            .unwrap()
+            .broadcast((10, 10, points))
+            .unwrap()
+            .to_owned();
 
         let integral = f.map_axis(Axis(2), |v| super::periodic_simpson_integrate(v, h));
 
         for e in integral.iter() {
             assert!((e - 2.000000010824505).abs() < EPSILON);
         }
+    }
+
+    #[test]
+    fn test_calc_stress_gradient() {
+        let boxsize = (1., 1.);
+        let gs = (10, 10, 10);
+        let mut d = Distribution::new(gs, boxsize);
+
+        d.dist = Array::zeros(gs);
+
+        let gw = GridWidth {
+            x: 1.,
+            y: 1.,
+            a: TWOPI / gs.2 as f64,
+        };
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 1.,
+        };
+
+        let i = Integrator::new(gs, gw, &s);
+
+        let res = i.calc_stress_gradient(&d);
+
+        assert_eq!(Array::zeros((gs.0, gs.1, 2)), res);
     }
 }
