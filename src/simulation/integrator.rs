@@ -22,9 +22,8 @@ impl Integrator {
         let mut s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
         // Calculate discrete angles, considering the cell centered sample points of
         // the distribution
-        let angles = Array::linspace(0. + grid_width.a / 2.,
-                                     TWOPI - grid_width.a / 2.,
-                                     grid_size.2);
+        let gw_half = grid_width.a / 2.;
+        let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size.2);
 
         for (mut e, a) in s.outer_iter_mut().zip(&angles) {
             e[[0, 0]] = stresses.active * 0.5 * (2. * a).cos();
@@ -150,7 +149,7 @@ pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionConstants, times
 mod tests {
     use coordinates::TWOPI;
     use coordinates::particle::Particle;
-    use ndarray::{Array, Axis};
+    use ndarray::{Array, Axis, arr2};
     use settings::{DiffusionConstants, GridSize, StressPrefactors};
     use std::f64::EPSILON;
     use std::f64::consts::PI;
@@ -173,7 +172,24 @@ mod tests {
 
         let i = Integrator::new(gs, gw, &s);
 
-        unimplemented!()
+        let should0 = arr2(&[[-0.25, -0.4330127018922193], [1.299038105676658, 0.25]]);
+        let should1 = arr2(&[[0.5, -2.449293598294707e-16], [0.0, -0.5]]);
+
+        for e in (should0.clone() - i.stress_kernel.subview(Axis(0), 0)).map(|x| x.abs()).iter() {
+            assert!(*e < EPSILON,
+                    "{} != {}",
+                    should0,
+                    i.stress_kernel.subview(Axis(0), 0));
+        }
+
+        for e in (should1.clone() - i.stress_kernel.subview(Axis(0), 1)).map(|x| x.abs()).iter() {
+            assert!(*e < EPSILON,
+                    "{} != {}",
+                    should1,
+                    i.stress_kernel.subview(Axis(0), 1));
+        }
+
+        assert_eq!(i.stress_kernel.dim(), (3, 2, 2));
     }
 
     #[test]
@@ -242,17 +258,12 @@ mod tests {
 
         d.dist = Array::zeros(gs);
 
-        let gw = GridWidth {
-            x: 1.,
-            y: 1.,
-            a: TWOPI / gs.2 as f64,
-        };
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
         };
 
-        let i = Integrator::new(gs, gw, &s);
+        let i = Integrator::new(gs, d.get_grid_width(), &s);
 
         let res = i.calc_stress_gradient(&d);
 
