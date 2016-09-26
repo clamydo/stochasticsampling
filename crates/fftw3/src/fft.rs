@@ -35,7 +35,6 @@ impl FFTPlan {
         let outp = outa.as_ptr() as *mut FFTWComplex;
 
         let plan;
-
         unsafe {
             plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as i32,
                                                  n1 as i32,
@@ -60,10 +59,10 @@ impl FFTPlan {
                            -> FFTPlan {
 
         let (n0, n1) = arr.dim();
-        let p = arr.as_ptr() as *mut FFTWComplex;
+        // let p = arr.as_ptr() as *mut FFTWComplex;
+        let p = &mut arr[[0, 0]] as *mut _ as *mut FFTWComplex;
 
         let plan;
-
         unsafe {
             plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as i32,
                                                  n1 as i32,

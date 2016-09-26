@@ -49,7 +49,7 @@ impl<'a> FFTData2DVectorField<'a> {
     pub fn new(shape: (Ix, Ix, Ix)) -> FFTData2DVectorField<'a> {
         let data;
         unsafe {
-            let ptr = ::fftw3_ffi::fftw_malloc(shape.0 * shape.1 * shape.2 * shape.3 *
+            let ptr = ::fftw3_ffi::fftw_malloc(shape.0 * shape.1 * shape.2 *
                                                mem::size_of::<Complex<f64>>());
             data = ArrayViewMut::from_shape_ptr(shape, ptr as *mut Complex<f64>);
         }

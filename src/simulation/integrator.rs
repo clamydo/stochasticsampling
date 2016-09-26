@@ -3,7 +3,6 @@ use coordinates::particle::Particle;
 use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use fftw3::fftw_ndarray::{FFTData2DMatrixField, FFTData2DVectorField};
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use std::f64::consts::PI;
@@ -13,13 +12,13 @@ use super::distribution::GridWidth;
 
 /// Holds precomuted values
 #[derive(Debug)]
-pub struct Integrator<'a> {
+pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
     stress_kernel: Array<f64, (Ix, Ix, Ix)>,
-    avg_oseen_kernel_fft: FFTData2DMatrix<'a>,
+    avg_oseen_kernel_fft: Array<Complex<f64>, (Ix, Ix, Ix, Ix)>,
 }
 
-impl<'a> Integrator<'a> {
+impl Integrator {
     fn calc_stress_kernel(grid_size: GridSize,
                           grid_width: GridWidth,
                           stresses: &StressPrefactors)
@@ -53,7 +52,7 @@ impl<'a> Integrator<'a> {
                          grid_width: GridWidth,
                          stresses: &StressPrefactors,
                          speed: f64)
-                         -> FFTData2DMatrix {
+                         -> Array<Complex<f64>, (Ix, Ix, Ix, Ix)> {
 
         // Grid size must be even, because the oseen tensor diverges at the origin.
         assert_eq!(grid_size.0 % 2,
@@ -75,9 +74,13 @@ impl<'a> Integrator<'a> {
         };
 
         // Allocate array to prepare FFT
-        let mut res = FFTData2DMatrix::new((2, 2, grid_size.0, grid_size.1));
+        // This would allocated an aligned array for SIMD.
+        // let mut res = FFTData2DMatrix::new((2, 2, grid_size.0, grid_size.1));
+        // But maybe, rust will do that anyways? Not guaranteed, though.
+        let mut res = Array::<Complex<f64>, _>::from_elem((2, 2, grid_size.0, grid_size.1),
+                                                          Complex::new(0., 0.));
 
-        for (i, v) in res.data.indexed_iter_mut() {
+        for (i, v) in res.indexed_iter_mut() {
             // sample Oseen tensor, so that the origin lies on the 'upper left'
             // corner of the 'upper left' cell.
             let gw_x = grid_width.x;
@@ -100,12 +103,11 @@ impl<'a> Integrator<'a> {
         }
 
 
-        for mut row in res.data.outer_iter_mut() {
+        for mut row in res.outer_iter_mut() {
             for mut elem in row.outer_iter_mut() {
                 let plan = FFTPlan::new_c2c_inplace(&mut elem,
                                                     fft::FFTDirection::Forward,
-                                                    fft::FFTFlags::Measure);
-
+                                                    fft::FFTFlags::Estimate);
                 plan.execute()
             }
         }
@@ -285,7 +287,7 @@ mod tests {
         }
 
         assert_eq!(i.stress_kernel.dim(), (3, 2, 2));
-        assert_eq!(i.avg_oseen_kernel_fft.data.dim(), (2, 2, gs.0, gs.1));
+        assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs.0, gs.1));
     }
 
     #[test]
