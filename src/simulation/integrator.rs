@@ -3,7 +3,7 @@ use coordinates::particle::Particle;
 use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use fftw3::fftw_ndarray::FFTData2DMatrix;
+use fftw3::fftw_ndarray::{FFTData2DMatrixField, FFTData2DVectorField};
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use std::f64::consts::PI;
@@ -42,22 +42,28 @@ impl<'a> Integrator<'a> {
     }
 
     /// The Oseen tensor diverges at the origin and is not defined. Thus, it
-    /// can't be sampled in
-    /// the origin. To work around this, a Oseen kernel at an even number of
-    /// grid points is used.
-    /// Since this also means, that the Oseen kernel has no identical center,
-    /// and can't be centered
-    /// on the 'image'. When just using an even sampled Oseen tensor as a
-    /// filter kernel, the value
-    /// of the filter at a grid point is the value at a corner of the grid
-    /// cell. To get an
-    /// interpolated value at the center of the cell an average of all cell
-    /// corners is calculated.
+    /// can't be sampled in the origin. To work around this, a Oseen kernel at
+    /// an even number of grid points is used. Since this also means, that the
+    /// Oseen kernel has no identical center, and can't be centered on the
+    /// 'image'. When just using an even sampled Oseen tensor as a filter
+    /// kernel, the value of the filter at a grid point is the value at a
+    /// corner of the grid cell. To get an interpolated value at the center of
+    /// the cell an average of all cell corners is calculated.
     fn calc_oseen_kernel(grid_size: GridSize,
                          grid_width: GridWidth,
                          stresses: &StressPrefactors,
                          speed: f64)
                          -> FFTData2DMatrix {
+
+        // Grid size must be even, because the oseen tensor diverges at the origin.
+        assert_eq!(grid_size.0 % 2,
+                   0,
+                   "Greed needs to have even number of cells. But found {}",
+                   grid_size.0);
+        assert_eq!(grid_size.1 % 2,
+                   0,
+                   "Greed needs to have even number of cells. But found {}",
+                   grid_size.1);
 
         // Define Oseen-Tensor
         let oseen = |x: f64, y: f64| {
@@ -69,18 +75,42 @@ impl<'a> Integrator<'a> {
         };
 
         // Allocate array to prepare FFT
-        let mut o = FFTData2DMatrix::new((2, 2, grid_size.0, grid_size.1));
+        let mut res = FFTData2DMatrix::new((2, 2, grid_size.0, grid_size.1));
 
-        for (i, v) in o.data.indexed_iter_mut() {
-            let x = grid_width.x * i.2 as f64 + grid_width.x / 2.;
-            let y = grid_width.y * i.3 as f64 + grid_width.y / 2.;
+        for (i, v) in res.data.indexed_iter_mut() {
+            // sample Oseen tensor, so that the origin lies on the 'upper left'
+            // corner of the 'upper left' cell.
+            let gw_x = grid_width.x;
+            let gw_y = grid_width.y;
 
-            *v = oseen(x, y)[i.0][i.1];
+            let xi = (i.2 as i64 - grid_size.0 as i64 / 2) as f64;
+            let yi = (i.3 as i64 - grid_size.0 as i64 / 2) as f64;
+            let x = grid_width.x * xi + grid_width.x / 2.;
+            let y = grid_width.y * yi + grid_width.y / 2.;
+
+            // Calcualte the average of a shifted kernel, where all four points next to the
+            // origin are shifted once into the center. This is done, to get an estimate of
+            // the correct value in the center of the cell. It is necessary, since we're
+            // using an even dimensioned kernel.
+            // Because of the linearity of the fourier transform, it does not matter if the
+            // average is calculated before or after the transformation.
+            *v = (oseen(x, y)[i.0][i.1] + oseen(x - gw_x, y)[i.0][i.1] +
+                  oseen(x, y - gw_y)[i.0][i.1] +
+                  oseen(x - gw_x, y - gw_y)[i.0][i.1]) / 4.;
         }
 
-        unimplemented!();
 
-        o
+        for mut row in res.data.outer_iter_mut() {
+            for mut elem in row.outer_iter_mut() {
+                let plan = FFTPlan::new_c2c_inplace(&mut elem,
+                                                    fft::FFTDirection::Forward,
+                                                    fft::FFTFlags::Measure);
+
+                plan.execute()
+            }
+        }
+
+        res
     }
 
     /// Returns a new instance of the mc_sampling integrator.
@@ -255,6 +285,7 @@ mod tests {
         }
 
         assert_eq!(i.stress_kernel.dim(), (3, 2, 2));
+        assert_eq!(i.avg_oseen_kernel_fft.data.dim(), (2, 2, gs.0, gs.1));
     }
 
     #[test]

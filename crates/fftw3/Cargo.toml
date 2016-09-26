@@ -9,4 +9,3 @@ num = "0.1"
 
 [dev-dependencies]
 quickcheck = "*"
-quickcheck_macros = "*"
