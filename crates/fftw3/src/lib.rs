@@ -1,10 +1,11 @@
 #![cfg_attr(test, feature(plugin))]
 #![cfg_attr(test, plugin(quickcheck_macros))]
+
 #[cfg(test)]
 extern crate quickcheck;
 
-extern crate ndarray;
 extern crate num;
+extern crate ndarray;
 
 mod fftw3_ffi;
 pub mod fftw_ndarray;
@@ -29,7 +30,7 @@ mod tests {
         let mut ifft = FFTData2D::new(shape);
 
         // zero out input array
-        input.data.map_inplace(|x| *x = Complex::<f64>([0., 0.]));
+        input.data.assign_scalar(Complex::<f64>([0., 0.]));
 
         // define a real rectangle in the middle of the array
         input.data[[4, 4]] = Complex::<f64>([1., 0.]);

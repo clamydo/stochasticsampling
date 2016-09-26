@@ -1,24 +1,30 @@
 use coordinates::TWOPI;
 use coordinates::particle::Particle;
+use fftw3::complex::Complex;
+use fftw3::fft;
+use fftw3::fft::FFTPlan;
+use fftw3::fftw_ndarray::FFTData2DMatrix;
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
+use std::f64::consts::PI;
 use super::DiffusionParameter;
 use super::distribution::Distribution;
 use super::distribution::GridWidth;
 
 /// Holds precomuted values
 #[derive(Debug)]
-pub struct Integrator {
+pub struct Integrator<'a> {
     /// First axis holds submatrices for different discrete angles.
     stress_kernel: Array<f64, (Ix, Ix, Ix)>,
+    avg_oseen_kernel_fft: FFTData2DMatrix<'a>,
 }
 
-impl Integrator {
-    /// Returns a new instance of the mc_sampling integrator
-    pub fn new(grid_size: GridSize,
-               grid_width: GridWidth,
-               stresses: &StressPrefactors)
-               -> Integrator {
+impl<'a> Integrator<'a> {
+    fn calc_stress_kernel(grid_size: GridSize,
+                          grid_width: GridWidth,
+                          stresses: &StressPrefactors)
+                          -> Array<f64, (Ix, Ix, Ix)> {
+
         let mut s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
         // Calculate discrete angles, considering the cell centered sample points of
         // the distribution
@@ -32,7 +38,66 @@ impl Integrator {
             e[[1, 1]] = -e[[0, 0]];
         }
 
-        Integrator { stress_kernel: s }
+        s
+    }
+
+    /// The Oseen tensor diverges at the origin and is not defined. Thus, it
+    /// can't be sampled in
+    /// the origin. To work around this, a Oseen kernel at an even number of
+    /// grid points is used.
+    /// Since this also means, that the Oseen kernel has no identical center,
+    /// and can't be centered
+    /// on the 'image'. When just using an even sampled Oseen tensor as a
+    /// filter kernel, the value
+    /// of the filter at a grid point is the value at a corner of the grid
+    /// cell. To get an
+    /// interpolated value at the center of the cell an average of all cell
+    /// corners is calculated.
+    fn calc_oseen_kernel(grid_size: GridSize,
+                         grid_width: GridWidth,
+                         stresses: &StressPrefactors,
+                         speed: f64)
+                         -> FFTData2DMatrix {
+
+        // Define Oseen-Tensor
+        let oseen = |x: f64, y: f64| {
+            let norm: f64 = (x * x + y * y).sqrt();
+            let p = speed / 8. / PI / norm;
+
+            [[Complex::new(1. + x * x, 0.) * p, Complex::new(x * y, 0.) * p],
+             [Complex::new(y * x, 0.) * p, Complex::new(1. + y * y, 0.) * p]]
+        };
+
+        // Allocate array to prepare FFT
+        let mut o = FFTData2DMatrix::new((2, 2, grid_size.0, grid_size.1));
+
+        for (i, v) in o.data.indexed_iter_mut() {
+            let x = grid_width.x * i.2 as f64 + grid_width.x / 2.;
+            let y = grid_width.y * i.3 as f64 + grid_width.y / 2.;
+
+            *v = oseen(x, y)[i.0][i.1];
+        }
+
+        unimplemented!();
+
+        o
+    }
+
+    /// Returns a new instance of the mc_sampling integrator.
+    ///
+    pub fn new(grid_size: GridSize,
+               grid_width: GridWidth,
+               stresses: &StressPrefactors,
+               speed: f64)
+               -> Integrator {
+
+        Integrator {
+            stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, stresses),
+            avg_oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size,
+                                                                grid_width,
+                                                                stresses,
+                                                                speed),
+        }
     }
 
     /// Calculates force on the flow field because of the sress contributions.
@@ -104,7 +169,7 @@ impl Integrator {
         let int = (g.into_shape(sh_a).unwrap().broadcast(sh_b).unwrap().to_owned() * sk)
             .sum(Axis(3));
 
-        // Implement Simpson's rule integration as a fold. Maybe do this in loops.
+        // Integrate along angle
         int.map_axis(Axis(2), |v| periodic_simpson_integrate(v, h.a))
     }
 }
@@ -163,14 +228,14 @@ mod tests {
         let gw = GridWidth {
             x: 1.,
             y: 1.,
-            a: TWOPI / gs.2 as f64,
+            a: TWOPI / (gs.2 as f64),
         };
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
         };
 
-        let i = Integrator::new(gs, gw, &s);
+        let i = Integrator::new(gs, gw, &s, 1.);
 
         let should0 = arr2(&[[-0.25, -0.4330127018922193], [1.299038105676658, 0.25]]);
         let should1 = arr2(&[[0.5, -2.449293598294707e-16], [0.0, -0.5]]);
@@ -263,7 +328,7 @@ mod tests {
             magnetic: 1.,
         };
 
-        let i = Integrator::new(gs, d.get_grid_width(), &s);
+        let i = Integrator::new(gs, d.get_grid_width(), &s, 1.);
 
         let res = i.calc_stress_gradient(&d);
 

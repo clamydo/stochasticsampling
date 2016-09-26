@@ -15,10 +15,11 @@ rand = "0.3"
 toml = "0.1"
 rustc-serialize = "*"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
-ndarray = { git = "https://github.com/bluss/rust-ndarray", branch = "master" }
+ndarray = "0.6"
+fftw3 = { path = "crates/fftw3" }
 
 [dev-dependencies]
 quickcheck = "*"
 
 [workspace]
-members = ["src/fftw3"]
+members = ["crates/fftw3"]

@@ -18,6 +18,7 @@ extern crate ndarray;
 extern crate rand;
 extern crate rustc_serialize;
 extern crate toml;
+extern crate fftw3;
 
 pub mod coordinates;
 pub mod settings;
