@@ -3,6 +3,7 @@ use coordinates::particle::Particle;
 use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
+use fftw3::fftw_ndarray::FFTData2D;
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use std::f64::consts::PI;
@@ -105,10 +106,14 @@ impl Integrator {
 
         for mut row in res.outer_iter_mut() {
             for mut elem in row.outer_iter_mut() {
+
                 let plan = FFTPlan::new_c2c_inplace(&mut elem,
                                                     fft::FFTDirection::Forward,
                                                     fft::FFTFlags::Estimate);
-                plan.execute()
+                match plan {
+                    None => panic!("Could not aquire FFT plan from fftw3!"),
+                    Some(p) => p.execute(),
+                }
             }
         }
 
@@ -288,6 +293,8 @@ mod tests {
 
         assert_eq!(i.stress_kernel.dim(), (3, 2, 2));
         assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs.0, gs.1));
+
+        // TODO check if average oseen tensor is reasonable
     }
 
     #[test]

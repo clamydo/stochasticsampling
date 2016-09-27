@@ -44,11 +44,13 @@ mod tests {
         let plan_forward = FFTPlan::new_c2c(&mut input.data,
                                             &mut fft.data,
                                             fft::FFTDirection::Forward,
-                                            fft::FFTFlags::Measure);
+                                            fft::FFTFlags::Measure)
+            .unwrap();
         let plan_backward = FFTPlan::new_c2c(&mut fft.data,
                                              &mut ifft.data,
                                              fft::FFTDirection::Backward,
-                                             fft::FFTFlags::Measure);
+                                             fft::FFTFlags::Measure)
+            .unwrap();
 
         plan_forward.execute();
         plan_backward.execute();

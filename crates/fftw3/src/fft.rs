@@ -1,5 +1,6 @@
 use complex::Complex;
 use ndarray::{ArrayViewMut, Ix};
+use std;
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 
@@ -28,7 +29,7 @@ impl FFTPlan {
                    outa: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
                    direction: FFTDirection,
                    flags: FFTFlags)
-                   -> FFTPlan {
+                   -> Option<FFTPlan> {
 
         let (n0, n1) = ina.dim();
         let inp = ina.as_ptr() as *mut FFTWComplex;
@@ -36,15 +37,19 @@ impl FFTPlan {
 
         let plan;
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as i32,
-                                                 n1 as i32,
+            plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
+                                                 n1 as std::os::raw::c_int,
                                                  inp,
                                                  outp,
-                                                 direction as i32,
-                                                 flags as u32);
+                                                 direction as std::os::raw::c_int,
+                                                 flags as std::os::raw::c_uint);
         }
 
-        FFTPlan { plan: plan }
+        if plan.is_null() {
+            None
+        } else {
+            Some(FFTPlan { plan: plan })
+        }
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -52,27 +57,30 @@ impl FFTPlan {
     /// WARNING: This is an unormalized transformation. A forwards and
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
-    /// TODO: Write test.
+    /// TODO: Write test. Return Result, not Option.
     pub fn new_c2c_inplace(arr: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
                            direction: FFTDirection,
                            flags: FFTFlags)
-                           -> FFTPlan {
+                           -> Option<FFTPlan> {
 
         let (n0, n1) = arr.dim();
-        // let p = arr.as_ptr() as *mut FFTWComplex;
-        let p = &mut arr[[0, 0]] as *mut _ as *mut FFTWComplex;
+        let p = arr.as_ptr() as *mut FFTWComplex;
 
         let plan;
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as i32,
-                                                 n1 as i32,
+            plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
+                                                 n1 as std::os::raw::c_int,
                                                  p,
                                                  p,
-                                                 direction as i32,
-                                                 flags as u32);
+                                                 direction as std::os::raw::c_int,
+                                                 flags as std::os::raw::c_uint);
         }
 
-        FFTPlan { plan: plan }
+        if plan.is_null() {
+            None
+        } else {
+            Some(FFTPlan { plan: plan })
+        }
     }
 
 
