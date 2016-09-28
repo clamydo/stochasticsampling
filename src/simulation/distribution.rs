@@ -111,7 +111,7 @@ impl Distribution {
     /// quotient with wrap around coordinates.
     pub fn spatgrad(&self) -> Array<f64, (Ix, Ix, Ix, Ix)> {
         let (sx, sy, sa) = self.shape();
-        let mut res = ArrayBase::zeros((sx, sy, sa, 2));
+        let mut res = ArrayBase::zeros((2, sx, sy, sa));
 
         let h = &self.grid_width;
         let hx = 2. * h.x;
@@ -125,12 +125,12 @@ impl Distribution {
             // cheaper as it only has to wrap around one dimension at a time.
             let xm = (ix + sx - 1) % sx;
             let xp = (ix + 1) % sx;
-            res[(ix, iy, ia, 0)] =
+            res[(0, ix, iy, ia)] =
                 unsafe { (self.dist.uget((xp, iy, ia)) - self.dist.uget((xm, iy, ia))) / hx };
 
             let ym = (iy + sy - 1) % sy;
             let yp = (iy + 1) % sy;
-            res[(ix, iy, ia, 1)] =
+            res[(1, ix, iy, ia)] =
                 unsafe { (self.dist.uget((ix, yp, ia)) - self.dist.uget((ix, ym, ia))) / hy };
         }
 
@@ -290,14 +290,14 @@ mod tests {
         let grad = d.spatgrad();
 
 
-        assert_eq!(grad.subview(Axis(3), 0), res_x);
-        assert_eq!(grad.subview(Axis(3), 1), res_y);
+        assert_eq!(grad.subview(Axis(0), 0), res_x);
+        assert_eq!(grad.subview(Axis(0), 1), res_y);
 
         d.dist = Array::zeros(shape);
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((shape.0, shape.1, shape.2, 2)));
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
 
         d.dist = Array::zeros(shape) + 1.;
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((shape.0, shape.1, shape.2, 2)));
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, shape.0, shape.1, shape.2)));
     }
 
     #[test]

@@ -3,7 +3,6 @@ use coordinates::particle::Particle;
 use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use fftw3::fftw_ndarray::FFTData2D;
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use std::f64::consts::PI;
@@ -25,13 +24,13 @@ impl Integrator {
                           stresses: &StressPrefactors)
                           -> Array<f64, (Ix, Ix, Ix)> {
 
-        let mut s = Array::<f64, _>::zeros((grid_size.2, 2, 2));
+        let mut s = Array::<f64, _>::zeros((2, 2, grid_size.2));
         // Calculate discrete angles, considering the cell centered sample points of
         // the distribution
         let gw_half = grid_width.a / 2.;
         let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size.2);
 
-        for (mut e, a) in s.outer_iter_mut().zip(&angles) {
+        for (mut e, a) in s.axis_iter_mut(Axis(2)).zip(&angles) {
             e[[0, 0]] = stresses.active * 0.5 * (2. * a).cos();
             e[[0, 1]] = stresses.active * a.sin() * a.cos() - stresses.magnetic * a.sin();
             e[[1, 0]] = stresses.active * a.sin() * a.cos() + stresses.magnetic * a.sin();
@@ -75,9 +74,7 @@ impl Integrator {
         };
 
         // Allocate array to prepare FFT
-        // This would allocated an aligned array for SIMD.
-        // let mut res = FFTData2DMatrix::new((2, 2, grid_size.0, grid_size.1));
-        // But maybe, rust will do that anyways? Not guaranteed, though.
+        // Consider to align memory for SIMD
         let mut res = Array::<Complex<f64>, _>::from_elem((2, 2, grid_size.0, grid_size.1),
                                                           Complex::new(0., 0.));
 
@@ -172,11 +169,9 @@ impl Integrator {
     ///
     /// f[0, nx, ny] = l * grid_width_angle / 3
     /// ´´´
-    fn calc_stress_gradient(&self, dist: &Distribution) -> Array<f64, (Ix, Ix, Ix)> {
-        let h = dist.get_grid_width();
-
-        // Calculate just first component
-
+    ///
+    /// The result as dimensions (compontent, x, y).
+    fn calc_stress_divergence(&self, dist: &Distribution) -> Array<f64, (Ix, Ix, Ix)> {
         // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the
         // grid and j = 0.
         // This makes implicit and explicit use of broadcasting. Implicetly the
@@ -193,21 +188,48 @@ impl Integrator {
         //
         // This is done for every point (x, y, alpha).
 
-        let g = dist.spatgrad();
-        let sk = &self.stress_kernel;
+        let h = dist.get_grid_width();
 
-        let sh = g.dim();
+        let g = dist.spatgrad();
+        let sk = self.stress_kernel.view();
+
+        let sh_g = g.dim();
+        let sh_sk = sk.dim();
+        assert_eq!(sh_g.2,
+                   sh_sk.2,
+                   "Distribution gradient and stress_kernel should have same number of angles!");
+
         // Haven't found a better way to do this, since ndarray uses tuples for
         // encoding shapes.
-        let sh_a = (sh.0, sh.1, sh.2, sh.3, 1);
-        let sh_b = (sh.0, sh.1, sh.2, sh.3, 2);
+        let shape_g_newaxis = (1, sh_g.0, sh_g.1, sh_g.2, sh_g.3);
+        let shape_sk_newaxis = (sh_sk.0, sh_sk.1, 1, 1, sh_sk.2);
+        let shape_broadcast = (2, sh_g.0, sh_g.1, sh_g.2, sh_g.3);
 
         // TODO: Error handling
-        let int = (g.into_shape(sh_a).unwrap().broadcast(sh_b).unwrap().to_owned() * sk)
-            .sum(Axis(3));
+        let g_newaxis = g.into_shape(shape_g_newaxis).unwrap();
+        let g_broad = g_newaxis.broadcast(shape_broadcast).unwrap();
+        let sk_newaxis = sk.into_shape(shape_sk_newaxis).unwrap();
+        let sk_broad = sk_newaxis.broadcast(shape_broadcast).unwrap();
+
+        // TODO: Test if this actually works, as expected.
+        let int = (g_broad.to_owned() * sk_broad).sum(Axis(1));
 
         // Integrate along angle
-        int.map_axis(Axis(2), |v| periodic_simpson_integrate(v, h.a))
+        int.map_axis(Axis(3), |v| periodic_simpson_integrate(v, h.a))
+    }
+
+    /// Calculate flow field by convolving the Green's function of the stokes
+    /// equation (Oseen tensor) with the stress field divergence (force density)
+    pub fn calculate_flow_field(&self, dist: &Distribution) -> Array<f64, (Ix, Ix, Ix)> {
+        let f = self.calc_stress_divergence(dist);
+        let sh = f.dim();
+
+        match f.subview(Axis(2), 0).to_owned().as_slice() {
+            None => panic!("Fail!"),
+            _ => {}
+        }
+
+        unimplemented!()
     }
 }
 
@@ -259,6 +281,8 @@ mod tests {
     use super::super::distribution::Distribution;
     use super::super::distribution::GridWidth;
 
+    /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
+    /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
         let gs = (10, 10, 3);
@@ -277,21 +301,21 @@ mod tests {
         let should0 = arr2(&[[-0.25, -0.4330127018922193], [1.299038105676658, 0.25]]);
         let should1 = arr2(&[[0.5, -2.449293598294707e-16], [0.0, -0.5]]);
 
-        for e in (should0.clone() - i.stress_kernel.subview(Axis(0), 0)).map(|x| x.abs()).iter() {
+        for e in (should0.clone() - i.stress_kernel.subview(Axis(2), 0)).map(|x| x.abs()).iter() {
             assert!(*e < EPSILON,
                     "{} != {}",
                     should0,
-                    i.stress_kernel.subview(Axis(0), 0));
+                    i.stress_kernel.subview(Axis(2), 0));
         }
 
-        for e in (should1.clone() - i.stress_kernel.subview(Axis(0), 1)).map(|x| x.abs()).iter() {
+        for e in (should1.clone() - i.stress_kernel.subview(Axis(2), 1)).map(|x| x.abs()).iter() {
             assert!(*e < EPSILON,
                     "{} != {}",
                     should1,
-                    i.stress_kernel.subview(Axis(0), 1));
+                    i.stress_kernel.subview(Axis(2), 1));
         }
 
-        assert_eq!(i.stress_kernel.dim(), (3, 2, 2));
+        assert_eq!(i.stress_kernel.dim(), (2, 2, 3));
         assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs.0, gs.1));
 
         // TODO check if average oseen tensor is reasonable
@@ -356,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calc_stress_gradient() {
+    fn test_calc_stress_divergence() {
         let boxsize = (1., 1.);
         let gs = (10, 10, 10);
         let mut d = Distribution::new(gs, boxsize);
@@ -370,8 +394,8 @@ mod tests {
 
         let i = Integrator::new(gs, d.get_grid_width(), &s, 1.);
 
-        let res = i.calc_stress_gradient(&d);
+        let res = i.calc_stress_divergence(&d);
 
-        assert_eq!(Array::zeros((gs.0, gs.1, 2)), res);
+        assert_eq!(Array::zeros((2, gs.0, gs.1)), res);
     }
 }
