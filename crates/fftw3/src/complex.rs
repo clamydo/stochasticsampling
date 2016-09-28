@@ -13,6 +13,18 @@ impl<T: Float> Complex<T> {
     pub fn new(re: T, im: T) -> Complex<T> {
         Complex::<T>([re, im])
     }
+
+    /// Returns real part.
+    pub fn re(&self) -> T {
+        let &Complex::<T>(ref c) = self;
+        c[0]
+    }
+
+    /// Returns imaginary part.
+    pub fn im(&self) -> T {
+        let &Complex::<T>(ref c) = self;
+        c[1]
+    }
 }
 
 
@@ -81,6 +93,25 @@ impl<T: Float> Sub for Complex<T> {
         Complex::<T>([re, im])
     }
 }
+
+// TODO write test
+impl<T: Float> From<T> for Complex<T> {
+    fn from(re: T) -> Complex<T> {
+        Complex([re, T::zero()])
+    }
+}
+
+// TODO write test
+impl<T: Float> PartialEq for Complex<T> {
+    fn eq(&self, other: &Complex<T>) -> bool {
+        let &Complex::<T>(ref a) = self;
+        let &Complex::<T>(ref b) = other;
+
+        a[0] == b[0] && a[1] == b[1]
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {

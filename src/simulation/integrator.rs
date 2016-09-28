@@ -106,11 +106,10 @@ impl Integrator {
 
                 let plan = FFTPlan::new_c2c_inplace(&mut elem,
                                                     fft::FFTDirection::Forward,
-                                                    fft::FFTFlags::Estimate);
-                match plan {
-                    None => panic!("Could not aquire FFT plan from fftw3!"),
-                    Some(p) => p.execute(),
-                }
+                                                    fft::FFTFlags::Estimate)
+                    .unwrap();
+                plan.execute()
+
             }
         }
 
@@ -171,7 +170,7 @@ impl Integrator {
     /// ´´´
     ///
     /// The result as dimensions (compontent, x, y).
-    fn calc_stress_divergence(&self, dist: &Distribution) -> Array<f64, (Ix, Ix, Ix)> {
+    fn calc_stress_divergence(&self, dist: &Distribution) -> Array<Complex<f64>, (Ix, Ix, Ix)> {
         // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the
         // grid and j = 0.
         // This makes implicit and explicit use of broadcasting. Implicetly the
@@ -206,27 +205,39 @@ impl Integrator {
         let shape_broadcast = (2, sh_g.0, sh_g.1, sh_g.2, sh_g.3);
 
         // TODO: Error handling
-        let g_newaxis = g.into_shape(shape_g_newaxis).unwrap();
-        let g_broad = g_newaxis.broadcast(shape_broadcast).unwrap();
-        let sk_newaxis = sk.into_shape(shape_sk_newaxis).unwrap();
-        let sk_broad = sk_newaxis.broadcast(shape_broadcast).unwrap();
+        let g = g.into_shape(shape_g_newaxis).unwrap();
+        let g = g.broadcast(shape_broadcast).unwrap();
+        let sk = sk.into_shape(shape_sk_newaxis).unwrap();
+        let sk = sk.broadcast(shape_broadcast).unwrap();
 
-        // TODO: Test if this actually works, as expected.
-        let int = (g_broad.to_owned() * sk_broad).sum(Axis(1));
+        // TODO: Test if this actually works, as expected. Should produce a
+        // matrix-vector-product for every (x, y, alpha) coordinate.
+        // .to_owned() creates a unquily owned array that will contain the result and
+        // `int` is then bound to.
+        let int = (g.to_owned() * sk).sum(Axis(1));
 
         // Integrate along angle
-        int.map_axis(Axis(3), |v| periodic_simpson_integrate(v, h.a))
+        int.map_axis(Axis(3),
+                     |v| Complex::from(periodic_simpson_integrate(v, h.a)))
     }
 
     /// Calculate flow field by convolving the Green's function of the stokes
     /// equation (Oseen tensor) with the stress field divergence (force density)
     pub fn calculate_flow_field(&self, dist: &Distribution) -> Array<f64, (Ix, Ix, Ix)> {
-        let f = self.calc_stress_divergence(dist);
-        let sh = f.dim();
+        let mut f = self.calc_stress_divergence(dist);
 
-        match f.subview(Axis(2), 0).to_owned().as_slice() {
-            None => panic!("Fail!"),
-            _ => {}
+        // Just for testing, if memory is continuous.
+        f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
+
+        let mut u = Array::<f64, _>::zeros(f.dim());
+
+        // Fourier transform force density component wise
+        for mut a in f.outer_iter_mut() {
+            let plan = FFTPlan::new_c2c_inplace(&mut a,
+                                                fft::FFTDirection::Forward,
+                                                fft::FFTFlags::Estimate)
+                .unwrap();
+            plan.execute();
         }
 
         unimplemented!()
@@ -273,6 +284,7 @@ pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionConstants, times
 mod tests {
     use coordinates::TWOPI;
     use coordinates::particle::Particle;
+    use fftw3::complex::Complex;
     use ndarray::{Array, Axis, arr2};
     use settings::{DiffusionConstants, GridSize, StressPrefactors};
     use std::f64::EPSILON;
@@ -396,6 +408,6 @@ mod tests {
 
         let res = i.calc_stress_divergence(&d);
 
-        assert_eq!(Array::zeros((2, gs.0, gs.1)), res);
+        assert_eq!(Array::from_elem((2, gs.0, gs.1), Complex::new(0., 0.)), res);
     }
 }
