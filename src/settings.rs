@@ -10,7 +10,7 @@ use std::io::prelude::*;
 use toml;
 
 /// Structure that holds settings, which are defined externally in a TOML file.
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct Settings {
     pub simulation: SimulationSettings,
     pub parameters: Parameters,
@@ -23,21 +23,21 @@ pub type GridSize = (usize, usize, usize);
 
 
 /// Holds rotational and translational diffusion constants
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct DiffusionConstants {
     pub translational: f64,
     pub rotational: f64,
 }
 
 /// Holds prefactors for active and magnetic stress
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct StressPrefactors {
     pub active: f64,
     pub magnetic: f64,
 }
 
 /// Holds phyiscal parameters
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct Parameters {
     pub self_propulsion_speed: f64,
     pub diffusion: DiffusionConstants,
@@ -45,7 +45,7 @@ pub struct Parameters {
 }
 
 /// Holds simulation specific settings.
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,

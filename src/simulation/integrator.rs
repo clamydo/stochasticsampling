@@ -6,9 +6,18 @@ use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix};
 use settings::{DiffusionConstants, GridSize, StressPrefactors};
 use std::f64::consts::PI;
-use super::DiffusionParameter;
+use super::GridWidth;
 use super::distribution::Distribution;
-use super::distribution::GridWidth;
+
+/// Holds parameter needed for time step
+#[derive(Debug)]
+pub struct IntegrationParameter {
+    pub rot_diffusion: f64,
+    pub speed: f64,
+    pub stress: StressPrefactors,
+    pub timestep: f64,
+    pub trans_diffusion: f64,
+}
 
 /// Holds precomuted values
 #[derive(Debug)]
@@ -16,12 +25,13 @@ pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
     stress_kernel: Array<f64, (Ix, Ix, Ix)>,
     avg_oseen_kernel_fft: Array<Complex<f64>, (Ix, Ix, Ix, Ix)>,
+    parameter: IntegrationParameter,
 }
 
 impl Integrator {
     fn calc_stress_kernel(grid_size: GridSize,
                           grid_width: GridWidth,
-                          stresses: &StressPrefactors)
+                          stress: StressPrefactors)
                           -> Array<f64, (Ix, Ix, Ix)> {
 
         let mut s = Array::<f64, _>::zeros((2, 2, grid_size.2));
@@ -31,9 +41,9 @@ impl Integrator {
         let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size.2);
 
         for (mut e, a) in s.axis_iter_mut(Axis(2)).zip(&angles) {
-            e[[0, 0]] = stresses.active * 0.5 * (2. * a).cos();
-            e[[0, 1]] = stresses.active * a.sin() * a.cos() - stresses.magnetic * a.sin();
-            e[[1, 0]] = stresses.active * a.sin() * a.cos() + stresses.magnetic * a.sin();
+            e[[0, 0]] = stress.active * 0.5 * (2. * a).cos();
+            e[[0, 1]] = stress.active * a.sin() * a.cos() - stress.magnetic * a.sin();
+            e[[1, 0]] = stress.active * a.sin() * a.cos() + stress.magnetic * a.sin();
             e[[1, 1]] = -e[[0, 0]];
         }
 
@@ -50,7 +60,7 @@ impl Integrator {
     /// the cell an average of all cell corners is calculated.
     fn calc_oseen_kernel(grid_size: GridSize,
                          grid_width: GridWidth,
-                         stresses: &StressPrefactors,
+                         stress: StressPrefactors,
                          speed: f64)
                          -> Array<Complex<f64>, (Ix, Ix, Ix, Ix)> {
 
@@ -120,16 +130,16 @@ impl Integrator {
     ///
     pub fn new(grid_size: GridSize,
                grid_width: GridWidth,
-               stresses: &StressPrefactors,
-               speed: f64)
+               parameter: IntegrationParameter)
                -> Integrator {
 
         Integrator {
-            stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, stresses),
+            stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
             avg_oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size,
                                                                 grid_width,
-                                                                stresses,
-                                                                speed),
+                                                                parameter.stress,
+                                                                parameter.speed),
+            parameter: parameter,
         }
     }
 
@@ -252,11 +262,30 @@ impl Integrator {
 
         u.map(|x| x.re())
     }
+
+    /// Updates a test particle configuration according to the given parameters.
+    ///
+    /// Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1,
+    /// then
+    /// Y is normally distributed with variance t.
+    /// Diffusioncoefficient `d` translates to variance of normal distribuion
+    /// `s^2`
+    /// as `d = s^2 / 2`.
+    /// Together this leads to an update of the position due to the diffusion of
+    /// x_d(t + dt) = sqrt(2 d dt) N(0, 1)
+    pub fn evolve_inplace<F>(&self, p: &mut Particle, mut wiener_process: F)
+        where F: FnMut() -> f64
+    {
+        // TODO Also add fluxes
+        // Draw independently for every coordinate
+        p.position.x += self.parameter.trans_diffusion * wiener_process();
+        p.position.y += self.parameter.trans_diffusion * wiener_process();
+        p.orientation += self.parameter.rot_diffusion * wiener_process();
+    }
 }
 
 /// Implements Simpon's Rule integration on an array, representing sampled
-/// points of a periodic
-/// function.
+/// points of a periodic function.
 fn periodic_simpson_integrate(samples: ArrayView<f64, Ix>, h: f64) -> f64 {
     let len = samples.dim();
 
@@ -277,18 +306,6 @@ fn periodic_simpson_integrate(samples: ArrayView<f64, Ix>, h: f64) -> f64 {
     }
 }
 
-pub fn evolve_inplace<F>(p: &mut Particle, diffusion: &DiffusionConstants, timestep: f64, mut c: F)
-    where F: FnMut() -> f64
-{
-    // Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1, then
-    // Y is normally distributed with variance t.
-    let trans_diff_step = timestep * diffusion.translational;
-    let rot_diff_step = timestep * diffusion.rotational;
-
-    p.position += c() * trans_diff_step;
-    p.orientation += c() * rot_diff_step;
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -300,25 +317,30 @@ mod tests {
     use std::f64::EPSILON;
     use std::f64::consts::PI;
     use super::*;
+    use super::super::{GridWidth, grid_width};
     use super::super::distribution::Distribution;
-    use super::super::distribution::GridWidth;
 
     /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
+        let bs = (1., 1.);
         let gs = (10, 10, 3);
-        let gw = GridWidth {
-            x: 1.,
-            y: 1.,
-            a: TWOPI / (gs.2 as f64),
-        };
+        let gw = grid_width(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
         };
 
-        let i = Integrator::new(gs, gw, &s, 1.);
+        let int_param = IntegrationParameter {
+            timestep: 1.,
+            trans_diffusion: 1.,
+            rot_diffusion: 1.,
+            speed: 1.,
+            stress: s,
+        };
+
+        let i = Integrator::new(gs, gw, int_param);
 
         let should0 = arr2(&[[-0.25, -0.4330127018922193], [1.299038105676658, 0.25]]);
         let should1 = arr2(&[[0.5, -2.449293598294707e-16], [0.0, -0.5]]);
@@ -345,6 +367,24 @@ mod tests {
 
     #[test]
     fn test_evolve() {
+        let bs = (1., 1.);
+        let gs = (10, 10, 3);
+        let gw = grid_width(gs, bs);
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 1.,
+        };
+
+        let int_param = IntegrationParameter {
+            timestep: 1.,
+            trans_diffusion: 1.,
+            rot_diffusion: 1.,
+            speed: 1.,
+            stress: s,
+        };
+
+        let i = Integrator::new(gs, gw, int_param);
+
         let mut p = Particle::new(0.4, 0.5, 1., (1., 1.));
         let d = DiffusionConstants {
             translational: 1.,
@@ -354,7 +394,7 @@ mod tests {
         let t = 1.;
         let c = || 0.1;
 
-        evolve_inplace(&mut p, &d, t, c);
+        i.evolve_inplace(&mut p, c);
 
         assert_eq!(p.position.x.v, 0.5);
         assert_eq!(p.position.y.v, 0.6);
@@ -403,18 +443,34 @@ mod tests {
 
     #[test]
     fn test_calc_stress_divergence() {
-        let boxsize = (1., 1.);
+        let bs = (1., 1.);
         let gs = (10, 10, 10);
-        let mut d = Distribution::new(gs, boxsize);
-
-        d.dist = Array::zeros(gs);
 
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
         };
 
-        let i = Integrator::new(gs, d.get_grid_width(), &s, 1.);
+        let bs = (1., 1.);
+        let gs = (10, 10, 10);
+        let gw = grid_width(gs, bs);
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 1.,
+        };
+
+        let int_param = IntegrationParameter {
+            timestep: 1.,
+            trans_diffusion: 1.,
+            rot_diffusion: 1.,
+            speed: 1.,
+            stress: s,
+        };
+
+        let i = Integrator::new(gs, gw, int_param);
+        let mut d = Distribution::new(gs, grid_width(gs, bs));
+
+        d.dist = Array::zeros(gs);
 
         let res = i.calc_stress_divergence(&d);
 

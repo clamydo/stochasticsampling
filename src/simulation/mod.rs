@@ -3,12 +3,14 @@
 mod distribution;
 mod integrator;
 
+use coordinates::TWOPI;
 use coordinates::particle::Particle;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
 use rand::distributions::{IndependentSample, Normal};
 use self::distribution::Distribution;
-use settings::Settings;
+use self::integrator::{IntegrationParameter, Integrator};
+use settings::{BoxSize, GridSize, Settings};
 use std::error::Error;
 use std::f64;
 use std::fmt;
@@ -33,13 +35,6 @@ impl Error for SimulationError {
     }
 }
 
-
-
-/// Holds rotational and translational difussion parameters.
-pub struct DiffusionParameter {
-    dt: f64, // translational diffusion
-    dr: f64, // rotational diffusion
-}
 
 /// Structure that holds state variables needed for MPI.
 #[allow(dead_code)]
@@ -84,6 +79,23 @@ macro_rules! zdebug {
     }
 }
 
+
+#[derive(Debug, Clone, Copy)]
+pub struct GridWidth {
+    x: f64,
+    y: f64,
+    a: f64,
+}
+
+/// Calculates width of a grid cell given the number of cells and box size.
+pub fn grid_width(grid_size: GridSize, box_size: BoxSize) -> GridWidth {
+    GridWidth {
+        x: box_size.0 as f64 / grid_size.0 as f64,
+        y: box_size.1 as f64 / grid_size.1 as f64,
+        a: TWOPI / grid_size.2 as f64,
+    }
+}
+
 impl<'a> Simulation<'a> {
     /// Return a new simulation data structure, holding the state of the
     /// simulation.
@@ -105,7 +117,8 @@ impl<'a> Simulation<'a> {
         let state = SimulationState {
             particles: Vec::with_capacity(ranklocal_number_of_particles),
             distribution: Distribution::new(settings.simulation.grid_size,
-                                            settings.simulation.box_size),
+                                            grid_width(settings.simulation.grid_size,
+                                                       settings.simulation.box_size)),
         };
 
         Simulation {
@@ -135,18 +148,30 @@ impl<'a> Simulation<'a> {
     /// settings file.
     pub fn run(&mut self) -> Result<(), SimulationError> {
 
-        let sqrt_timestep = f64::sqrt(self.settings.simulation.timestep);
+        let sim = self.settings.simulation;
+        let param = self.settings.parameters;
+
+        // TODO use seeded random source
         let mut rng = ::rand::thread_rng();
-        let normal = Normal::new(0.0, sqrt_timestep);
+        // normal distribution with variance timestep
+        let normal = Normal::new(0.0, sim.timestep.sqrt());
         let mut normal_sample = move || normal.ind_sample(&mut rng);
 
+        let int_param = IntegrationParameter {
+            timestep: sim.timestep,
+            trans_diffusion: param.diffusion.translational.sqrt() * 2.,
+            rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
+            speed: param.self_propulsion_speed,
+            stress: param.stress,
+        };
+
+        let integrator = Integrator::new(sim.grid_size,
+                                         grid_width(sim.grid_size, sim.box_size),
+                                         int_param);
 
         for step in 1..self.settings.simulation.number_of_timesteps {
             for (i, mut p) in self.state.particles.iter_mut().enumerate() {
-                integrator::evolve_inplace(&mut p,
-                                           &self.settings.parameters.diffusion,
-                                           sqrt_timestep,
-                                           &mut normal_sample);
+                integrator.evolve_inplace(&mut p, &mut normal_sample);
 
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
