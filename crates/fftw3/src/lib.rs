@@ -1,3 +1,5 @@
+#![feature(custom_derive)]
+
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;

@@ -229,9 +229,7 @@ impl Integrator {
         // Just for testing, if memory is continuous.
         f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
 
-        let mut u = Array::<f64, _>::zeros(f.dim());
-
-        // Fourier transform force density component wise
+        // Fourier transform force density component-wise
         for mut a in f.outer_iter_mut() {
             let plan = FFTPlan::new_c2c_inplace(&mut a,
                                                 fft::FFTDirection::Forward,
@@ -240,7 +238,19 @@ impl Integrator {
             plan.execute();
         }
 
-        unimplemented!()
+        // Make use of auto-broadcasting of lhs
+        let mut u = (&self.avg_oseen_kernel_fft * &f).sum(Axis(1));
+
+        // Inverse Fourier transform flow field component-wise
+        for mut a in u.outer_iter_mut() {
+            let plan = FFTPlan::new_c2c_inplace(&mut a,
+                                                fft::FFTDirection::Backward,
+                                                fft::FFTFlags::Estimate)
+                .unwrap();
+            plan.execute();
+        }
+
+        u.map(|x| x.re())
     }
 }
 

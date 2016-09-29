@@ -1,4 +1,5 @@
 use num::Float;
+use num::traits::identities::Zero;
 use std::ops::{Add, Div, Mul, Sub};
 
 /// Implement own complex representation in order to be conform with C99 memory
@@ -111,6 +112,17 @@ impl<T: Float> PartialEq for Complex<T> {
     }
 }
 
+
+impl<T: Float> Zero for Complex<T> {
+    fn zero() -> Complex<T> {
+        let z = T::zero();
+        Complex([z, z])
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+}
 
 
 #[cfg(test)]
