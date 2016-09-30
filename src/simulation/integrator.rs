@@ -77,7 +77,10 @@ impl Integrator {
         // Define Oseen-Tensor
         let oseen = |x: f64, y: f64| {
             let norm: f64 = (x * x + y * y).sqrt();
-            let p = speed / 8. / PI / norm;
+            // Normalization due to forth and back Fourier transformation. FFTW3 does not
+            // do this!
+            let fft_norm = (grid_size.0 * grid_size.1) as f64;
+            let p = 1. / 8. / PI / norm / fft_norm;
 
             [[Complex::new(1. + x * x, 0.) * p, Complex::new(x * y, 0.) * p],
              [Complex::new(y * x, 0.) * p, Complex::new(1. + y * y, 0.) * p]]
@@ -273,7 +276,10 @@ impl Integrator {
     /// as `d = s^2 / 2`.
     /// Together this leads to an update of the position due to the diffusion of
     /// x_d(t + dt) = sqrt(2 d dt) N(0, 1)
-    pub fn evolve_inplace<F>(&self, p: &mut Particle, mut wiener_process: F)
+    pub fn evolve_inplace<F>(&self,
+                             p: &mut Particle,
+                             mut wiener_process: F,
+                             distribution: &Distribution)
         where F: FnMut() -> f64
     {
         // TODO Also add fluxes
@@ -385,7 +391,6 @@ mod tests {
 
         let i = Integrator::new(gs, gw, int_param);
 
-        let mut p = Particle::new(0.4, 0.5, 1., (1., 1.));
         let d = DiffusionConstants {
             translational: 1.,
             rotational: 2.,
@@ -394,11 +399,15 @@ mod tests {
         let t = 1.;
         let c = || 0.1;
 
-        i.evolve_inplace(&mut p, c);
+        let mut p = vec![Particle::new(0.6, 0.3, 0., bs)];
+        let mut d = Distribution::new(gs, grid_width(gs, bs));
+        d.sample_from(&p);
 
-        assert_eq!(p.position.x.v, 0.5);
-        assert_eq!(p.position.y.v, 0.6);
-        assert_eq!(p.orientation.v, 1.2);
+        i.evolve_inplace(&mut p[0], c, &d);
+
+        assert_eq!(p[0].position.x.v, 0.5);
+        assert_eq!(p[0].position.y.v, 0.6);
+        assert_eq!(p[0].orientation.v, 1.2);
     }
 
     #[test]
