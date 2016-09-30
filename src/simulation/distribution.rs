@@ -213,6 +213,7 @@ mod tests {
         d.sample_from(&p2);
         println!("{}", d.dist);
 
+        // Check if properly normalised to 1 (N = 1)
         assert!((d.dist[[2, 1, 0]] * vol - 1.0).abs() <= EPSILON,
                 "Sum is: {}, but expected: {}.",
                 d.dist[[2, 1, 0]] * vol,
