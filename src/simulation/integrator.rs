@@ -17,6 +17,7 @@ pub struct IntegrationParameter {
     pub stress: StressPrefactors,
     pub timestep: f64,
     pub trans_diffusion: f64,
+    pub magnetic_reoriantation: f64,
 }
 
 /// Holds precomuted values
@@ -277,7 +278,8 @@ impl Integrator {
     fn evolve_particle_inplace<F>(&self,
                                   p: &mut Particle,
                                   wiener_process: &mut F,
-                                  flow_field: &ArrayView<f64, (Ix, Ix, Ix)>)
+                                  flow_field: &ArrayView<f64, (Ix, Ix, Ix)>,
+                                  vort: &ArrayView<f64, (Ix, Ix)>)
         where F: FnMut() -> f64
     {
 
@@ -287,13 +289,18 @@ impl Integrator {
         let flow_x = flow_field[[0, nearest_grid_point_index[0], nearest_grid_point_index[1]]];
         let flow_y = flow_field[[1, nearest_grid_point_index[0], nearest_grid_point_index[1]]];
 
-        // TODO Also add fluxes
         // Draw independently for every coordinate
-        p.position.x += flow_x * self.parameter.timestep +
+        p.position.x += (flow_x + p.orientation.as_ref().cos()) * self.parameter.timestep +
                         self.parameter.trans_diffusion * wiener_process();
-        p.position.y += flow_y * self.parameter.timestep +
+        p.position.y += (flow_y + p.orientation.as_ref().sin()) * self.parameter.timestep +
                         self.parameter.trans_diffusion * wiener_process();
-        p.orientation += self.parameter.rot_diffusion * wiener_process();
+
+
+        let vort = vort[nearest_grid_point_index];
+
+        p.orientation +=
+            (self.parameter.magnetic_reoriantation * p.orientation.as_ref().sin() + vort) *
+            self.parameter.timestep + self.parameter.rot_diffusion * wiener_process();
     }
 
     pub fn evolve_particles_inplace<F>(&self,
@@ -304,11 +311,47 @@ impl Integrator {
     {
         // Calculate flow field from distribution
         let u = self.calculate_flow_field(distribution);
+        let vort = vorticity(self.grid_width, &u.view());
 
         for p in particles {
-            self.evolve_particle_inplace(p, wiener_process, &u.view());
+            self.evolve_particle_inplace(p, wiener_process, &u.view(), &vort.view());
         }
     }
+}
+
+
+/// Implements the operation `dx uy - dy ux` on a given discretized flow field
+/// `u=(ux, uy)`.
+fn vorticity(grid_width: GridWidth, u: &ArrayView<f64, (Ix, Ix, Ix)>) -> Array<f64, (Ix, Ix)> {
+    let sh = u.shape();
+    let sx = sh[1];
+    let sy = sh[2];
+    let mut res = Array::zeros((sx, sy));
+
+    let hx = 2. * grid_width.x;
+    let hy = 2. * grid_width.y;
+
+    for (i, _) in u.indexed_iter() {
+        match i {
+            (0, ix, iy) => {
+                let ym = (iy + sy - 1) % sy;
+                let yp = (iy + 1) % sy;
+                unsafe {
+                    *res.uget_mut((ix, iy)) -= (u.uget((0, ix, yp)) - u.uget((0, ix, ym))) / hy
+                }
+            }
+            (1, ix, iy) => {
+                let xm = (ix + sx - 1) % sx;
+                let xp = (ix + 1) % sx;
+                unsafe {
+                    *res.uget_mut((ix, iy)) += (u.uget((1, xp, iy)) - u.uget((1, xm, iy))) / hx
+                }
+            }
+            (_, _, _) => {}
+        }
+    }
+
+    res
 }
 
 /// Implements Simpon's Rule integration on an array, representing sampled
@@ -364,6 +407,7 @@ mod tests {
             rot_diffusion: 1.,
             speed: 1.,
             stress: s,
+            magnetic_reoriantation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);
@@ -407,6 +451,7 @@ mod tests {
             rot_diffusion: 1.,
             speed: 1.,
             stress: s,
+            magnetic_reoriantation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);
@@ -480,6 +525,7 @@ mod tests {
             rot_diffusion: 1.,
             speed: 1.,
             stress: s,
+            magnetic_reoriantation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);

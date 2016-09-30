@@ -1,4 +1,5 @@
 #![crate_type = "staticlib"]
+#![feature(slice_patterns)]
 
 //! This crate implements a Monte-Carlo method for solving a (specific)
 //! Fokker-Planck type equation. Most of the implementation is rather general.

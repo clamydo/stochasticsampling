@@ -163,6 +163,7 @@ impl<'a> Simulation<'a> {
             rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
             speed: param.self_propulsion_speed,
             stress: param.stress,
+            magnetic_reoriantation: param.magnetic_reoriantation * 2.,
         };
 
         let integrator = Integrator::new(sim.grid_size,

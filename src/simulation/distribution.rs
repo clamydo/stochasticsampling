@@ -1,7 +1,7 @@
 //! A representation for the probability distribution function.
 
 use coordinates::particle::Particle;
-use ndarray::{Array, ArrayBase, Ix};
+use ndarray::{Array, Ix};
 use settings::GridSize;
 use std::ops::Index;
 use super::GridWidth;
@@ -99,7 +99,7 @@ impl Distribution {
     /// quotient with wrap around coordinates.
     pub fn spatgrad(&self) -> Array<f64, (Ix, Ix, Ix, Ix)> {
         let (sx, sy, sa) = self.shape();
-        let mut res = ArrayBase::zeros((2, sx, sy, sa));
+        let mut res = Array::zeros((2, sx, sy, sa));
 
         let h = &self.grid_width;
         let hx = 2. * h.x;

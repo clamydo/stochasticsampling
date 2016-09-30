@@ -8,6 +8,7 @@
 
 [parameters]
     self_propulsion_speed = 0.01
+    magnetic_reoriantation = 1.0
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0
