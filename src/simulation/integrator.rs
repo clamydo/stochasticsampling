@@ -289,18 +289,21 @@ impl Integrator {
         let flow_x = flow_field[[0, nearest_grid_point_index[0], nearest_grid_point_index[1]]];
         let flow_y = flow_field[[1, nearest_grid_point_index[0], nearest_grid_point_index[1]]];
 
+        let param = &self.parameter;
+
         // Draw independently for every coordinate
-        p.position.x += (flow_x + p.orientation.as_ref().cos()) * self.parameter.timestep +
-                        self.parameter.trans_diffusion * wiener_process();
-        p.position.y += (flow_y + p.orientation.as_ref().sin()) * self.parameter.timestep +
-                        self.parameter.trans_diffusion * wiener_process();
+        p.position.x += (flow_x + p.orientation.as_ref().cos()) * param.timestep +
+                        param.trans_diffusion * wiener_process();
+        p.position.y += (flow_y + p.orientation.as_ref().sin()) * param.timestep +
+                        param.trans_diffusion * wiener_process();
 
 
+        // Get vorticity dx uy - dy ux
         let vort = vort[nearest_grid_point_index];
 
-        p.orientation +=
-            (self.parameter.magnetic_reoriantation * p.orientation.as_ref().sin() + vort) *
-            self.parameter.timestep + self.parameter.rot_diffusion * wiener_process();
+        p.orientation += (param.magnetic_reoriantation * p.orientation.as_ref().sin() + vort) *
+                         param.timestep +
+                         param.rot_diffusion * wiener_process();
     }
 
     pub fn evolve_particles_inplace<F>(&self,
@@ -311,6 +314,7 @@ impl Integrator {
     {
         // Calculate flow field from distribution
         let u = self.calculate_flow_field(distribution);
+        // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &u.view());
 
         for p in particles {
