@@ -170,15 +170,16 @@ impl<'a> Simulation<'a> {
                                          int_param);
 
 
-        for step in 1..self.settings.simulation.number_of_timesteps {
+        for step in 0..self.settings.simulation.number_of_timesteps {
             // Sample probability distribution from ensemble
             self.state.distribution.sample_from(&self.state.particles);
 
-            for (i, mut p) in self.state.particles.iter_mut().enumerate() {
+            // Update particle positions
+            integrator.evolve_particles_inplace(&mut self.state.particles,
+                                                &mut normal_sample,
+                                                &self.state.distribution);
 
-                // Let the ensemble evolve in time
-                integrator.evolve_inplace(&mut p, &mut normal_sample, &self.state.distribution);
-
+            for (i, p) in self.state.particles.iter().enumerate() {
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
                     i,

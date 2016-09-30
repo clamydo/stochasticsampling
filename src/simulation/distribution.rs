@@ -1,6 +1,5 @@
 //! A representation for the probability distribution function.
 
-use coordinates::TWOPI;
 use coordinates::particle::Particle;
 use ndarray::{Array, ArrayBase, Ix};
 use settings::GridSize;
@@ -13,7 +12,7 @@ pub type Bins = Array<f64, (Ix, Ix, Ix)>;
 /// Holds a normalised sampled distribution function on a grid, assuming the
 /// sampling points to be centered in a grid cell. This means, that the value
 /// at position `x_j` (for `j=0,...,N-1`, on a grid with `N` cells and `x_0 =
-/// w/2``) is the average of particles in the interval `[x_j - w/2, x_j +
+/// w/2`) is the average of particles in the interval `[x_j - w/2, x_j +
 /// w/2]`, with the grid width `w`.
 #[derive(Debug)]
 pub struct Distribution {
@@ -24,7 +23,7 @@ pub struct Distribution {
     grid_width: GridWidth,
 }
 
-type GridCoordinate = [usize; 3];
+type GridCoordinate = [Ix; 3];
 
 impl Distribution {
     /// Returns a zero initialised instance of Distribution.
@@ -45,15 +44,15 @@ impl Distribution {
         self.dist.dim()
     }
 
-    /// Transforms a continous particle coorinate into a discrete grid
+    /// Transforms a continous particle coordinate into a discrete grid
     /// coordinate. Maps particle inside an volume *centered* around the grid
     /// point to that grid point.
     /// The first grid point does not lie on the box border, but a half cell
     /// width from it.
     pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
-        let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as usize;
-        let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as usize;
-        let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as usize;
+        let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as Ix;
+        let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
+        let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as Ix;
 
         [gx, gy, ga]
     }
@@ -79,7 +78,7 @@ impl Distribution {
     /// Estimates the approximate values for the distribution function at the
     /// grid points using grid cell averages.
     pub fn sample_from(&mut self, particles: &[Particle]) {
-        let n = self.histogram_from(&particles) as f64;
+        let n = self.histogram_from(particles) as f64;
 
         // Scale by grid cell volume, in order to arrive at a sampled function,
         // averaged over a grid cell. Missing this would result into the
@@ -148,12 +147,9 @@ impl Index<[i32; 3]> for Distribution {
 
 #[cfg(test)]
 mod tests {
-    use coordinates::modulofloat::Mf64;
     use coordinates::particle::Particle;
-    use coordinates::vector::Mod64Vector2;
     use ndarray::{Array, Axis, arr3};
     use std::f64::EPSILON;
-    use std::f64::consts::PI;
     use super::*;
     use super::super::{GridWidth, grid_width};
 
