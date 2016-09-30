@@ -206,7 +206,7 @@ impl Integrator {
 
         let sh_g = g.dim();
         let sh_sk = sk.dim();
-        assert_eq!(sh_g.2,
+        assert_eq!(sh_g.3,
                    sh_sk.2,
                    "Distribution gradient and stress_kernel should have same number of angles!");
 
