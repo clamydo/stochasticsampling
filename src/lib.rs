@@ -17,6 +17,7 @@ extern crate mpi;
 #[macro_use(s)]
 extern crate ndarray;
 extern crate rand;
+extern crate pcg_rand;
 extern crate rustc_serialize;
 extern crate toml;
 extern crate fftw3;

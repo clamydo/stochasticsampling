@@ -55,6 +55,7 @@ pub struct SimulationSettings {
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub timestep: f64,
+    pub seed: [u64; 2],
 }
 
 /// Error type that merges all errors that can happen during loading and
@@ -150,5 +151,6 @@ mod tests {
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
+        assert_eq!(settings.simulation.seed, [1, 1]);
     }
 }
