@@ -167,7 +167,7 @@ mod tests {
         let box_size = (1., 1.);
         let gw = grid_width(grid_size, box_size);
         let n = 1000;
-        let p = Particle::randomly_placed_particles(n, box_size);
+        let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, gw);
 
         d.histogram_from(&p);
@@ -188,7 +188,7 @@ mod tests {
         let box_size = (1., 1.);
         let grid_size = (5, 5, 2);
         let n = 1000;
-        let p = Particle::randomly_placed_particles(n, box_size);
+        let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
 
         d.sample_from(&p);
@@ -199,7 +199,7 @@ mod tests {
         let vol = gx * gy * ga;
         // Naive integration
         let sum = vol * d.dist.fold(0., |s, x| s + x);
-        assert!((sum - 1.).abs() <= n as f64 * EPSILON,
+        assert!((sum - 1.).abs() <= EPSILON * n as f64, 
                 "Step function sum is: {}, but expected: {}. Should be normalised.",
                 sum,
                 n);

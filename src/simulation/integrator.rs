@@ -442,7 +442,7 @@ mod tests {
     #[test]
     fn test_evolve() {
         let bs = (1., 1.);
-        let gs = (10, 10, 3);
+        let gs = (10, 10, 4);
         let gw = grid_width(gs, bs);
         let s = StressPrefactors {
             active: 1.,

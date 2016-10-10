@@ -7,6 +7,8 @@ use coordinates::TWOPI;
 use coordinates::particle::Particle;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
+use pcg_rand::Pcg64;
+use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Normal};
 use self::distribution::Distribution;
 use self::integrator::{IntegrationParameter, Integrator};
@@ -139,7 +141,8 @@ impl<'a> Simulation<'a> {
 
         self.state.particles =
             Particle::randomly_placed_particles(self.number_of_particles,
-                                                self.settings.simulation.box_size);
+                                                self.settings.simulation.box_size,
+                                                self.settings.simulation.seed);
 
         assert_eq!(self.state.particles.len(), self.number_of_particles);
     }
@@ -151,8 +154,9 @@ impl<'a> Simulation<'a> {
         let sim = self.settings.simulation;
         let param = self.settings.parameters;
 
-        // TODO use seeded random source
-        let mut rng = ::rand::thread_rng();
+        // deterministically seed every mpi process (slightly) differently
+        let seed = [sim.seed[0], sim.seed[1] + self.mpi.rank as u64];
+        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
         // normal distribution with variance timestep
         let normal = Normal::new(0.0, sim.timestep.sqrt());
         let mut normal_sample = move || normal.ind_sample(&mut rng);
