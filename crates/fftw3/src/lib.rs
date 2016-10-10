@@ -1,10 +1,11 @@
-#![cfg_attr(test, feature(plugin))]
-#![cfg_attr(test, plugin(quickcheck_macros))]
+#![feature(custom_derive)]
+
 #[cfg(test)]
+#[macro_use]
 extern crate quickcheck;
 
-extern crate ndarray;
 extern crate num;
+extern crate ndarray;
 
 mod fftw3_ffi;
 pub mod fftw_ndarray;
@@ -22,34 +23,36 @@ mod tests {
     /// Transforming for and back should be an identity operation (except for
     /// normalization factors)
     #[test]
-    fn fft_test() {
+    fn test_fft_identity() {
         let shape = (11usize, 11);
         let mut input = FFTData2D::new(shape);
         let mut fft = FFTData2D::new(shape);
         let mut ifft = FFTData2D::new(shape);
 
         // zero out input array
-        input.data.map_inplace(|x| *x = Complex::<f64>([0., 0.]));
+        input.data.assign_scalar(&Complex::new(0., 0.));
 
         // define a real rectangle in the middle of the array
-        input.data[[4, 4]] = Complex::<f64>([1., 0.]);
-        input.data[[4, 5]] = Complex::<f64>([1., 0.]);
-        input.data[[4, 6]] = Complex::<f64>([1., 0.]);
-        input.data[[5, 4]] = Complex::<f64>([1., 0.]);
-        input.data[[5, 5]] = Complex::<f64>([1., 0.]);
-        input.data[[5, 6]] = Complex::<f64>([1., 0.]);
-        input.data[[6, 4]] = Complex::<f64>([1., 0.]);
-        input.data[[6, 5]] = Complex::<f64>([1., 0.]);
-        input.data[[6, 6]] = Complex::<f64>([1., 0.]);
+        input.data[[4, 4]] = Complex::new(1., 0.);
+        input.data[[4, 5]] = Complex::new(1., 0.);
+        input.data[[4, 6]] = Complex::new(1., 0.);
+        input.data[[5, 4]] = Complex::new(1., 0.);
+        input.data[[5, 5]] = Complex::new(1., 0.);
+        input.data[[5, 6]] = Complex::new(1., 0.);
+        input.data[[6, 4]] = Complex::new(1., 0.);
+        input.data[[6, 5]] = Complex::new(1., 0.);
+        input.data[[6, 6]] = Complex::new(1., 0.);
 
         let plan_forward = FFTPlan::new_c2c(&mut input.data,
                                             &mut fft.data,
                                             fft::FFTDirection::Forward,
-                                            fft::FFTFlags::Measure);
+                                            fft::FFTFlags::Measure)
+            .unwrap();
         let plan_backward = FFTPlan::new_c2c(&mut fft.data,
                                              &mut ifft.data,
                                              fft::FFTDirection::Backward,
-                                             fft::FFTFlags::Measure);
+                                             fft::FFTFlags::Measure)
+            .unwrap();
 
         plan_forward.execute();
         plan_backward.execute();

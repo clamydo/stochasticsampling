@@ -1,4 +1,5 @@
 use num::Float;
+use num::traits::identities::Zero;
 use std::ops::{Add, Div, Mul, Sub};
 
 /// Implement own complex representation in order to be conform with C99 memory
@@ -12,6 +13,18 @@ impl<T: Float> Complex<T> {
     /// Return a new complex number.
     pub fn new(re: T, im: T) -> Complex<T> {
         Complex::<T>([re, im])
+    }
+
+    /// Returns real part.
+    pub fn re(&self) -> T {
+        let &Complex::<T>(ref c) = self;
+        c[0]
+    }
+
+    /// Returns imaginary part.
+    pub fn im(&self) -> T {
+        let &Complex::<T>(ref c) = self;
+        c[1]
     }
 }
 
@@ -82,41 +95,73 @@ impl<T: Float> Sub for Complex<T> {
     }
 }
 
+// TODO write test
+impl<T: Float> From<T> for Complex<T> {
+    fn from(re: T) -> Complex<T> {
+        Complex([re, T::zero()])
+    }
+}
+
+// TODO write test
+impl<T: Float> PartialEq for Complex<T> {
+    fn eq(&self, other: &Complex<T>) -> bool {
+        let &Complex::<T>(ref a) = self;
+        let &Complex::<T>(ref b) = other;
+
+        a[0] == b[0] && a[1] == b[1]
+    }
+}
+
+
+impl<T: Float> Zero for Complex<T> {
+    fn zero() -> Complex<T> {
+        let z = T::zero();
+        Complex([z, z])
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use num::Complex as NC;
     use super::Complex;
 
     // check against different implementation
-    #[quickcheck]
-    fn mul_qc(re1: f64, im1: f64, re2: f64, im2: f64) -> bool {
-        let a = Complex::<f64>([re1, im1]);
-        let b = Complex::<f64>([re2, im2]);
+    quickcheck!{
+        fn mul_qc(re1: f64, im1: f64, re2: f64, im2: f64) -> bool {
+            let a = Complex::<f64>([re1, im1]);
+            let b = Complex::<f64>([re2, im2]);
 
-        let Complex::<f64>(res) = a * b;
+            let Complex::<f64>(res) = a * b;
 
-        let na = NC::<f64> { re: re1, im: im1 };
-        let nb = NC::<f64> { re: re2, im: im2 };
+            let na = NC::<f64> { re: re1, im: im1 };
+            let nb = NC::<f64> { re: re2, im: im2 };
 
-        let NC { re: cmp_re, im: cmp_im } = na * nb;
+            let NC { re: cmp_re, im: cmp_im } = na * nb;
 
-        cmp_re == res[0] && cmp_im == res[1]
+            cmp_re == res[0] && cmp_im == res[1]
+        }
     }
 
-    #[quickcheck]
-    fn mul_scalar_qc(re: f64, im: f64, s: f64) -> bool {
-        let a = Complex::<f64>([re, im]);
+    quickcheck!{
+        fn mul_scalar_qc(re: f64, im: f64, s: f64) -> bool {
+            let a = Complex::<f64>([re, im]);
 
-        let Complex::<f64>(res_right) = a * s;
-        let Complex::<f64>(res_left) = s * a;
+            let Complex::<f64>(res_right) = a * s;
+            let Complex::<f64>(res_left) = s * a;
 
-        let na = NC::<f64> { re: re, im: im };
+            let na = NC::<f64> { re: re, im: im };
 
-        let NC { re: cmp_re_right, im: cmp_im_right } = na * s;
-        let NC { re: cmp_re_left, im: cmp_im_left } = s * na;
+            let NC { re: cmp_re_right, im: cmp_im_right } = na * s;
+            let NC { re: cmp_re_left, im: cmp_im_left } = s * na;
 
-        cmp_re_right == res_right[0] && cmp_im_right == res_right[1] &&
-        cmp_re_left == res_left[0] && cmp_im_left == res_left[1]
+            cmp_re_right == res_right[0] && cmp_im_right == res_right[1] &&
+            cmp_re_left == res_left[0] && cmp_im_left == res_left[1]
+        }
     }
 
     // fails because of different implementations!

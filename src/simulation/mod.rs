@@ -1,13 +1,18 @@
-
+//! Module that defines data structures and algorithms for the integration of
+//! the simulation.
 mod distribution;
 mod integrator;
 
+use coordinates::TWOPI;
 use coordinates::particle::Particle;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
+use pcg_rand::Pcg64;
+use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Normal};
 use self::distribution::Distribution;
-use settings::Settings;
+use self::integrator::{IntegrationParameter, Integrator};
+use settings::{BoxSize, GridSize, Settings};
 use std::error::Error;
 use std::f64;
 use std::fmt;
@@ -32,13 +37,8 @@ impl Error for SimulationError {
     }
 }
 
-pub struct DiffusionParameter {
-    dt: f64, // translational diffusion
-    dr: f64, // rotational diffusion
-}
 
-
-
+/// Structure that holds state variables needed for MPI.
 #[allow(dead_code)]
 struct MPIState {
     universe: Universe,
@@ -47,6 +47,7 @@ struct MPIState {
     rank: i32,
 }
 
+/// Main data structure representing the simulation.
 pub struct Simulation<'a> {
     settings: &'a Settings,
     mpi: MPIState,
@@ -54,6 +55,8 @@ pub struct Simulation<'a> {
     number_of_particles: usize,
 }
 
+
+/// Holds the current state of the simulation.
 struct SimulationState {
     particles: Vec<Particle>,
     distribution: Distribution,
@@ -78,7 +81,26 @@ macro_rules! zdebug {
     }
 }
 
+
+#[derive(Debug, Clone, Copy)]
+pub struct GridWidth {
+    x: f64,
+    y: f64,
+    a: f64,
+}
+
+/// Calculates width of a grid cell given the number of cells and box size.
+pub fn grid_width(grid_size: GridSize, box_size: BoxSize) -> GridWidth {
+    GridWidth {
+        x: box_size.0 as f64 / grid_size.0 as f64,
+        y: box_size.1 as f64 / grid_size.1 as f64,
+        a: TWOPI / grid_size.2 as f64,
+    }
+}
+
 impl<'a> Simulation<'a> {
+    /// Return a new simulation data structure, holding the state of the
+    /// simulation.
     pub fn new(settings: &Settings) -> Simulation {
         let mpi_universe = ::mpi::initialize().unwrap();
         let mpi_world = mpi_universe.world();
@@ -97,7 +119,8 @@ impl<'a> Simulation<'a> {
         let state = SimulationState {
             particles: Vec::with_capacity(ranklocal_number_of_particles),
             distribution: Distribution::new(settings.simulation.grid_size,
-                                            settings.simulation.box_size),
+                                            grid_width(settings.simulation.grid_size,
+                                                       settings.simulation.box_size)),
         };
 
         Simulation {
@@ -109,6 +132,8 @@ impl<'a> Simulation<'a> {
     }
 
 
+    /// Initialise the initial condition of the simulation. At the moment it is
+    /// sampled from a uniform random distribution.
     pub fn init(&mut self) {
         zinfo!(self.mpi.rank,
                "Placing {} particles at their initial positions.",
@@ -116,27 +141,50 @@ impl<'a> Simulation<'a> {
 
         self.state.particles =
             Particle::randomly_placed_particles(self.number_of_particles,
-                                                self.settings.simulation.box_size);
+                                                self.settings.simulation.box_size,
+                                                self.settings.simulation.seed);
 
         assert_eq!(self.state.particles.len(), self.number_of_particles);
     }
 
+    /// Run the simulation for the number of timesteps specified in the
+    /// settings file.
     pub fn run(&mut self) -> Result<(), SimulationError> {
 
-        let sqrt_timestep = f64::sqrt(self.settings.simulation.timestep);
-        let mut rng = ::rand::thread_rng();
-        let normal = Normal::new(0.0, sqrt_timestep);
+        let sim = self.settings.simulation;
+        let param = self.settings.parameters;
+
+        // deterministically seed every mpi process (slightly) differently
+        let seed = [sim.seed[0], sim.seed[1] + self.mpi.rank as u64];
+        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
+        // normal distribution with variance timestep
+        let normal = Normal::new(0.0, sim.timestep.sqrt());
         let mut normal_sample = move || normal.ind_sample(&mut rng);
 
-        let diff = DiffusionParameter {
-            dt: self.settings.simulation.translational_diffusion_constant,
-            dr: self.settings.simulation.rotational_diffusion_constant,
+        let int_param = IntegrationParameter {
+            timestep: sim.timestep,
+            trans_diffusion: param.diffusion.translational.sqrt() * 2.,
+            rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
+            speed: param.self_propulsion_speed,
+            stress: param.stress,
+            magnetic_reoriantation: param.magnetic_reoriantation * 2.,
         };
 
-        for step in 1..self.settings.simulation.number_of_timesteps {
-            for (i, mut p) in self.state.particles.iter_mut().enumerate() {
-                integrator::evolve_inplace(&mut p, &diff, sqrt_timestep, &mut normal_sample);
+        let integrator = Integrator::new(sim.grid_size,
+                                         grid_width(sim.grid_size, sim.box_size),
+                                         int_param);
 
+
+        for step in 0..self.settings.simulation.number_of_timesteps {
+            // Sample probability distribution from ensemble
+            self.state.distribution.sample_from(&self.state.particles);
+
+            // Update particle positions
+            integrator.evolve_particles_inplace(&mut self.state.particles,
+                                                &mut normal_sample,
+                                                &self.state.distribution);
+
+            for (i, p) in self.state.particles.iter().enumerate() {
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
                     step,
                     i,

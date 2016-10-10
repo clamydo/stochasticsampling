@@ -18,10 +18,13 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 
+/// This structure represents a modulo type, with modulus m.
 #[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
 pub struct Mf64 {
-    pub v: f64, // value
-    pub m: f64, // divisor
+    /// value
+    pub v: f64,
+    /// divisor/modulus
+    pub m: f64,
 }
 
 /// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.
@@ -245,22 +248,24 @@ mod tests {
         }
     }
 
-    #[quickcheck]
     #[ignore]
-    fn new_invariant_qc(f: f64) -> TestResult {
-        if f > 1. || f < 0. {
-            TestResult::discard()
-        } else {
-            let a = Mf64::new(f, 1.);
-            TestResult::from_bool(a.v == f)
+    quickcheck!{
+        fn new_invariant_qc(f: f64) -> TestResult {
+            if f > 1. || f < 0. {
+                TestResult::discard()
+            } else {
+                let a = Mf64::new(f, 1.);
+                TestResult::from_bool(a.v == f)
+            }
         }
     }
 
-    #[quickcheck]
     #[ignore]
-    fn new_range_qc(f: f64) -> bool {
-        let a = Mf64::new(f, 1.);
-        0. <= a.v && a.v < 1.
+    quickcheck!{
+        fn new_range_qc(f: f64) -> bool {
+            let a = Mf64::new(f, 1.);
+            0. <= a.v && a.v < 1.
+        }
     }
 
     #[test]
@@ -322,16 +327,17 @@ mod tests {
         }
     }
 
-    #[quickcheck]
     #[ignore]
-    fn addition_range_qc(lhs: f64, rhs: f64, range: f64) -> TestResult {
-        if range <= 0.0 {
-            TestResult::discard()
-        } else {
-            let a = Mf64::new(lhs, range);
-            let b = Mf64::new(rhs, range);
-            let c = a + b;
-            TestResult::from_bool(0. <= c.v && c.v < range)
+    quickcheck!{
+        fn addition_range_qc(lhs: f64, rhs: f64, range: f64) -> TestResult {
+            if range <= 0.0 {
+                TestResult::discard()
+            } else {
+                let a = Mf64::new(lhs, range);
+                let b = Mf64::new(rhs, range);
+                let c = a + b;
+                TestResult::from_bool(0. <= c.v && c.v < range)
+            }
         }
     }
 
@@ -391,13 +397,14 @@ mod tests {
         }
     }
 
-    #[quickcheck]
     #[ignore]
-    fn subtraction_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs, 1.);
-        let b = Mf64::new(rhs, 1.);
-        let c = a - b;
-        0. <= c.v && c.v < 1.
+    quickcheck!{
+        fn subtraction_range_qc(lhs: f64, rhs: f64) -> bool {
+            let a = Mf64::new(lhs, 1.);
+            let b = Mf64::new(rhs, 1.);
+            let c = a - b;
+            0. <= c.v && c.v < 1.
+        }
     }
 
     #[test]
@@ -436,12 +443,13 @@ mod tests {
         }
     }
 
-    #[quickcheck]
     #[ignore]
-    fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
-        let a = Mf64::new(lhs, 1.);
-        let b = a * rhs;
-        0. <= b.v && b.v < 1.
+    quickcheck!{
+        fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
+            let a = Mf64::new(lhs, 1.);
+            let b = a * rhs;
+            0. <= b.v && b.v < 1.
+        }
     }
 
     #[test]

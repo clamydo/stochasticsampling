@@ -1,4 +1,4 @@
-extern crate toml;
+//! This module handles a TOML settings file.
 
 use std::convert::From;
 use std::error::Error;
@@ -7,27 +7,55 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use toml;
 
 /// Structure that holds settings, which are defined externally in a TOML file.
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct Settings {
     pub simulation: SimulationSettings,
+    pub parameters: Parameters,
 }
 
+/// Size of the simulation box an arbitary physical dimensions.
 pub type BoxSize = (f64, f64);
+/// Size of the discrete grid.
 pub type GridSize = (usize, usize, usize);
 
+
+/// Holds rotational and translational diffusion constants
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+pub struct DiffusionConstants {
+    pub translational: f64,
+    pub rotational: f64,
+}
+
+/// Holds prefactors for active and magnetic stress
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+pub struct StressPrefactors {
+    pub active: f64,
+    pub magnetic: f64,
+}
+
+/// Holds phyiscal parameters
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+pub struct Parameters {
+    pub self_propulsion_speed: f64,
+    pub diffusion: DiffusionConstants,
+    pub stress: StressPrefactors,
+    /// Assumes that b points in x-direction
+    pub magnetic_reoriantation: f64,
+}
+
 /// Holds simulation specific settings.
-#[derive(RustcEncodable, RustcDecodable)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
     pub number_of_cells: usize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub rotational_diffusion_constant: f64,
     pub timestep: f64,
-    pub translational_diffusion_constant: f64,
+    pub seed: [u64; 2],
 }
 
 /// Error type that merges all errors that can happen during loading and
@@ -35,15 +63,15 @@ pub struct SimulationSettings {
 /// file.
 #[derive(Debug)]
 pub enum SettingsError {
-    Parser(String),
     Io(io::Error),
+    Parser(toml::ParserError),
 }
 
 impl Display for SettingsError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             SettingsError::Io(ref e) => e.fmt(f),
-            SettingsError::Parser(ref s) => write!(f, "{}", s),
+            SettingsError::Parser(ref e) => write!(f, "{}", e),
         }
     }
 }
@@ -52,14 +80,14 @@ impl Error for SettingsError {
     fn description(&self) -> &str {
         match *self {
             SettingsError::Io(ref e) => e.description(),
-            SettingsError::Parser(ref s) => s,
+            SettingsError::Parser(ref e) => e.description(),
         }
     }
 
     fn cause(&self) -> Option<&Error> {
         match *self {
             SettingsError::Io(ref e) => Some(e),
-            SettingsError::Parser(_) => None,
+            SettingsError::Parser(ref e) => Some(e),
         }
     }
 }
@@ -67,6 +95,12 @@ impl Error for SettingsError {
 impl From<io::Error> for SettingsError {
     fn from(err: io::Error) -> SettingsError {
         SettingsError::Io(err)
+    }
+}
+
+impl From<toml::ParserError> for SettingsError {
+    fn from(err: toml::ParserError) -> SettingsError {
+        SettingsError::Parser(err)
     }
 }
 
@@ -88,9 +122,13 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> 
     // read .toml file into string
     let toml_string = try!(read_from_file(&param_file));
 
+    let mut parser = toml::Parser::new(&toml_string);
+
     // desereialise
-    toml::decode_str::<Settings>(&toml_string)
-        .ok_or_else(|| SettingsError::Parser("Settings file could not be Parserd.".to_owned()))
+    match parser.parse() {
+        Some(t) => Ok(toml::decode::<Settings>(toml::Value::Table(t)).unwrap()),
+        None => Err(SettingsError::Parser(parser.errors[0].to_owned())),
+    }
 }
 
 
@@ -102,13 +140,17 @@ mod tests {
     fn read_settings() {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
+        assert_eq!(settings.parameters.diffusion.rotational, 0.5);
+        assert_eq!(settings.parameters.diffusion.translational, 1.0);
+        assert_eq!(settings.parameters.stress.active, 1.0);
+        assert_eq!(settings.parameters.stress.magnetic, 1.0);
+        assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
         assert_eq!(settings.simulation.box_size, (1., 1.));
         assert_eq!(settings.simulation.grid_size, (10, 10, 6));
         assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
-        assert_eq!(settings.simulation.rotational_diffusion_constant, 0.5);
         assert_eq!(settings.simulation.timestep, 0.1);
-        assert_eq!(settings.simulation.translational_diffusion_constant, 1.0);
+        assert_eq!(settings.simulation.seed, [1, 1]);
     }
 }

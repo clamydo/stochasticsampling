@@ -11,14 +11,15 @@ name = "simulation"
 log = "0.3"
 env_logger = "0.3"
 rand = "0.3"
+pcg_rand = "0.7"
 toml = "0.1"
 rustc-serialize = "*"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
 ndarray = "0.6"
+fftw3 = { path = "crates/fftw3" }
 
 [dev-dependencies]
 quickcheck = "*"
-quickcheck_macros = "*"
 
 [workspace]
-members = ["src/fftw3"]
+members = ["crates/fftw3"]

@@ -1,17 +1,27 @@
+//! 2D and 3D modulo vector types.
+
 use coordinates::modulofloat::Mf64;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
+/// 3D modulo vector type
 #[derive(Copy, Clone)]
 pub struct Mod64Vector3 {
+    /// x-coordinate
     pub x: Mf64,
+    /// y-coordinate
     pub y: Mf64,
+    /// z-coordinate
     pub z: Mf64,
-    pub mx: f64, // divisor
-    pub my: f64, // divisor
-    pub mz: f64, // divisor
+    /// quotient in x direction, typically the box size
+    pub mx: f64,
+    /// quotient in y direction, typically the box size
+    pub my: f64,
+    /// quotient in z direction, typically the box size
+    pub mz: f64,
 }
 
 impl Mod64Vector3 {
+    /// Returns a modulo 3D vector with the given coordinates and quotients.
     pub fn new(x: f64, y: f64, z: f64, m: (f64, f64, f64)) -> Mod64Vector3 {
         Mod64Vector3 {
             x: Mf64::new(x, m.0),
@@ -95,15 +105,22 @@ impl Mul<f64> for Mod64Vector3 {
 
 // implement 2D version
 
+/// 2D modulo vector type
 #[derive(Copy, Clone)]
 pub struct Mod64Vector2 {
+    /// x-coordinate
     pub x: Mf64,
+    /// y-coordinate
     pub y: Mf64,
+    /// quotient in x direction, typically the box size
     pub mx: f64,
+    /// quotient in y direction, typically the box size
     pub my: f64,
 }
 
+
 impl Mod64Vector2 {
+    /// Returns a modulo 3D vector with the given coordinates and quotients.
     pub fn new(x: f64, y: f64, m: (f64, f64)) -> Mod64Vector2 {
         Mod64Vector2 {
             x: Mf64::new(x, m.0),
@@ -201,15 +218,16 @@ mod tests {
         assert_eq!(*p3.z.as_ref(), 0.25);
     }
 
-    #[quickcheck]
     #[ignore]
-    fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
-        const DIV: f64 = 3.45;
-        let boxsize = (3.45, 3.45, 3.45);
-        let a = Mod64Vector3::new(x, y, z, boxsize);
-        let b = a * rhs;
-        0. <= *b.x.as_ref() && *b.x.as_ref() < DIV && 0. <= *b.y.as_ref() &&
-        *b.y.as_ref() < DIV && 0. <= *b.z.as_ref() && *b.z.as_ref() < DIV
+    quickcheck!{
+        fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
+            const DIV: f64 = 3.45;
+            let boxsize = (3.45, 3.45, 3.45);
+            let a = Mod64Vector3::new(x, y, z, boxsize);
+            let b = a * rhs;
+            0. <= *b.x.as_ref() && *b.x.as_ref() < DIV && 0. <= *b.y.as_ref() &&
+            *b.y.as_ref() < DIV && 0. <= *b.z.as_ref() && *b.z.as_ref() < DIV
+        }
     }
 
     #[test]
@@ -220,11 +238,12 @@ mod tests {
         assert_eq!(*p3.y.as_ref(), 0.5);
     }
 
-    #[quickcheck]
     #[ignore]
-    fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
-        let a = Mod64Vector2::new(x, y, (1., 1.));
-        let b = a * rhs;
-        0. <= *b.x.as_ref() && *b.x.as_ref() < 1. && 0. <= *b.y.as_ref() && *b.y.as_ref() < 1.
+    quickcheck!{
+        fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
+            let a = Mod64Vector2::new(x, y, (1., 1.));
+            let b = a * rhs;
+            0. <= *b.x.as_ref() && *b.x.as_ref() < 1. && 0. <= *b.y.as_ref() && *b.y.as_ref() < 1.
+        }
     }
 }

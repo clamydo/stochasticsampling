@@ -1,9 +1,18 @@
 [simulation]
-box_size = [ 1.0, 1.0 ]
-grid_size = [ 10, 10, 6 ]
-number_of_particles = 100
-number_of_timesteps = 500
-number_of_cells = 10
-rotational_diffusion_constant = 0.5
-timestep = 0.1
-translational_diffusion_constant = 1.0
+    box_size = [ 1.0, 1.0 ]
+    grid_size = [ 10, 10, 6 ]
+    number_of_particles = 100
+    number_of_timesteps = 500
+    number_of_cells = 10
+    timestep = 0.1
+    seed = [ 1, 1 ]
+
+[parameters]
+    self_propulsion_speed = 0.01
+    magnetic_reoriantation = 1.0
+    [parameters.diffusion]
+        rotational = 0.5
+        translational = 1.0
+    [parameters.stress]
+        active =  1.0
+        magnetic = 1.0
