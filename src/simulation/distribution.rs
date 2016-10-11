@@ -199,7 +199,7 @@ mod tests {
         let vol = gx * gy * ga;
         // Naive integration
         let sum = vol * d.dist.fold(0., |s, x| s + x);
-        assert!((sum - 1.).abs() <= EPSILON * n as f64, 
+        assert!((sum - 1.).abs() <= EPSILON * n as f64,
                 "Step function sum is: {}, but expected: {}. Should be normalised.",
                 sum,
                 n);
