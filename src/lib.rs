@@ -1,5 +1,5 @@
 #![crate_type = "staticlib"]
-#![feature(slice_patterns)]
+#![feature(proc_macro)]
 
 //! This crate implements a Monte-Carlo method for solving a (specific)
 //! Fokker-Planck type equation. Most of the implementation is rather general.
@@ -18,7 +18,9 @@ extern crate mpi;
 extern crate ndarray;
 extern crate rand;
 extern crate pcg_rand;
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_cbor;
 extern crate toml;
 extern crate fftw3;
 
