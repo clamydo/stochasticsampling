@@ -1,10 +1,16 @@
-image: alpine
+image: baseimage-cargo
 
-pages:
-  script:
-  - curl https://sh.rustup.rs -sSf | sh
-  - rustup default nightly
-  - cargo test -- --ignored
-  only:
-  - master
+before_script:
+    - apt-get update && apt-get -y install build-essential libopenmpi1.10 libopenmpi-dev libfftw3-3 libfftw3-dev libclang1 libclang-dev clang
+    - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+    - export PATH="/root/.cargo/bin:$PATH"
 
+stages:
+    - test
+
+test_job:
+    stage: test
+    script:
+        - env RUST_TEST_THREADS=1 LIBCLANG_PATH=/usr/lib/llvm-3.8/lib /root/.cargo/bin/cargo test
+    only:
+        - master
