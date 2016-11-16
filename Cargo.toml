@@ -13,10 +13,10 @@ fftw3 = { path = "crates/fftw3" }
 log = "0.3"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
 ndarray = "0.6"
-pcg_rand = "0.7"
+pcg_rand = { path = "crates/external/pcg_rand"}
 rand = "0.3"
-serde = "0.8"
-serde_derive = "0.8"
+serde = "=0.8.9"
+serde_derive = "=0.8.9"
 serde_cbor = "0.4"
 toml = { version = "0.2", default-features = false, features = ["serde"] }
 

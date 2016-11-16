@@ -1,6 +1,6 @@
 #![crate_type = "staticlib"]
 #![feature(proc_macro)]
-
+#![feature(rustc_macro)]
 //! This crate implements a Monte-Carlo method for solving a (specific)
 //! Fokker-Planck type equation. Most of the implementation is rather general.
 //! The parts specific to the problem can be found mainly in  the

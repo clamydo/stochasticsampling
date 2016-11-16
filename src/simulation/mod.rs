@@ -49,10 +49,12 @@ struct MPIState {
 
 /// Main data structure representing the simulation.
 pub struct Simulation<'a> {
-    settings: &'a Settings,
+    integrator: Integrator,
     mpi: MPIState,
-    state: SimulationState,
+    normaldist: Normal,
     number_of_particles: usize,
+    settings: &'a Settings,
+    state: SimulationState,
 }
 
 
@@ -60,6 +62,7 @@ pub struct Simulation<'a> {
 struct SimulationState {
     particles: Vec<Particle>,
     distribution: Distribution,
+    rng: Pcg64,
 }
 
 macro_rules! zinfo {
@@ -105,8 +108,13 @@ impl<'a> Simulation<'a> {
         let mpi_universe = ::mpi::initialize().unwrap();
         let mpi_world = mpi_universe.world();
 
+        // helper bindings for brevity
+        let sim = settings.simulation;
+        let param = settings.parameters;
+
+
         // share particles evenly between all ranks
-        let ranklocal_number_of_particles: usize = settings.simulation.number_of_particles /
+        let ranklocal_number_of_particles: usize = sim.number_of_particles /
                                                    (mpi_world.size() as usize);
 
         let mpi = MPIState {
@@ -116,18 +124,39 @@ impl<'a> Simulation<'a> {
             rank: mpi_world.rank(),
         };
 
+        // deterministically seed every mpi process (slightly) differently
+        // normal distribution with variance timestep
+        let seed = [sim.seed[0], sim.seed[1] + mpi.rank as u64];
+
         let state = SimulationState {
             particles: Vec::with_capacity(ranklocal_number_of_particles),
-            distribution: Distribution::new(settings.simulation.grid_size,
-                                            grid_width(settings.simulation.grid_size,
-                                                       settings.simulation.box_size)),
+            distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
+            rng: SeedableRng::from_seed(seed),
         };
 
+        let int_param = IntegrationParameter {
+            timestep: sim.timestep,
+            trans_diffusion: param.diffusion.translational.sqrt() * 2.,
+            rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
+            speed: param.self_propulsion_speed,
+            stress: param.stress,
+            magnetic_reoriantation: param.magnetic_reoriantation * 2.,
+        };
+
+        let integrator = Integrator::new(sim.grid_size,
+                                         grid_width(sim.grid_size, sim.box_size),
+                                         int_param);
+
+        // initialize a normal distribution with variance sqrt(timestep)
+        let normal = Normal::new(0.0, sim.timestep.sqrt());
+
         Simulation {
-            settings: settings,
+            integrator: integrator,
             mpi: mpi,
-            state: state,
+            normaldist: normal,
             number_of_particles: ranklocal_number_of_particles,
+            settings: settings,
+            state: state,
         }
     }
 
@@ -150,39 +179,19 @@ impl<'a> Simulation<'a> {
     /// Run the simulation for the number of timesteps specified in the
     /// settings file.
     pub fn run(&mut self) -> Result<(), SimulationError> {
-
-        let sim = self.settings.simulation;
-        let param = self.settings.parameters;
-
-        // deterministically seed every mpi process (slightly) differently
-        let seed = [sim.seed[0], sim.seed[1] + self.mpi.rank as u64];
-        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
-        // normal distribution with variance timestep
-        let normal = Normal::new(0.0, sim.timestep.sqrt());
-        let mut normal_sample = move || normal.ind_sample(&mut rng);
-
-        let int_param = IntegrationParameter {
-            timestep: sim.timestep,
-            trans_diffusion: param.diffusion.translational.sqrt() * 2.,
-            rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
-            speed: param.self_propulsion_speed,
-            stress: param.stress,
-            magnetic_reoriantation: param.magnetic_reoriantation * 2.,
-        };
-
-        let integrator = Integrator::new(sim.grid_size,
-                                         grid_width(sim.grid_size, sim.box_size),
-                                         int_param);
-
-
         for step in 0..self.settings.simulation.number_of_timesteps {
             // Sample probability distribution from ensemble
             self.state.distribution.sample_from(&self.state.particles);
 
+            // Dirty hack, pretty inelegant!
+            let random_samples = [self.normaldist.ind_sample(&mut self.state.rng),
+                                  self.normaldist.ind_sample(&mut self.state.rng),
+                                  self.normaldist.ind_sample(&mut self.state.rng)];
+
             // Update particle positions
-            integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                &mut normal_sample,
-                                                &self.state.distribution);
+            self.integrator.evolve_particles_inplace(&mut self.state.particles,
+                                                     &random_samples,
+                                                     &self.state.distribution);
 
             for (i, p) in self.state.particles.iter().enumerate() {
                 zdebug!(self.mpi.rank, "{}, {}, {}, {}",
