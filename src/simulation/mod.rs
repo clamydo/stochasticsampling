@@ -138,7 +138,6 @@ impl Simulation {
             timestep: sim.timestep,
             trans_diffusion: param.diffusion.translational.sqrt() * 2.,
             rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
-            speed: param.self_propulsion_speed,
             stress: param.stress,
             magnetic_reoriantation: param.magnetic_reoriantation * 2.,
         };

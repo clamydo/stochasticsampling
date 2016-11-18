@@ -62,6 +62,7 @@ pub struct SimulationSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentSettings {
     pub output_dir: String,
+    pub prefix: String,
 }
 
 /// Error type that merges all errors that can happen during loading and
@@ -147,6 +148,7 @@ mod tests {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
         assert_eq!(settings.environment.output_dir, "./out/");
+        assert_eq!(settings.environment.prefix, "foo");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);

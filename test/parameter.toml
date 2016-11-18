@@ -1,5 +1,6 @@
 [environment]
     output_dir = "./out/"
+    prefix = "foo"
 
 [simulation]
     box_size = [ 1.0, 1.0 ]

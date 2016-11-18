@@ -7,12 +7,13 @@ extern crate env_logger;
 extern crate serde_cbor;
 extern crate time;
 
+use serde_cbor::ser;
 use std::env;
 use std::fs::File;
 use std::path::Path;
 use stochasticsampling::settings;
 use stochasticsampling::simulation::Simulation;
-use serde_cbor::ser;
+use stochasticsampling::simulation::Snapshot;
 
 fn main() {
 
@@ -37,22 +38,30 @@ fn main() {
                 }
             };
 
-
-            // TODO Add option to add prefix to output path
-            // TODO Save version of simulation
-            let timestring = time::now().strftime("%Y-%m-%d_%H%M").unwrap().to_string() + ".cbor";
-            let filename = Path::new(&settings.environment.output_dir).join(timestring);
-
-            let mut file = match File::create(&filename) {
-                Err(why) => panic!("couldn't create {}: {}", filename.display(), why),
-                Ok(file) => file,
-            };
-
             let mut simulation = Simulation::new(settings.clone());
             simulation.init();
 
-            for state in simulation.take(1) {
-                ser::to_writer(&mut file, &state).unwrap();
+            // run the actual simulation
+            let data: Vec<Snapshot> = simulation.take(settings.simulation.number_of_timesteps)
+                .collect();
+
+
+            // TODO Add option to add prefix to output path
+            // TODO Save version of simulation
+            let filename = settings.environment.prefix +
+                           &time::now().strftime("%Y-%m-%d_%H%M").unwrap().to_string() +
+                           ".cbor";
+            let filepath = Path::new(&settings.environment.output_dir).join(filename);
+
+            let mut file = match File::create(&filepath) {
+                Err(why) => panic!("couldn't create {}: {}", filepath.display(), why),
+                Ok(file) => file,
+            };
+
+            // write all snapshots into one cbor file
+            match ser::to_writer(&mut file, &data) {
+                Err(e) => panic!("The world has stopped turnung, because: {}", e),
+                _ => {}
             }
 
             // match simulation.run() {
