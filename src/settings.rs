@@ -10,10 +10,11 @@ use std::io::prelude::*;
 use toml;
 
 /// Structure that holds settings, which are defined externally in a TOML file.
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub simulation: SimulationSettings,
     pub parameters: Parameters,
+    pub environment: EnvironmentSettings,
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
@@ -23,21 +24,21 @@ pub type GridSize = (usize, usize, usize);
 
 
 /// Holds rotational and translational diffusion constants
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct DiffusionConstants {
     pub translational: f64,
     pub rotational: f64,
 }
 
 /// Holds prefactors for active and magnetic stress
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct StressPrefactors {
     pub active: f64,
     pub magnetic: f64,
 }
 
 /// Holds phyiscal parameters
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Parameters {
     pub self_propulsion_speed: f64,
     pub diffusion: DiffusionConstants,
@@ -47,7 +48,7 @@ pub struct Parameters {
 }
 
 /// Holds simulation specific settings.
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
@@ -56,6 +57,12 @@ pub struct SimulationSettings {
     pub number_of_timesteps: usize,
     pub timestep: f64,
     pub seed: [u64; 2],
+}
+
+/// Holds environment variables.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentSettings {
+    pub output_dir: String,
 }
 
 /// Error type that merges all errors that can happen during loading and
@@ -140,6 +147,7 @@ mod tests {
     fn read_settings() {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
+        assert_eq!(settings.environment.output_dir, "./out/");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);

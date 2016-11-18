@@ -4,11 +4,15 @@ extern crate stochasticsampling;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
+extern crate serde_cbor;
+extern crate time;
 
 use std::env;
+use std::fs::File;
+use std::path::Path;
 use stochasticsampling::settings;
 use stochasticsampling::simulation::Simulation;
-
+use serde_cbor::ser;
 
 fn main() {
 
@@ -33,17 +37,31 @@ fn main() {
                 }
             };
 
-            let mut simulation = Simulation::new(settings);
 
+            // TODO Add option to add prefix to output path
+            // TODO Save version of simulation
+            let timestring = time::now().strftime("%Y-%m-%d_%H%M").unwrap().to_string() + ".cbor";
+            let filename = Path::new(&settings.environment.output_dir).join(timestring);
+
+            let mut file = match File::create(&filename) {
+                Err(why) => panic!("couldn't create {}: {}", filename.display(), why),
+                Ok(file) => file,
+            };
+
+            let mut simulation = Simulation::new(settings.clone());
             simulation.init();
 
-            match simulation.run() {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("Error during simulation: {}", e);
-                    std::process::exit(1)
-                }
+            for state in simulation.take(1) {
+                ser::to_writer(&mut file, &state).unwrap();
             }
+
+            // match simulation.run() {
+            //     Ok(_) => {}
+            //     Err(e) => {
+            //         error!("Error during simulation: {}", e);
+            //         std::process::exit(1)
+            //     }
+            // }
         }
         _ => {
             error!("You've passed too many arguments. Please don't do that.");

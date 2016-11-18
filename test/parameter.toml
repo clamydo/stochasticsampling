@@ -1,3 +1,6 @@
+[environment]
+    output_dir = "./out/"
+
 [simulation]
     box_size = [ 1.0, 1.0 ]
     grid_size = [ 10, 10, 6 ]
