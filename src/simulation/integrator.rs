@@ -456,13 +456,11 @@ mod tests {
 
         let i = Integrator::new(gs, gw, int_param);
 
-        let mut c = || 0.1;
-
         let mut p = vec![Particle::new(0.6, 0.3, 0., bs)];
         let mut d = Distribution::new(gs, grid_width(gs, bs));
         d.sample_from(&p);
 
-        i.evolve_particles_inplace(&mut p, &mut c, &d);
+        i.evolve_particles_inplace(&mut p, &[0.1, 0.1, 0.1], &d);
 
         // TODO Check these values!
         assert_eq!(p[0].position.x.v, 0.6103050484831503);

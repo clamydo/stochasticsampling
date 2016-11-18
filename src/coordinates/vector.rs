@@ -4,7 +4,7 @@ use coordinates::modulofloat::Mf64;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
 /// 3D modulo vector type
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Mod64Vector3 {
     /// x-coordinate
     pub x: Mf64,
@@ -106,7 +106,7 @@ impl Mul<f64> for Mod64Vector3 {
 // implement 2D version
 
 /// 2D modulo vector type
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Mod64Vector2 {
     /// x-coordinate
     pub x: Mf64,

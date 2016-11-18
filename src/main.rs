@@ -33,7 +33,7 @@ fn main() {
                 }
             };
 
-            let mut simulation = Simulation::new(&settings);
+            let mut simulation = Simulation::new(settings);
 
             simulation.init();
 

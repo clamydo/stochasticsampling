@@ -9,7 +9,7 @@ use super::modulofloat::Mf64;
 use super::vector::Mod64Vector2;
 
 /// Coordinates (including the orientation) of a particle in 2D.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Particle {
     /// spatial position
     pub position: Mod64Vector2,
