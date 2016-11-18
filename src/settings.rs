@@ -40,7 +40,6 @@ pub struct StressPrefactors {
 /// Holds phyiscal parameters
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Parameters {
-    pub self_propulsion_speed: f64,
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
     /// Assumes that b points in x-direction

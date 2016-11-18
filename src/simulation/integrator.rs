@@ -13,7 +13,6 @@ use super::distribution::Distribution;
 #[derive(Debug)]
 pub struct IntegrationParameter {
     pub rot_diffusion: f64,
-    pub speed: f64,
     pub stress: StressPrefactors,
     pub timestep: f64,
     pub trans_diffusion: f64,
@@ -405,7 +404,6 @@ mod tests {
             timestep: 1.,
             trans_diffusion: 1.,
             rot_diffusion: 1.,
-            speed: 1.,
             stress: s,
             magnetic_reoriantation: 1.,
         };
@@ -449,7 +447,6 @@ mod tests {
             timestep: 1.,
             trans_diffusion: 1.,
             rot_diffusion: 1.,
-            speed: 1.,
             stress: s,
             magnetic_reoriantation: 1.,
         };
@@ -522,7 +519,6 @@ mod tests {
             timestep: 1.,
             trans_diffusion: 1.,
             rot_diffusion: 1.,
-            speed: 1.,
             stress: s,
             magnetic_reoriantation: 1.,
         };
