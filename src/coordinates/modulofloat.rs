@@ -24,6 +24,7 @@ pub struct Mf64 {
     /// value
     pub v: f64,
     /// divisor/modulus
+    #[serde(skip_serializing, skip_deserializing)]
     pub m: f64,
 }
 
