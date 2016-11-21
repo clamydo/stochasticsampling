@@ -51,7 +51,6 @@ pub struct Parameters {
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
-    pub number_of_cells: usize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub timestep: f64,
@@ -156,7 +155,6 @@ mod tests {
         assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
         assert_eq!(settings.simulation.box_size, (1., 1.));
         assert_eq!(settings.simulation.grid_size, (10, 10, 6));
-        assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
