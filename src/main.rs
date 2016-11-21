@@ -15,6 +15,8 @@ use stochasticsampling::settings;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
 
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 fn main() {
 
     // initialize the env_logger implementation
@@ -38,39 +40,37 @@ fn main() {
                 }
             };
 
-            let mut simulation = Simulation::new(settings.clone());
-            simulation.init();
+            // Create and initialize output file
+            let filename = format!("{prefix}-{time}_v{version}.cbor",
+                                   prefix = settings.environment.prefix,
+                                   time =
+                                       &time::now().strftime("%Y-%m-%d_%H%M").unwrap().to_string(),
+                                   version = VERSION);
 
-            // run the actual simulation
-            let data: Vec<Snapshot> = simulation.take(settings.simulation.number_of_timesteps)
-                .collect();
-
-
-            // TODO Add option to add prefix to output path
-            // TODO Save version of simulation
-            let filename = settings.environment.prefix +
-                           &time::now().strftime("%Y-%m-%d_%H%M").unwrap().to_string() +
-                           ".cbor";
             let filepath = Path::new(&settings.environment.output_dir).join(filename);
 
             let mut file = match File::create(&filepath) {
-                Err(why) => panic!("couldn't create {}: {}", filepath.display(), why),
+                Err(why) => {
+                    panic!("couldn't create output file '{}': {}",
+                           filepath.display(),
+                           why)
+                }
                 Ok(file) => file,
             };
 
+            // Setup simulation
+            let mut simulation = Simulation::new(settings.clone());
+            simulation.init();
+
+            // Run the simulation
+            let data: Vec<Snapshot> = simulation.take(settings.simulation.number_of_timesteps)
+                .collect();
+
             // write all snapshots into one cbor file
             match ser::to_writer(&mut file, &data) {
-                Err(e) => panic!("The world has stopped turnung, because: {}", e),
+                Err(e) => panic!("Tried to write simulation output: {}", e),
                 _ => {}
             }
-
-            // match simulation.run() {
-            //     Ok(_) => {}
-            //     Err(e) => {
-            //         error!("Error during simulation: {}", e);
-            //         std::process::exit(1)
-            //     }
-            // }
         }
         _ => {
             error!("You've passed too many arguments. Please don't do that.");

@@ -173,6 +173,7 @@ mod tests {
         d.histogram_from(&p);
 
         let sum = d.dist.fold(0., |s, x| s + x);
+        // Sum over all bins should be partcle number
         assert_eq!(sum, n as f64);
 
         let p2 = vec![Particle::new(0.6, 0.3, 0., box_size)];
