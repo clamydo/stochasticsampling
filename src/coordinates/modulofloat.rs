@@ -16,15 +16,16 @@
 //! ```
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use serde::{Serialize, Serializer};
 
 
 /// This structure represents a modulo type, with modulus m.
-#[derive(Debug, PartialEq, PartialOrd, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Copy, Clone, Deserialize)]
 pub struct Mf64 {
     /// value
     pub v: f64,
     /// divisor/modulus
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip_deserializing)]
     pub m: f64,
 }
 
@@ -206,6 +207,17 @@ impl AsMut<f64> for Mf64 {
         &mut self.v
     }
 }
+
+/// Implement serde's Serialize in order to serialize only to a float.
+/// This skips the modulo quotient.
+impl Serialize for Mf64 {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer
+    {
+        serializer.serialize_f64((*self).v)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
