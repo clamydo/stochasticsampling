@@ -236,7 +236,7 @@ impl Iterator for Simulation {
             particles: self.state.particles.clone(),
             distribution: self.state.distribution.clone(),
             // assuming little endianess
-            rng_seed: [seed[0].lo, seed[0].hi, seed[0].lo, seed[1]. hi],
+            rng_seed: [seed[0].lo, seed[0].hi, seed[0].lo, seed[1].hi],
         };
         Some(snapshot)
     }
