@@ -15,17 +15,17 @@
 //! assert_eq!(*(a * -22.0).as_ref(), 0.75);
 //! ```
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::Visitor;
+use std::f64;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
-use serde::{Serialize, Serializer};
-
 
 /// This structure represents a modulo type, with modulus m.
-#[derive(Debug, PartialEq, PartialOrd, Copy, Clone, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
 pub struct Mf64 {
     /// value
     pub v: f64,
     /// divisor/modulus
-    #[serde(skip_deserializing)]
     pub m: f64,
 }
 
@@ -215,6 +215,36 @@ impl Serialize for Mf64 {
         where S: Serializer
     {
         serializer.serialize_f64((*self).v)
+    }
+}
+
+/// Implement a custom Deserialize trait, that deserializes a value to a Mf64
+/// with default modulo quotient.
+impl Deserialize for Mf64 {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Mf64, D::Error>
+        where D: Deserializer
+    {
+        struct F64Visitor;
+
+        impl Visitor for F64Visitor {
+            type Value = f64;
+
+            fn visit_f64<E>(&mut self, value: f64) -> Result<f64, E>
+                where E: ::serde::de::Error
+            {
+                Ok(value as f64)
+            }
+        }
+
+        match deserializer.deserialize_f64(F64Visitor) {
+            Err(e) => Err(e),
+            Ok(v) => {
+                Ok(Mf64 {
+                    v: v,
+                    m: f64::default(),
+                })
+            }
+        }
     }
 }
 
