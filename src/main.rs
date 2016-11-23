@@ -11,11 +11,20 @@ use serde_cbor::ser;
 use std::env;
 use std::fs::File;
 use std::path::Path;
+use std::sync::mpsc;
+use std::thread;
 use stochasticsampling::settings;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+// TODO: Maybe replace this arbitrary hardcoded number with somehing different
+const COLLECT_TIMESTEPS: usize = 500;
+
+enum IOWorkerMsg {
+    Quit,
+    Data(Vec<Snapshot>),
+}
 
 fn main() {
 
@@ -62,21 +71,52 @@ fn main() {
             let mut simulation = Simulation::new(settings.clone());
             simulation.init();
 
-
-            // Run the simulation
-            let data: Vec<Snapshot> = simulation.take(settings.simulation.number_of_timesteps)
-                .collect();
-
             // Serialize parameter as first object in file
             match ser::to_writer_sd(&mut file, &settings) {
                 Err(e) => panic!("Tried to write simulation settings to file: {}", e),
                 _ => {}
             }
 
-            // write all snapshots into one cbor file
-            match ser::to_writer_sd(&mut file, &data) {
-                Err(e) => panic!("Tried to write simulation output: {}", e),
-                _ => {}
+            let n = settings.simulation.number_of_timesteps / COLLECT_TIMESTEPS;
+
+            // Create commuication channel for thread
+            let (tx, rx) = mpsc::channel::<IOWorkerMsg>();
+            // Spawn worker thread, that periodically flushes collections of simultaions
+            // states to
+            // disk.
+            let io_worker = thread::spawn(move || -> Result<(), serde_cbor::Error> {
+                loop {
+                    match rx.recv().unwrap() {
+                        IOWorkerMsg::Quit => break,
+                        IOWorkerMsg::Data(v) => {
+                            // write all snapshots into one cbor file
+                            ser::to_writer_sd(&mut file, &v)?
+                        }
+                    }
+                }
+
+                Ok(())
+            });
+
+            // Run the simulation. Split timesteps into bundles of COLLECT_TIMESTEP and
+            // flush them
+            // periodically to disk.
+            for _ in 0..n {
+                let data: Vec<Snapshot> = (&mut simulation).take(COLLECT_TIMESTEPS).collect();
+                tx.send(IOWorkerMsg::Data(data)).unwrap();
+            }
+            let data: Vec<Snapshot> =
+                simulation.take(settings.simulation.number_of_timesteps - n * COLLECT_TIMESTEPS)
+                    .collect();
+            tx.send(IOWorkerMsg::Data(data)).unwrap();
+
+            // Stop worker
+            tx.send(IOWorkerMsg::Quit).unwrap();
+
+            // Wait for worker to quit
+            match io_worker.join() {
+                Ok(_) => println!("Simulation finished successful."),
+                Err(e) => error!("Error during flushing to disk: {:?}", e),
             }
         }
         _ => {
