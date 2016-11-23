@@ -62,12 +62,19 @@ fn main() {
             let mut simulation = Simulation::new(settings.clone());
             simulation.init();
 
+
             // Run the simulation
             let data: Vec<Snapshot> = simulation.take(settings.simulation.number_of_timesteps)
                 .collect();
 
+            // Serialize parameter as first object in file
+            match ser::to_writer_sd(&mut file, &settings) {
+                Err(e) => panic!("Tried to write simulation settings to file: {}", e),
+                _ => {}
+            }
+
             // write all snapshots into one cbor file
-            match ser::to_writer(&mut file, &data) {
+            match ser::to_writer_sd(&mut file, &data) {
                 Err(e) => panic!("Tried to write simulation output: {}", e),
                 _ => {}
             }
