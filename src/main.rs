@@ -56,11 +56,18 @@ fn run(settings_file_name: &str) {
         }
     };
 
+    let fileext = match settings.environment.output_format {
+        OutputFormat::CBOR => "cbor",
+        OutputFormat::Bincode => "bincode",
+    };
+
     // Create and initialize output file
-    let filename = format!("{prefix}-{time}_v{version}.cbor",
+    let filename = format!("{prefix}-{time}_v{version}.{fileext}",
                            prefix = settings.environment.prefix,
-                           time = &time::now().strftime("%Y-%m-%d_%H%M").unwrap().to_string(),
-                           version = VERSION);
+                           time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
+                           version = VERSION,
+                           fileext = fileext
+                       );
 
     let filepath = Path::new(&settings.environment.output_dir).join(filename);
 
