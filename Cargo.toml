@@ -26,3 +26,6 @@ quickcheck = "*"
 
 [workspace]
 members = ["crates/fftw3"]
+
+[profile.release]
+lto = true
