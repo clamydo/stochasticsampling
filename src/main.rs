@@ -1,20 +1,25 @@
 #![crate_type = "bin"]
+#![recursion_limit = "1024"]
 
 extern crate stochasticsampling;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate serde_cbor;
+extern crate bincode;
 extern crate time;
+#[macro_use]
+extern crate quick_error;
 
+use bincode::serde::serialize_into;
 use serde_cbor::ser;
 use std::env;
 use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
 use stochasticsampling::settings;
+use stochasticsampling::settings::OutputFormat;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
 
@@ -22,6 +27,19 @@ const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 // TODO: Maybe replace this arbitrary hardcoded number with somehing different
 const COLLECT_TIMESTEPS: usize = 100;
 const IOWORKER_BUFFER_SIZE: usize = 100;
+
+// Implement Error type for IOWorker thread
+quick_error! {
+    #[derive(Debug)]
+    pub enum IOWorkerError {
+        BincodeError(err: bincode::serde::SerializeError) {
+            from()
+        }
+        CBORError(err: serde_cbor::Error) {
+            from()
+        }
+    }
+}
 
 enum IOWorkerMsg {
     Quit,
@@ -37,6 +55,8 @@ fn run(settings_file_name: &str) {
             std::process::exit(1)
         }
     };
+
+    println!("{:?}", settings);
 
     // Create and initialize output file
     let filename = format!("{prefix}-{time}_v{version}.cbor",
@@ -60,26 +80,37 @@ fn run(settings_file_name: &str) {
     simulation.init();
 
     // Serialize parameter as first object in file
-    match ser::to_writer_sd(&mut file, &settings) {
-        Err(e) => panic!("Tried to write simulation settings to file: {}", e),
-        _ => {}
+
+    match settings.environment.output_format {
+        OutputFormat::CBOR => ser::to_writer_sd(&mut file, &settings).unwrap(),
+        OutputFormat::Bincode => {
+            serialize_into(&mut file, &settings, bincode::SizeLimit::Infinite).unwrap()
+        }
     }
 
     let n = settings.simulation.number_of_timesteps / COLLECT_TIMESTEPS;
 
     // Create commuication channel for thread
     let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(IOWORKER_BUFFER_SIZE);
-    // Spawn worker thread, that periodically flushes collections of simultaions
-    // states to
-    // disk.
-    let io_worker = thread::spawn(move || -> Result<(), serde_cbor::Error> {
+
+    // Copy output_format, so it can be captured by the thread closure.
+    let output_format = settings.environment.output_format;
+
+    // Spawn worker thread, that periodically flushes collections of simultaions states to disk.
+    let io_worker = thread::spawn(move || -> Result<(), IOWorkerError> {
         loop {
             match rx.recv().unwrap() {
                 IOWorkerMsg::Quit => break,
                 IOWorkerMsg::Data(v) => {
                     // write all snapshots into one cbor file
-                    ser::to_writer_sd(&mut file, &v)?;
-                    file.flush()?;
+                    match output_format {
+                        OutputFormat::CBOR => {
+                            ser::to_writer_sd(&mut file, &v)?
+                        }
+                        OutputFormat::Bincode => {
+                            serialize_into(&mut file, &v, bincode::SizeLimit::Infinite)?
+                        }
+                    }
                 }
             }
         }
@@ -110,11 +141,10 @@ fn run(settings_file_name: &str) {
     }
 }
 
-fn main() {
 
+fn main() {
     // initialize the env_logger implementation
     env_logger::init().unwrap();
-
 
     // parse command line arguments
     let args: Vec<String> = env::args().collect();

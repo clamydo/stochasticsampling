@@ -1,9 +1,6 @@
 //! This module handles a TOML settings file.
 
-use std::convert::From;
-use std::error::Error;
-use std::fmt;
-use std::fmt::Display;
+use serde::Deserialize;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -57,56 +54,40 @@ pub struct SimulationSettings {
     pub seed: [u64; 2],
 }
 
+// use enum_str macro to encode this variant into strings
+enum_str!(OutputFormat {
+    CBOR("CBOR"),
+    Bincode("bincode"),
+});
+
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentSettings {
     pub output_dir: String,
     pub prefix: String,
+    #[serde(default = "default_output_format")]
+    pub output_format: OutputFormat,
 }
 
-/// Error type that merges all errors that can happen during loading and
-/// parsing of the settings
-/// file.
-#[derive(Debug)]
-pub enum SettingsError {
-    Io(io::Error),
-    Parser(toml::ParserError),
+fn default_output_format() -> OutputFormat {
+    OutputFormat::CBOR
 }
 
-impl Display for SettingsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            SettingsError::Io(ref e) => e.fmt(f),
-            SettingsError::Parser(ref e) => write!(f, "{}", e),
+// Quickly implement meta error type for this module.
+quick_error! {
+    /// Error type including error that can happend during (de)serialization of
+    /// the settings file.
+    #[derive(Debug)]
+    pub enum SettingsError {
+        Io(err: io::Error) {
+            from()
         }
-    }
-}
-
-impl Error for SettingsError {
-    fn description(&self) -> &str {
-        match *self {
-            SettingsError::Io(ref e) => e.description(),
-            SettingsError::Parser(ref e) => e.description(),
+        Parser(err: toml::ParserError) {
+            from()
         }
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        match *self {
-            SettingsError::Io(ref e) => Some(e),
-            SettingsError::Parser(ref e) => Some(e),
+        TOML(err: toml::DecodeError) {
+            from()
         }
-    }
-}
-
-impl From<io::Error> for SettingsError {
-    fn from(err: io::Error) -> SettingsError {
-        SettingsError::Io(err)
-    }
-}
-
-impl From<toml::ParserError> for SettingsError {
-    fn from(err: toml::ParserError) -> SettingsError {
-        SettingsError::Parser(err)
     }
 }
 
@@ -115,7 +96,7 @@ impl From<toml::ParserError> for SettingsError {
 fn read_from_file(filename: &str) -> Result<String, io::Error> {
     let mut f = try!(File::open(filename));
     let mut content = String::new();
-    try!(f.read_to_string(&mut content));
+    f.read_to_string(&mut content)?;
 
     Ok(content)
 }
@@ -123,18 +104,19 @@ fn read_from_file(filename: &str) -> Result<String, io::Error> {
 
 /// Reads content of a file `param_file`, that should point to a valid TOML
 /// file, and Parsers it.
-/// Then returns the deserialised data in form of a Settings struct.
+/// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> {
     // read .toml file into string
-    let toml_string = try!(read_from_file(&param_file));
+    let toml_string = read_from_file(&param_file)?;
 
     let mut parser = toml::Parser::new(&toml_string);
 
-    // desereialise
-    match parser.parse() {
-        Some(t) => Ok(toml::decode(toml::Value::Table(t)).unwrap()),
-        None => Err(SettingsError::Parser(parser.errors[0].to_owned())),
-    }
+    // try to parse settings file
+    let table = parser.parse()
+        .ok_or(SettingsError::Parser(parser.errors[0].to_owned()))?;
+
+    // try to decode settings file
+    Ok(Settings::deserialize(&mut toml::Decoder::new(toml::Value::Table(table)))?)
 }
 
 
@@ -146,7 +128,10 @@ mod tests {
     fn read_settings() {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
+        assert!(false);
+
         assert_eq!(settings.environment.output_dir, "./out/");
+        assert_eq!(settings.environment.output_format, OutputFormat::CBOR);
         assert_eq!(settings.environment.prefix, "foo");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);

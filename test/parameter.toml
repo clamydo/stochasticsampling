@@ -1,6 +1,7 @@
 [environment]
     output_dir = "./out/"
     prefix = "foo"
+    output_format = "CBOR"
 
 [simulation]
     box_size = [ 1.0, 1.0 ]

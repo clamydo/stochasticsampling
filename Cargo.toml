@@ -8,7 +8,9 @@ doc = false
 name = "simulation"
 
 [dependencies]
+bincode = "0.6.0"
 env_logger = "0.3"
+quick-error = "*"
 fftw3 = { path = "crates/fftw3" }
 log = "0.3"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
@@ -16,13 +18,13 @@ ndarray = { version = "0.6", features = ["serde"] }
 pcg_rand = { path = "crates/external/pcg_rand"}
 rand = "0.3"
 serde = "0.8.9"
-serde_derive = "0.8.9"
 serde_cbor = "0.4"
-toml = { version = "0.2", default-features = false, features = ["serde"] }
+serde_derive = "0.8.9"
 time = "0.1"
+toml = { version = "0.2", default-features = false, features = ["serde"] }
 
 [dev-dependencies]
-quickcheck = "*"
+quickcheck = "0.3"
 
 [workspace]
 members = ["crates/fftw3"]
