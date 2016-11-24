@@ -56,8 +56,6 @@ fn run(settings_file_name: &str) {
         }
     };
 
-    println!("{:?}", settings);
-
     // Create and initialize output file
     let filename = format!("{prefix}-{time}_v{version}.cbor",
                            prefix = settings.environment.prefix,
