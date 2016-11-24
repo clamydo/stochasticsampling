@@ -33,9 +33,13 @@ quick_error! {
     #[derive(Debug)]
     pub enum IOWorkerError {
         BincodeError(err: bincode::serde::SerializeError) {
+            cause(err)
+            description(err.description())
             from()
         }
         CBORError(err: serde_cbor::Error) {
+            cause(err)
+            description(err.description())
             from()
         }
     }
