@@ -55,7 +55,7 @@ pub struct SimulationSettings {
 }
 
 // use enum_str macro to encode this variant into strings
-enum_str!(OutputFormat {
+serde_enum_str!(OutputFormat {
     CBOR("CBOR"),
     Bincode("bincode"),
 });

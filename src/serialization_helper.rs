@@ -1,7 +1,7 @@
 //! Helper functions and macros for serialization
 
 /// Macro taken from the serde documentation https://serde.rs/enum-str.html
-macro_rules! enum_str {
+macro_rules! serde_enum_str {
     ($name:ident { $($variant:ident($str:expr), )* }) => {
         #[derive(Clone, Copy, Debug, Eq, PartialEq)]
         pub enum $name {
