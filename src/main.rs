@@ -25,7 +25,6 @@ use stochasticsampling::simulation::Snapshot;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 // TODO: Maybe replace this arbitrary hardcoded number with somehing different
-const COLLECT_TIMESTEPS: usize = 100;
 const IOWORKER_BUFFER_SIZE: usize = 100;
 
 // Implement Error type for IOWorker thread
@@ -47,7 +46,7 @@ quick_error! {
 
 enum IOWorkerMsg {
     Quit,
-    Data(Vec<Snapshot>),
+    Data(Snapshot),
 }
 
 // TODO: Add Result return type
@@ -97,7 +96,7 @@ fn run(settings_file_name: &str) {
         }
     }
 
-    let n = settings.simulation.number_of_timesteps / COLLECT_TIMESTEPS;
+    let n = settings.simulation.number_of_timesteps;
 
     // Create commuication channel for thread
     let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(IOWORKER_BUFFER_SIZE);
@@ -127,18 +126,10 @@ fn run(settings_file_name: &str) {
         Ok(())
     });
 
-    // Run the simulation. Split timesteps into bundles of COLLECT_TIMESTEP and
-    // flush them
-    // periodically to disk.
-    for _ in 0..n {
-        let data: Vec<Snapshot> = (&mut simulation).take(COLLECT_TIMESTEPS).collect();
+    // Run the simulation and send data to asynchronous to the IO-thread.
+    for data in (&mut simulation).take(n) {
         tx.send(IOWorkerMsg::Data(data)).unwrap();
     }
-
-    let remaining_data: Vec<Snapshot> =
-        simulation.take(settings.simulation.number_of_timesteps - n * COLLECT_TIMESTEPS)
-            .collect();
-    tx.send(IOWorkerMsg::Data(remaining_data)).unwrap();
 
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
