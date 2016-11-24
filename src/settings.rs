@@ -80,12 +80,15 @@ quick_error! {
     #[derive(Debug)]
     pub enum SettingsError {
         Io(err: io::Error) {
+            display("I/O error: {}", err)
             from()
         }
         Parser(err: toml::ParserError) {
+            display("Parser error: {}", err)
             from()
         }
-        TOML(err: toml::DecodeError) {
+        Devode(err: toml::DecodeError) {
+            display("TOML decorder error: {}", err)
             from()
         }
     }

@@ -51,7 +51,7 @@ fn run(settings_file_name: &str) {
     let settings = match settings::read_parameter_file(settings_file_name) {
         Ok(s) => s,
         Err(e) => {
-            error!("Error reading parameter file: {}", e);
+            error!("Error reading parameter file. {}", e);
             std::process::exit(1)
         }
     };
