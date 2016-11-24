@@ -113,6 +113,7 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> 
 
     // try to parse settings file
     match parser.parse() {
+        // Choosing this more complicated way, to get better error messages.
         Some(t) => Ok(Settings::deserialize(&mut toml::Decoder::new(toml::Value::Table(t)))?),
         None => Err(parser.errors[0].to_owned().into()),
     }
@@ -129,7 +130,7 @@ mod tests {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
         assert_eq!(settings.environment.output_dir, "./out/");
-        assert_eq!(settings.environment.output_format, OutputFormat::CBOR);
+        assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
