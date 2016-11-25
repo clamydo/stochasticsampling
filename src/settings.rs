@@ -1,19 +1,20 @@
 //! This module handles a TOML settings file.
 
-use std::convert::From;
-use std::error::Error;
-use std::fmt;
-use std::fmt::Display;
+use serde::Deserialize;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use toml;
 
+const DEFAULT_IO_QUEUE_SIZE: usize = 10;
+const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::CBOR;
+
 /// Structure that holds settings, which are defined externally in a TOML file.
-#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub simulation: SimulationSettings,
     pub parameters: Parameters,
+    pub environment: EnvironmentSettings,
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
@@ -23,23 +24,22 @@ pub type GridSize = (usize, usize, usize);
 
 
 /// Holds rotational and translational diffusion constants
-#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct DiffusionConstants {
     pub translational: f64,
     pub rotational: f64,
 }
 
 /// Holds prefactors for active and magnetic stress
-#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct StressPrefactors {
     pub active: f64,
     pub magnetic: f64,
 }
 
 /// Holds phyiscal parameters
-#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Parameters {
-    pub self_propulsion_speed: f64,
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
     /// Assumes that b points in x-direction
@@ -47,60 +47,67 @@ pub struct Parameters {
 }
 
 /// Holds simulation specific settings.
-#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
-    pub number_of_cells: usize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub timestep: f64,
     pub seed: [u64; 2],
 }
 
-/// Error type that merges all errors that can happen during loading and
-/// parsing of the settings
-/// file.
-#[derive(Debug)]
-pub enum SettingsError {
-    Io(io::Error),
-    Parser(toml::ParserError),
+// use enum_str macro to encode this variant into strings
+serde_enum_str!(OutputFormat {
+    CBOR("CBOR"),
+    Bincode("bincode"),
+});
+
+/// Holds environment variables.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentSettings {
+    #[serde(default = "default_io_queue_size")]
+    pub io_queue_size: usize,
+    pub output_dir: String,
+    #[serde(default = "default_output_format")]
+    pub output_format: OutputFormat,
+    pub prefix: String,
 }
 
-impl Display for SettingsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            SettingsError::Io(ref e) => e.fmt(f),
-            SettingsError::Parser(ref e) => write!(f, "{}", e),
+/// Default value of IO queue size
+fn default_io_queue_size() -> usize {
+    DEFAULT_IO_QUEUE_SIZE
+}
+
+/// Default output format
+fn default_output_format() -> OutputFormat {
+    DEFAULT_OUTPUT_FORMAT
+}
+
+// Quickly implement meta error type for this module.
+quick_error! {
+    /// Error type including error that can happend during (de)serialization of
+    /// the settings file.
+    #[derive(Debug)]
+    pub enum SettingsError {
+        Io(err: io::Error) {
+            display("I/O error: {}", err)
+            cause(err)
+            description(err.description())
+            from()
         }
-    }
-}
-
-impl Error for SettingsError {
-    fn description(&self) -> &str {
-        match *self {
-            SettingsError::Io(ref e) => e.description(),
-            SettingsError::Parser(ref e) => e.description(),
+        Parser(err: toml::ParserError) {
+            display("Parser error: {}", err)
+            cause(err)
+            description(err.description())
+            from()
         }
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        match *self {
-            SettingsError::Io(ref e) => Some(e),
-            SettingsError::Parser(ref e) => Some(e),
+        Devode(err: toml::DecodeError) {
+            display("TOML decorder error: {}", err)
+            cause(err)
+            description(err.description())
+            from()
         }
-    }
-}
-
-impl From<io::Error> for SettingsError {
-    fn from(err: io::Error) -> SettingsError {
-        SettingsError::Io(err)
-    }
-}
-
-impl From<toml::ParserError> for SettingsError {
-    fn from(err: toml::ParserError) -> SettingsError {
-        SettingsError::Parser(err)
     }
 }
 
@@ -109,7 +116,7 @@ impl From<toml::ParserError> for SettingsError {
 fn read_from_file(filename: &str) -> Result<String, io::Error> {
     let mut f = try!(File::open(filename));
     let mut content = String::new();
-    try!(f.read_to_string(&mut content));
+    f.read_to_string(&mut content)?;
 
     Ok(content)
 }
@@ -117,17 +124,18 @@ fn read_from_file(filename: &str) -> Result<String, io::Error> {
 
 /// Reads content of a file `param_file`, that should point to a valid TOML
 /// file, and Parsers it.
-/// Then returns the deserialised data in form of a Settings struct.
+/// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> {
     // read .toml file into string
-    let toml_string = try!(read_from_file(&param_file));
+    let toml_string = read_from_file(&param_file)?;
 
     let mut parser = toml::Parser::new(&toml_string);
 
-    // desereialise
+    // try to parse settings file
     match parser.parse() {
-        Some(t) => Ok(toml::decode::<Settings>(toml::Value::Table(t)).unwrap()),
-        None => Err(SettingsError::Parser(parser.errors[0].to_owned())),
+        // Choosing this more complicated way, to get better error messages.
+        Some(t) => Ok(Settings::deserialize(&mut toml::Decoder::new(toml::Value::Table(t)))?),
+        None => Err(parser.errors[0].to_owned().into()),
     }
 }
 
@@ -138,8 +146,16 @@ mod tests {
 
     #[test]
     fn read_settings() {
-        let settings = read_parameter_file("./test/parameter.toml").unwrap();
 
+        let settings = read_parameter_file("./test/parameter.toml").unwrap();
+        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
+
+        assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
+        assert_eq!(settings.environment.io_queue_size, 50);
+        assert_eq!(settings.environment.output_dir, "./out/");
+        assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
+        assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
+        assert_eq!(settings.environment.prefix, "foo");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
@@ -147,7 +163,6 @@ mod tests {
         assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
         assert_eq!(settings.simulation.box_size, (1., 1.));
         assert_eq!(settings.simulation.grid_size, (10, 10, 6));
-        assert_eq!(settings.simulation.number_of_cells, 10);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);

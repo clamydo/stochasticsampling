@@ -4,7 +4,7 @@ use coordinates::modulofloat::Mf64;
 use std::ops::{Add, AddAssign, Mul, Sub};
 
 /// 3D modulo vector type
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Mod64Vector3 {
     /// x-coordinate
     pub x: Mf64,
@@ -12,12 +12,6 @@ pub struct Mod64Vector3 {
     pub y: Mf64,
     /// z-coordinate
     pub z: Mf64,
-    /// quotient in x direction, typically the box size
-    pub mx: f64,
-    /// quotient in y direction, typically the box size
-    pub my: f64,
-    /// quotient in z direction, typically the box size
-    pub mz: f64,
 }
 
 impl Mod64Vector3 {
@@ -27,9 +21,6 @@ impl Mod64Vector3 {
             x: Mf64::new(x, m.0),
             y: Mf64::new(y, m.1),
             z: Mf64::new(z, m.2),
-            mx: m.0,
-            my: m.1,
-            mz: m.2,
         }
     }
 }
@@ -44,9 +35,6 @@ impl Add for Mod64Vector3 {
             x: self.x + other.x,
             y: self.y + other.y,
             z: self.z + other.z,
-            mx: self.mx,
-            my: self.my,
-            mz: self.mz,
         }
     }
 }
@@ -79,9 +67,6 @@ impl Sub for Mod64Vector3 {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
-            mx: self.mx,
-            my: self.my,
-            mz: self.mz,
         }
     }
 }
@@ -96,9 +81,6 @@ impl Mul<f64> for Mod64Vector3 {
             x: self.x * rhs,
             y: self.y * rhs,
             z: self.z * rhs,
-            mx: self.mx,
-            my: self.my,
-            mz: self.mz,
         }
     }
 }
@@ -106,16 +88,12 @@ impl Mul<f64> for Mod64Vector3 {
 // implement 2D version
 
 /// 2D modulo vector type
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Mod64Vector2 {
     /// x-coordinate
     pub x: Mf64,
     /// y-coordinate
     pub y: Mf64,
-    /// quotient in x direction, typically the box size
-    pub mx: f64,
-    /// quotient in y direction, typically the box size
-    pub my: f64,
 }
 
 
@@ -125,8 +103,6 @@ impl Mod64Vector2 {
         Mod64Vector2 {
             x: Mf64::new(x, m.0),
             y: Mf64::new(y, m.1),
-            mx: m.0,
-            my: m.1,
         }
     }
 }
@@ -140,8 +116,6 @@ impl Add for Mod64Vector2 {
         Mod64Vector2 {
             x: self.x + other.x,
             y: self.y + other.y,
-            mx: self.mx,
-            my: self.my,
         }
     }
 }
@@ -154,8 +128,6 @@ impl Add<f64> for Mod64Vector2 {
         Mod64Vector2 {
             x: self.x + other,
             y: self.y + other,
-            mx: self.mx,
-            my: self.my,
         }
     }
 }
@@ -184,8 +156,6 @@ impl Sub for Mod64Vector2 {
         Mod64Vector2 {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
-            mx: self.mx,
-            my: self.my,
         }
     }
 }
@@ -199,8 +169,6 @@ impl Mul<f64> for Mod64Vector2 {
         Mod64Vector2 {
             x: self.x * rhs,
             y: self.y * rhs,
-            mx: self.mx,
-            my: self.my,
         }
     }
 }

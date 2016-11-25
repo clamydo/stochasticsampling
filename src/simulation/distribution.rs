@@ -14,7 +14,7 @@ pub type Bins = Array<f64, (Ix, Ix, Ix)>;
 /// at position `x_j` (for `j=0,...,N-1`, on a grid with `N` cells and `x_0 =
 /// w/2`) is the average of particles in the interval `[x_j - w/2, x_j +
 /// w/2]`, with the grid width `w`.
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Distribution {
     /// `dist` contains the probability for a particle in the box at position of
     /// first two axis and the direction of the last axis.
@@ -173,6 +173,7 @@ mod tests {
         d.histogram_from(&p);
 
         let sum = d.dist.fold(0., |s, x| s + x);
+        // Sum over all bins should be partcle number
         assert_eq!(sum, n as f64);
 
         let p2 = vec![Particle::new(0.6, 0.3, 0., box_size)];

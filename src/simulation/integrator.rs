@@ -13,7 +13,6 @@ use super::distribution::Distribution;
 #[derive(Debug)]
 pub struct IntegrationParameter {
     pub rot_diffusion: f64,
-    pub speed: f64,
     pub stress: StressPrefactors,
     pub timestep: f64,
     pub trans_diffusion: f64,
@@ -275,13 +274,11 @@ impl Integrator {
     /// as `d = s^2 / 2`.
     /// Together this leads to an update of the position due to the diffusion of
     /// x_d(t + dt) = sqrt(2 d dt) N(0, 1)
-    fn evolve_particle_inplace<F>(&self,
-                                  p: &mut Particle,
-                                  wiener_process: &mut F,
-                                  flow_field: &ArrayView<f64, (Ix, Ix, Ix)>,
-                                  vort: &ArrayView<f64, (Ix, Ix)>)
-        where F: FnMut() -> f64
-    {
+    fn evolve_particle_inplace(&self,
+                               p: &mut Particle,
+                               random_samples: &[f64; 3],
+                               flow_field: &ArrayView<f64, (Ix, Ix, Ix)>,
+                               vort: &ArrayView<f64, (Ix, Ix)>) {
 
         let nearest_grid_point_index = [(p.position.x.as_ref() / self.grid_width.x).floor() as Ix,
                                         (p.position.y.as_ref() / self.grid_width.y).floor() as Ix];
@@ -293,9 +290,9 @@ impl Integrator {
 
         // Draw independently for every coordinate
         p.position.x += (flow_x + p.orientation.as_ref().cos()) * param.timestep +
-                        param.trans_diffusion * wiener_process();
+                        param.trans_diffusion * random_samples[0];
         p.position.y += (flow_y + p.orientation.as_ref().sin()) * param.timestep +
-                        param.trans_diffusion * wiener_process();
+                        param.trans_diffusion * random_samples[1];
 
 
         // Get vorticity dx uy - dy ux
@@ -303,22 +300,20 @@ impl Integrator {
 
         p.orientation += (param.magnetic_reoriantation * p.orientation.as_ref().sin() + vort) *
                          param.timestep +
-                         param.rot_diffusion * wiener_process();
+                         param.rot_diffusion * random_samples[2];
     }
 
-    pub fn evolve_particles_inplace<F>(&self,
-                                       particles: &mut Vec<Particle>,
-                                       wiener_process: &mut F,
-                                       distribution: &Distribution)
-        where F: FnMut() -> f64
-    {
+    pub fn evolve_particles_inplace(&self,
+                                    particles: &mut Vec<Particle>,
+                                    random_samples: &[f64; 3],
+                                    distribution: &Distribution) {
         // Calculate flow field from distribution
         let u = self.calculate_flow_field(distribution);
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &u.view());
 
         for p in particles {
-            self.evolve_particle_inplace(p, wiener_process, &u.view(), &vort.view());
+            self.evolve_particle_inplace(p, random_samples, &u.view(), &vort.view());
         }
     }
 }
@@ -409,7 +404,6 @@ mod tests {
             timestep: 1.,
             trans_diffusion: 1.,
             rot_diffusion: 1.,
-            speed: 1.,
             stress: s,
             magnetic_reoriantation: 1.,
         };
@@ -453,20 +447,17 @@ mod tests {
             timestep: 1.,
             trans_diffusion: 1.,
             rot_diffusion: 1.,
-            speed: 1.,
             stress: s,
             magnetic_reoriantation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);
 
-        let mut c = || 0.1;
-
         let mut p = vec![Particle::new(0.6, 0.3, 0., bs)];
         let mut d = Distribution::new(gs, grid_width(gs, bs));
         d.sample_from(&p);
 
-        i.evolve_particles_inplace(&mut p, &mut c, &d);
+        i.evolve_particles_inplace(&mut p, &[0.1, 0.1, 0.1], &d);
 
         // TODO Check these values!
         assert_eq!(p[0].position.x.v, 0.6103050484831503);
@@ -528,7 +519,6 @@ mod tests {
             timestep: 1.,
             trans_diffusion: 1.,
             rot_diffusion: 1.,
-            speed: 1.,
             stress: s,
             magnetic_reoriantation: 1.,
         };
