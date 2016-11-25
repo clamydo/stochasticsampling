@@ -1,9 +1,11 @@
 image: baseimage-cargo
 
 before_script:
-    - apt-get update && apt-get -y install build-essential libopenmpi1.10 libopenmpi-dev libfftw3-3 libfftw3-dev libclang1 libclang-dev clang
+    - apt-get update && apt-get -y install build-essential libopenmpi1.10 libopenmpi-dev libfftw3-3 libfftw3-dev libclang1 libclang-dev clang git-core
     - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
     - export PATH="/root/.cargo/bin:$PATH"
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
 
 stages:
     - test

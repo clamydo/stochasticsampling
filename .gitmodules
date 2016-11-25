@@ -1,3 +1,3 @@
 [submodule "crates/external/pcg_rand"]
 	path = crates/external/pcg_rand
-	url = ../pcg_rand_fork/
+	url = ../../fkoessel/pcg_rand.git
