@@ -6,6 +6,9 @@ use std::io;
 use std::io::prelude::*;
 use toml;
 
+const DEFAULT_IO_QUEUE_SIZE: usize = 10;
+const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::CBOR;
+
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -63,14 +66,22 @@ serde_enum_str!(OutputFormat {
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentSettings {
+    #[serde(default = "default_io_queue_size")]
+    pub io_queue_size: usize,
     pub output_dir: String,
-    pub prefix: String,
     #[serde(default = "default_output_format")]
     pub output_format: OutputFormat,
+    pub prefix: String,
 }
 
+/// Default value of IO queue size
+fn default_io_queue_size() -> usize {
+    DEFAULT_IO_QUEUE_SIZE
+}
+
+/// Default output format
 fn default_output_format() -> OutputFormat {
-    OutputFormat::CBOR
+    DEFAULT_OUTPUT_FORMAT
 }
 
 // Quickly implement meta error type for this module.
@@ -137,8 +148,12 @@ mod tests {
     fn read_settings() {
 
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
+        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
 
+        assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
+        assert_eq!(settings.environment.io_queue_size, 50);
         assert_eq!(settings.environment.output_dir, "./out/");
+        assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
         assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);

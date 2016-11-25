@@ -1,6 +1,4 @@
 [environment]
-    io_queue_size = 50
-    output_format = "bincode"
     output_dir = "./out/"
     prefix = "foo"
 

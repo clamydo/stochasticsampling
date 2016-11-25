@@ -25,7 +25,6 @@ use stochasticsampling::simulation::Snapshot;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 // TODO: Maybe replace this arbitrary hardcoded number with somehing different
-const IOWORKER_BUFFER_SIZE: usize = 100;
 
 // Implement Error type for IOWorker thread
 quick_error! {
@@ -99,7 +98,7 @@ fn run(settings_file_name: &str) {
     let n = settings.simulation.number_of_timesteps;
 
     // Create commuication channel for thread
-    let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(IOWORKER_BUFFER_SIZE);
+    let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(settings.environment.io_queue_size);
 
     // Copy output_format, so it can be captured by the thread closure.
     let output_format = settings.environment.output_format;
