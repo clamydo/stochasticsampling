@@ -9,6 +9,8 @@ use std::f64::consts::PI;
 use super::GridWidth;
 use super::distribution::Distribution;
 
+pub type FlowField = Array<f64, (Ix, Ix, Ix)>;
+
 /// Holds parameter needed for time step
 #[derive(Debug)]
 pub struct IntegrationParameter {
@@ -306,7 +308,7 @@ impl Integrator {
     pub fn evolve_particles_inplace(&self,
                                     particles: &mut Vec<Particle>,
                                     random_samples: &[f64; 3],
-                                    distribution: &Distribution) {
+                                    distribution: &Distribution) -> FlowField {
         // Calculate flow field from distribution
         let u = self.calculate_flow_field(distribution);
         // Calculate vorticity dx uy - dy ux
@@ -315,6 +317,8 @@ impl Integrator {
         for p in particles {
             self.evolve_particle_inplace(p, random_samples, &u.view(), &vort.view());
         }
+
+        u
     }
 }
 
