@@ -8,7 +8,7 @@ Implementation of a Monte-Carlo like statistical sampling method for a time inte
 * OpenMPI 1.10+ or MPICH 3.1+
 * libclang 3.x
 
-For a minimal building environment, have a look into the Docker image defined by `test/CI/Dockerfile`.
+For a minimal build environment, have a look into the Docker image defined by `test/CI/Dockerfile`.
 
 # Build
 If all prerequisits are fulfilled, just build with
