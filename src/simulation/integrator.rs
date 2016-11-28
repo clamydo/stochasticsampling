@@ -239,8 +239,8 @@ impl Integrator {
     pub fn calculate_flow_field(&self, dist: &Distribution) -> Array<f64, (Ix, Ix, Ix)> {
         let mut f = self.calc_stress_divergence(dist);
 
-        // Just for testing, if memory is continuous.
-        f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
+        // // Just for testing, if memory is continuous.
+        // f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
 
         // Fourier transform force density component-wise
         for mut a in f.outer_iter_mut() {
