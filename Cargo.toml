@@ -14,7 +14,7 @@ quick-error = "*"
 fftw3 = { path = "crates/fftw3" }
 log = "0.3"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
-ndarray = { version = "0.6", features = ["serde"] }
+ndarray = { version = "0.7", features = ["serde"] }
 pcg_rand = { path = "crates/external/pcg_rand"}
 rand = "0.3"
 serde = "0.8.9"

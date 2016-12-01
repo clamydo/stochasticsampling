@@ -1,5 +1,5 @@
 use complex::Complex;
-use ndarray::{ArrayViewMut, Ix};
+use ndarray::{ArrayViewMut, Ix2};
 use std;
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
@@ -25,8 +25,8 @@ impl FFTPlan {
     /// WARNING: This is an unormalized transformation. A forwards and
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
-    pub fn new_c2c(ina: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
-                   outa: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
+    pub fn new_c2c(ina: &mut ArrayViewMut<Complex<f64>, Ix2>,
+                   outa: &mut ArrayViewMut<Complex<f64>, Ix2>,
                    direction: FFTDirection,
                    flags: FFTFlags)
                    -> Option<FFTPlan> {
@@ -58,7 +58,7 @@ impl FFTPlan {
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
     /// TODO: Write test. Return Result, not Option.
-    pub fn new_c2c_inplace(arr: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
+    pub fn new_c2c_inplace(arr: &mut ArrayViewMut<Complex<f64>, Ix2>,
                            direction: FFTDirection,
                            flags: FFTFlags)
                            -> Option<FFTPlan> {
@@ -92,8 +92,8 @@ impl FFTPlan {
     /// Reuse plan for different arrays
     /// TODO: Write test.
     pub fn reexecute(&self,
-                     ina: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>,
-                     outa: &mut ArrayViewMut<Complex<f64>, (Ix, Ix)>) {
+                     ina: &mut ArrayViewMut<Complex<f64>, Ix2>,
+                     outa: &mut ArrayViewMut<Complex<f64>, Ix2>) {
 
         let inp = ina.as_ptr() as *mut FFTWComplex;
         let outp = outa.as_ptr() as *mut FFTWComplex;

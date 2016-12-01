@@ -5,6 +5,7 @@
 
 #![crate_type = "staticlib"]
 #![feature(proc_macro)]
+#![feature(slice_patterns)]
 
 #[cfg(test)]
 #[macro_use]

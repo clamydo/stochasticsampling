@@ -18,9 +18,9 @@ pub struct Settings {
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
-pub type BoxSize = (f64, f64);
+pub type BoxSize = [f64;2];
 /// Size of the discrete grid.
-pub type GridSize = (usize, usize, usize);
+pub type GridSize = [usize; 3];
 
 
 /// Holds rotational and translational diffusion constants
@@ -127,7 +127,7 @@ fn read_from_file(filename: &str) -> Result<String, io::Error> {
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> {
     // read .toml file into string
-    let toml_string = read_from_file(param_file)?;
+    let toml_string = read_from_file(&param_file)?;
 
     let mut parser = toml::Parser::new(&toml_string);
 
@@ -161,8 +161,8 @@ mod tests {
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
-        assert_eq!(settings.simulation.box_size, (1., 1.));
-        assert_eq!(settings.simulation.grid_size, (10, 10, 6));
+        assert_eq!(settings.simulation.box_size, [1., 1.]);
+        assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);

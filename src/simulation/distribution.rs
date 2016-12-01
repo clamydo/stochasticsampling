@@ -1,13 +1,13 @@
 //! A representation for the probability distribution function.
 
 use coordinates::particle::Particle;
-use ndarray::{Array, Ix};
+use ndarray::{Array, Ix, Ix3, Ix4};
 use settings::GridSize;
 use std::ops::Index;
 use super::GridWidth;
 
 /// Array type, that holds the sampled function values.
-pub type Bins = Array<f64, (Ix, Ix, Ix)>;
+pub type Bins = Array<f64, Ix3>;
 
 /// Holds a normalised sampled distribution function on a grid, assuming the
 /// sampling points to be centered in a grid cell. This means, that the value
@@ -97,7 +97,7 @@ impl Distribution {
     ///
     /// The derivative is implemented as a symmetric finite differential
     /// quotient with wrap around coordinates.
-    pub fn spatgrad(&self) -> Array<f64, (Ix, Ix, Ix, Ix)> {
+    pub fn spatgrad(&self) -> Array<f64, Ix4> {
         let (sx, sy, sa) = self.shape();
         let mut res = Array::zeros((2, sx, sy, sa));
 
