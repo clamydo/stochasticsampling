@@ -2,19 +2,22 @@
 #![recursion_limit = "1024"]
 
 extern crate stochasticsampling;
+extern crate bincode;
+#[macro_use]
+extern crate clap;
+extern crate env_logger;
 #[macro_use]
 extern crate log;
-extern crate env_logger;
 extern crate serde_cbor;
-extern crate bincode;
 extern crate time;
 #[macro_use]
 extern crate quick_error;
 
 use bincode::serde::serialize_into;
-use serde_cbor::ser;
-use std::env;
+use clap::App;
+use serde_cbor::{de, ser};
 use std::fs::File;
+use std::io;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
@@ -145,21 +148,21 @@ fn main() {
     // initialize the env_logger implementation
     env_logger::init().unwrap();
 
-    // parse command line arguments
-    let args: Vec<String> = env::args().collect();
+    let yaml = load_yaml!("cli.yml");
+    let matches = App::from_yaml(yaml).version(crate_version!()).get_matches();
 
-    match args.len() {
-        1 => {
-            error!("Please pass a parameter file.");
-            std::process::exit(1);
-        }
-        2 => {
-            run(&args[1]);
-        }
-        _ => {
-            error!("You've passed too many arguments. Please don't do that.");
-            std::process::exit(1);
-        }
+    if matches.is_present("initial_condition") {
+        let ic = match de::from_reader(io::stdin()) {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Can't read given initial condition. Error: {}", e);
+                std::process::exit(1);
+            }
+        };
+
+        println!("{:?}", ic);
+    } else {
+        run(matches.value_of("parameter_file").unwrap());
     }
 
     std::process::exit(0);

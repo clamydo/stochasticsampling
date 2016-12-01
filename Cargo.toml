@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 
 [[bin]]
@@ -9,19 +9,20 @@ name = "simulation"
 
 [dependencies]
 bincode = "0.6.0"
-env_logger = "0.3"
-quick-error = "*"
+clap = { version = "~2.19.0", features = ["yaml"] }
+env_logger = "0.3.5"
 fftw3 = { path = "crates/fftw3" }
-log = "0.3"
+log = "0.3.6"
 mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
-ndarray = { version = "0.7", features = ["serde"] }
+ndarray = { version = "0.7.1", features = ["serde"] }
 pcg_rand = { path = "crates/external/pcg_rand"}
-rand = "0.3"
-serde = "0.8.9"
-serde_cbor = "0.4"
-serde_derive = "0.8.9"
-time = "0.1"
-toml = { version = "0.2", default-features = false, features = ["serde"] }
+rand = "0.3.15"
+serde = "0.8.19"
+serde_cbor = "0.4.0"
+serde_derive = "0.8.19"
+time = "0.1.35"
+toml = { version = "0.2.1", default-features = false, features = ["serde"] }
+quick-error = "*"
 
 [dev-dependencies]
 quickcheck = "0.3"
