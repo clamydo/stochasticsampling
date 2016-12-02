@@ -7,14 +7,20 @@ extern crate bincode;
 extern crate clap;
 extern crate env_logger;
 #[macro_use]
+extern crate error_chain;
+#[macro_use]
 extern crate log;
 extern crate serde_cbor;
 extern crate time;
-#[macro_use]
-extern crate quick_error;
+
+mod errors {
+    // Create the Error, ErrorKind, ResultExt, and Result types
+    error_chain!{}
+}
 
 use bincode::serde::serialize_into;
 use clap::App;
+use errors::*;
 use serde_cbor::{de, ser};
 use std::fs::File;
 use std::io;
@@ -27,24 +33,6 @@ use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-// TODO: Maybe replace this arbitrary hardcoded number with somehing different
-
-// Implement Error type for IOWorker thread
-quick_error! {
-    #[derive(Debug)]
-    pub enum IOWorkerError {
-        BincodeError(err: bincode::serde::SerializeError) {
-            cause(err)
-            description(err.description())
-            from()
-        }
-        CBORError(err: serde_cbor::Error) {
-            cause(err)
-            description(err.description())
-            from()
-        }
-    }
-}
 
 enum IOWorkerMsg {
     Quit,
@@ -52,14 +40,10 @@ enum IOWorkerMsg {
 }
 
 // TODO: Add Result return type
-fn run(settings_file_name: &str) {
-    let settings = match settings::read_parameter_file(settings_file_name) {
-        Ok(s) => s,
-        Err(e) => {
-            error!("Error reading parameter file. {}", e);
-            std::process::exit(1)
-        }
-    };
+fn run(settings_file_name: &str) -> Result<()> {
+    let settings =
+        settings::read_parameter_file(settings_file_name)
+            .chain_err(|| "Error reading parameter file.")?;
 
     let fileext = match settings.environment.output_format {
         OutputFormat::CBOR => "cbor",
@@ -71,19 +55,12 @@ fn run(settings_file_name: &str) {
                            prefix = settings.environment.prefix,
                            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
                            version = VERSION,
-                           fileext = fileext
-                       );
+                           fileext = fileext);
 
     let filepath = Path::new(&settings.environment.output_dir).join(filename);
 
-    let mut file = match File::create(&filepath) {
-        Err(why) => {
-            panic!("couldn't create output file '{}': {}",
-                   filepath.display(),
-                   why)
-        }
-        Ok(file) => file,
-    };
+    let mut file = File::create(&filepath)
+        .chain_err(|| format!("couldn't create output file '{}'.", filepath.display()))?;
 
     // Setup simulation
     let mut simulation = Simulation::new(settings.clone());
@@ -106,8 +83,9 @@ fn run(settings_file_name: &str) {
     // Copy output_format, so it can be captured by the thread closure.
     let output_format = settings.environment.output_format;
 
-    // Spawn worker thread, that periodically flushes collections of simultaions states to disk.
-    let io_worker = thread::spawn(move || -> Result<(), IOWorkerError> {
+    // Spawn worker thread, that periodically flushes collections of simultaions
+    // states to disk.
+    let io_worker = thread::spawn(move || -> Result<()> {
         loop {
             match rx.recv().unwrap() {
                 IOWorkerMsg::Quit => break,
@@ -115,10 +93,14 @@ fn run(settings_file_name: &str) {
                     // write all snapshots into one cbor file
                     match output_format {
                         OutputFormat::CBOR => {
-                            ser::to_writer_sd(&mut file, &v)?
+                            ser::to_writer_sd(&mut file, &v)
+                                .chain_err(||
+                                    "Cannot write simulation output (format: CBOR).")?
                         }
                         OutputFormat::Bincode => {
-                            serialize_into(&mut file, &v, bincode::SizeLimit::Infinite)?
+                            serialize_into(&mut file, &v, bincode::SizeLimit::Infinite)
+                                .chain_err(||
+                                    "Cannot write simulation output (format: bincode).")?
                         }
                     }
                 }
@@ -136,10 +118,11 @@ fn run(settings_file_name: &str) {
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
 
+    let () = io_worker.join();
     // Wait for worker to quit
     match io_worker.join() {
-        Ok(_) => println!("Simulation finished successful."),
-        Err(e) => error!("Error during flushing to disk: {:?}", e),
+        Ok(_) => Ok(()),
+        Err(e) => Err(e)
     }
 }
 
@@ -162,8 +145,22 @@ fn main() {
 
         println!("{:?}", ic);
     } else {
-        run(matches.value_of("parameter_file").unwrap());
+        if let Err(ref e) = run(matches.value_of("parameter_file").unwrap()) {
+            error!("error: {}", e);
+
+            for e in e.iter().skip(1) {
+                error!("caused by: {}", e);
+            }
+
+            // The backtrace is not always generated. Try to run this  with
+            // `RUST_BACKTRACE=1`.
+            if let Some(backtrace) = e.backtrace() {
+                error!("backtrace: {:?}", backtrace);
+            }
+
+            ::std::process::exit(1);
+        }
     }
 
-    std::process::exit(0);
+    ::std::process::exit(0);
 }
