@@ -166,7 +166,24 @@ impl Simulation {
     /// Initialise the initial condition of the simulation. At the moment it is
     /// sampled from a uniform random distribution.
     pub fn init(&mut self, particles: Vec<Particle>) {
+        // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
+        // provided for user given input.
+
+        let bs = self.settings.simulation.box_size;
+
         self.state.particles = particles;
+        assert!(self.state.particles.len() == self.settings.simulation.number_of_particles,
+                "Given initial condition has not the same number of particles ({}) as given in \
+                 the parameter file ({}).",
+                self.state.particles.len(),
+                self.settings.simulation.number_of_particles);
+
+        for p in &mut self.state.particles {
+            p.position.x.m = bs[0];
+            p.position.y.m = bs[1];
+            p.orientation.m = TWOPI;
+        }
+        println!("{:?}", self.state.particles);
     }
 
     pub fn do_timestep(&mut self) {
@@ -184,7 +201,6 @@ impl Simulation {
         self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
                                                                          &random_samples,
                                                                          &self.state.distribution);
-
     }
 
     /// Run the simulation for the number of timesteps specified in the
