@@ -165,17 +165,8 @@ impl Simulation {
 
     /// Initialise the initial condition of the simulation. At the moment it is
     /// sampled from a uniform random distribution.
-    pub fn init(&mut self) {
-        zinfo!(self.mpi.rank,
-               "Placing {} particles at their initial positions.",
-               self.settings.simulation.number_of_particles);
-
-        self.state.particles =
-            Particle::randomly_placed_particles(self.number_of_particles,
-                                                self.settings.simulation.box_size,
-                                                self.settings.simulation.seed);
-
-        assert_eq!(self.state.particles.len(), self.number_of_particles);
+    pub fn init(&mut self, particles: Vec<Particle>) {
+        self.state.particles = particles;
     }
 
     pub fn do_timestep(&mut self) {

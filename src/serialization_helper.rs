@@ -9,7 +9,7 @@ macro_rules! serde_enum_str {
         }
 
         impl ::serde::Serialize for $name {
-            fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            fn serialize<S>(&self, serializer: &mut S) -> ::std::result::Result<(), S::Error>
                 where S: ::serde::Serializer,
             {
                 // Serialize the enum as a string.
@@ -20,7 +20,7 @@ macro_rules! serde_enum_str {
         }
 
         impl ::serde::Deserialize for $name {
-            fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error>
                 where D: ::serde::Deserializer,
             {
                 struct Visitor;
@@ -28,7 +28,7 @@ macro_rules! serde_enum_str {
                 impl ::serde::de::Visitor for Visitor {
                     type Value = $name;
 
-                    fn visit_str<E>(&mut self, value: &str) -> Result<$name, E>
+                    fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<$name, E>
                         where E: ::serde::de::Error,
                     {
                         match value {
