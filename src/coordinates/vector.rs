@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn scalar_multiplication_3() {
-        let p = Mod64Vector3::new(0.5, -1.25, 0.75, (1., 1., 1.));
+        let p = Mod64Vector3::new(0.5, -1.25, 0.75, [1., 1., 1.]);
         let p3 = p * 3.;
         assert_eq!(*p3.x.as_ref(), 0.5);
         assert_eq!(*p3.y.as_ref(), 0.25);
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn scalar_multiplication_2() {
-        let p = Mod64Vector2::new(0.5, -1.5, (1., 1.));
+        let p = Mod64Vector2::new(0.5, -1.5, [1., 1.]);
         let p3 = p * 3.;
         assert_eq!(*p3.x.as_ref(), 0.5);
         assert_eq!(*p3.y.as_ref(), 0.5);
@@ -209,7 +209,7 @@ mod tests {
     #[ignore]
     quickcheck!{
         fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
-            let a = Mod64Vector2::new(x, y, (1., 1.));
+            let a = Mod64Vector2::new(x, y, [1., 1.]);
             let b = a * rhs;
             0. <= *b.x.as_ref() && *b.x.as_ref() < 1. && 0. <= *b.y.as_ref() && *b.y.as_ref() < 1.
         }

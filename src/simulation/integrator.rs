@@ -396,8 +396,8 @@ mod tests {
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
-        let bs = (1., 1.);
-        let gs = (10, 10, 3);
+        let bs = [1., 1.];
+        let gs = [10, 10, 3];
         let gw = grid_width(gs, bs);
         let s = StressPrefactors {
             active: 1.,
@@ -432,15 +432,15 @@ mod tests {
         }
 
         assert_eq!(i.stress_kernel.dim(), (2, 2, 3));
-        assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs.0, gs.1));
+        assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs[0], gs[1]));
 
         // TODO check if average oseen tensor is reasonable
     }
 
     #[test]
     fn test_evolve() {
-        let bs = (1., 1.);
-        let gs = (10, 10, 4);
+        let bs = [1., 1.];
+        let gs = [10, 10, 4];
         let gw = grid_width(gs, bs);
         let s = StressPrefactors {
             active: 1.,
@@ -511,8 +511,8 @@ mod tests {
 
     #[test]
     fn test_calc_stress_divergence() {
-        let bs = (1., 1.);
-        let gs = (10, 10, 10);
+        let bs = [1., 1.];
+        let gs = [10, 10, 10];
         let gw = grid_width(gs, bs);
         let s = StressPrefactors {
             active: 1.,
@@ -534,6 +534,6 @@ mod tests {
 
         let res = i.calc_stress_divergence(&d);
 
-        assert_eq!(Array::from_elem((2, gs.0, gs.1), Complex::new(0., 0.)), res);
+        assert_eq!(Array::from_elem((2, gs[0], gs[1]), Complex::new(0., 0.)), res);
     }
 }

@@ -155,16 +155,16 @@ mod tests {
 
     #[test]
     fn new() {
-        let gs = (10, 10, 6);
-        let bs = (1., 1.);
+        let gs = [10, 10, 6];
+        let bs = [1., 1.];
         let dist = Distribution::new(gs, grid_width(gs, bs));
         assert_eq!(dist.shape(), (10, 10, 6));
     }
 
     #[test]
     fn histogram() {
-        let grid_size = (5, 5, 2);
-        let box_size = (1., 1.);
+        let grid_size = [5, 5, 2];
+        let box_size = [1., 1.];
         let gw = grid_width(grid_size, box_size);
         let n = 1000;
         let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
@@ -186,8 +186,8 @@ mod tests {
 
     #[test]
     fn sample_from() {
-        let box_size = (1., 1.);
-        let grid_size = (5, 5, 2);
+        let box_size = [1., 1.];
+        let grid_size = [5, 5, 2];
         let n = 1000;
         let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
@@ -219,8 +219,8 @@ mod tests {
 
     #[test]
     fn coord_to_grid() {
-        let box_size = (1., 1.);
-        let grid_size = (10, 10, 6);
+        let box_size = [1., 1.];
+        let grid_size = [10, 10, 6];
 
         let input = [[0., 0., 0.],
                      [1., 0., 0.],
@@ -258,8 +258,8 @@ mod tests {
 
     #[test]
     fn spatgrad() {
-        let box_size = (1., 1.);
-        let grid_size = (5, 5, 1);
+        let box_size = [1., 1.];
+        let grid_size = [5, 5, 1];
         let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
 
         d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
@@ -287,16 +287,16 @@ mod tests {
         assert_eq!(grad.subview(Axis(0), 1), res_y);
 
         d.dist = Array::zeros(grid_size);
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, grid_size.0, grid_size.1, grid_size.2)));
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, grid_size[0], grid_size[1], grid_size[2])));
 
         d.dist = Array::zeros(grid_size) + 1.;
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, grid_size.0, grid_size.1, grid_size.2)));
+        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, grid_size[0], grid_size[1], grid_size[2])));
     }
 
     #[test]
     fn index() {
-        let box_size = (1., 1.);
-        let grid_size = (2, 3, 2);
+        let box_size = [1., 1.];
+        let grid_size = [2, 3, 2];
         let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
 
         d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]], [[4., 4.5], [5., 5.5], [6., 6.5]]]);
