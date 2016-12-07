@@ -33,8 +33,6 @@ use stochasticsampling::settings::OutputFormat;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-
 fn main() {
     // initialize the env_logger implementation
     env_logger::init().unwrap();
