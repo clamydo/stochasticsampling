@@ -7,11 +7,12 @@ use coordinates::TWOPI;
 use coordinates::particle::Particle;
 use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
+use ndarray::Array;
 use pcg_rand::Pcg64;
 use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Normal};
 use self::distribution::Distribution;
-use self::integrator::{IntegrationParameter, Integrator};
+use self::integrator::{FlowField, IntegrationParameter, Integrator};
 use settings::{BoxSize, GridSize, Settings};
 use std::error::Error;
 use std::f64;
@@ -60,8 +61,9 @@ pub struct Simulation {
 
 /// Holds the current state of the simulation.
 struct SimulationState {
-    particles: Vec<Particle>,
     distribution: Distribution,
+    flow_field: FlowField,
+    particles: Vec<Particle>,
     rng: Pcg64,
 }
 
@@ -95,9 +97,9 @@ pub struct GridWidth {
 /// Calculates width of a grid cell given the number of cells and box size.
 pub fn grid_width(grid_size: GridSize, box_size: BoxSize) -> GridWidth {
     GridWidth {
-        x: box_size.0 as f64 / grid_size.0 as f64,
-        y: box_size.1 as f64 / grid_size.1 as f64,
-        a: TWOPI / grid_size.2 as f64,
+        x: box_size[0] as f64 / grid_size[0] as f64,
+        y: box_size[1] as f64 / grid_size[1] as f64,
+        a: TWOPI / grid_size[2] as f64,
     }
 }
 
@@ -129,8 +131,9 @@ impl Simulation {
         let seed = [sim.seed[0], sim.seed[1] + mpi.rank as u64];
 
         let state = SimulationState {
-            particles: Vec::with_capacity(ranklocal_number_of_particles),
             distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
+            flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
+            particles: Vec::with_capacity(ranklocal_number_of_particles),
             rng: SeedableRng::from_seed(seed),
         };
 
@@ -162,17 +165,25 @@ impl Simulation {
 
     /// Initialise the initial condition of the simulation. At the moment it is
     /// sampled from a uniform random distribution.
-    pub fn init(&mut self) {
-        zinfo!(self.mpi.rank,
-               "Placing {} particles at their initial positions.",
-               self.settings.simulation.number_of_particles);
+    pub fn init(&mut self, particles: Vec<Particle>) {
+        // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
+        // provided for user given input.
 
-        self.state.particles =
-            Particle::randomly_placed_particles(self.number_of_particles,
-                                                self.settings.simulation.box_size,
-                                                self.settings.simulation.seed);
+        let bs = self.settings.simulation.box_size;
 
-        assert_eq!(self.state.particles.len(), self.number_of_particles);
+        self.state.particles = particles;
+        assert!(self.state.particles.len() == self.settings.simulation.number_of_particles,
+                "Given initial condition has not the same number of particles ({}) as given in \
+                 the parameter file ({}).",
+                self.state.particles.len(),
+                self.settings.simulation.number_of_particles);
+
+        for p in &mut self.state.particles {
+            p.position.x.m = bs[0];
+            p.position.y.m = bs[1];
+            p.orientation.m = TWOPI;
+        }
+        println!("{:?}", self.state.particles);
     }
 
     pub fn do_timestep(&mut self) {
@@ -187,11 +198,9 @@ impl Simulation {
                               self.normaldist.ind_sample(&mut self.state.rng)];
 
         // Update particle positions
-        self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                 &random_samples,
-                                                 &self.state.distribution);
-
-
+        self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
+                                                                         &random_samples,
+                                                                         &self.state.distribution);
     }
 
     /// Run the simulation for the number of timesteps specified in the
@@ -219,8 +228,9 @@ type Pcg64Seed = [u64; 4];
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Snapshot {
-    particles: Vec<Particle>,
     distribution: Distribution,
+    flow_field: FlowField,
+    particles: Vec<Particle>,
     rng_seed: Pcg64Seed,
 }
 
@@ -233,8 +243,9 @@ impl Iterator for Simulation {
         let seed = self.state.rng.extract_seed();
 
         let snapshot = Snapshot {
-            particles: self.state.particles.clone(),
             distribution: self.state.distribution.clone(),
+            flow_field: self.state.flow_field.clone(),
+            particles: self.state.particles.clone(),
             // assuming little endianess
             rng_seed: [seed[0].lo, seed[0].hi, seed[0].lo, seed[1].hi],
         };

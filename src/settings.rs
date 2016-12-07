@@ -2,12 +2,19 @@
 
 use serde::Deserialize;
 use std::fs::File;
-use std::io;
 use std::io::prelude::*;
 use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 10;
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::CBOR;
+
+error_chain! {
+    foreign_links {
+        TOMLParser(toml::ParserError);
+        TOMLDecoder(toml::DecodeError);
+    }
+}
+
 
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,9 +25,9 @@ pub struct Settings {
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
-pub type BoxSize = (f64, f64);
+pub type BoxSize = [f64; 2];
 /// Size of the discrete grid.
-pub type GridSize = (usize, usize, usize);
+pub type GridSize = [usize; 3];
 
 
 /// Holds rotational and translational diffusion constants
@@ -84,39 +91,13 @@ fn default_output_format() -> OutputFormat {
     DEFAULT_OUTPUT_FORMAT
 }
 
-// Quickly implement meta error type for this module.
-quick_error! {
-    /// Error type including error that can happend during (de)serialization of
-    /// the settings file.
-    #[derive(Debug)]
-    pub enum SettingsError {
-        Io(err: io::Error) {
-            display("I/O error: {}", err)
-            cause(err)
-            description(err.description())
-            from()
-        }
-        Parser(err: toml::ParserError) {
-            display("Parser error: {}", err)
-            cause(err)
-            description(err.description())
-            from()
-        }
-        Devode(err: toml::DecodeError) {
-            display("TOML decorder error: {}", err)
-            cause(err)
-            description(err.description())
-            from()
-        }
-    }
-}
-
 
 /// Reads the content of a file `filename` into an string and return it.
-fn read_from_file(filename: &str) -> Result<String, io::Error> {
-    let mut f = try!(File::open(filename));
+fn read_from_file(filename: &str) -> Result<String> {
+    let mut f = File::open(filename).chain_err(|| "Unable to open file.")?;
     let mut content = String::new();
-    f.read_to_string(&mut content)?;
+
+    f.read_to_string(&mut content).chain_err(|| "Unable to read file.")?;
 
     Ok(content)
 }
@@ -125,9 +106,9 @@ fn read_from_file(filename: &str) -> Result<String, io::Error> {
 /// Reads content of a file `param_file`, that should point to a valid TOML
 /// file, and Parsers it.
 /// Then returns the deserialized data in form of a Settings struct.
-pub fn read_parameter_file(param_file: &str) -> Result<Settings, SettingsError> {
+pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(&param_file)?;
+    let toml_string = read_from_file(&param_file).chain_err(|| "Unable to read parameter file.")?;
 
     let mut parser = toml::Parser::new(&toml_string);
 
@@ -161,8 +142,8 @@ mod tests {
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
-        assert_eq!(settings.simulation.box_size, (1., 1.));
-        assert_eq!(settings.simulation.grid_size, (10, 10, 6));
+        assert_eq!(settings.simulation.box_size, [1., 1.]);
+        assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);

@@ -5,30 +5,35 @@
 
 #![crate_type = "staticlib"]
 #![feature(proc_macro)]
+#![feature(slice_patterns)]
+#![recursion_limit = "1024"]
+
+#[macro_use]
+extern crate error_chain;
+#[macro_use]
+extern crate log;
+extern crate fftw3;
+extern crate mpi;
+extern crate ndarray;
+extern crate pcg_rand;
+extern crate rand;
+extern crate serde;
+extern crate serde_cbor;
+#[macro_use]
+extern crate serde_derive;
+extern crate toml;
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
-
-#[macro_use]
-extern crate log;
-
-extern crate mpi;
-#[macro_use(s)]
-extern crate ndarray;
-extern crate rand;
-extern crate pcg_rand;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_cbor;
-extern crate toml;
-extern crate fftw3;
-#[macro_use]
-extern crate quick_error;
 
 pub mod coordinates;
 #[macro_use]
 pub mod serialization_helper;
 pub mod settings;
 pub mod simulation;
+
+mod errors {
+    // Create the Error, ErrorKind, ResultExt, and Result types
+    error_chain! { }
+}

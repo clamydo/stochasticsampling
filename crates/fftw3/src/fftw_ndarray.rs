@@ -1,5 +1,5 @@
 use complex::Complex;
-use ndarray::{ArrayViewMut, Ix};
+use ndarray::{ArrayViewMut, Ix2};
 use std::mem;
 
 /// FFTW3 allocated `ArrayView` for 2D data.
@@ -7,16 +7,17 @@ use std::mem;
 /// The memory is allocated by FFTW3 in order to align it properly. This is
 /// needed for SIMD. See FFTW3 documentation.
 pub struct FFTData2D<'a> {
-    pub data: ArrayViewMut<'a, Complex<f64>, (Ix, Ix)>,
+    pub data: ArrayViewMut<'a, Complex<f64>, Ix2>,
 }
 
 
 impl<'a> FFTData2D<'a> {
     /// Return a new FFTData2 instance. Only considers the first
-    pub fn new(shape: (Ix, Ix)) -> FFTData2D<'a> {
+    pub fn new(shape: Ix2) -> FFTData2D<'a> {
         let data;
         unsafe {
-            let ptr = ::fftw3_ffi::fftw_malloc(shape.0 * shape.1 * mem::size_of::<Complex<f64>>());
+            let ptr = ::fftw3_ffi::fftw_malloc(shape[0] * shape[1] *
+                                               mem::size_of::<Complex<f64>>());
             data = ArrayViewMut::from_shape_ptr(shape, ptr as *mut Complex<f64>);
         }
 

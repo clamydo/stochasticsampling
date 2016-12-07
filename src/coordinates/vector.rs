@@ -16,11 +16,11 @@ pub struct Mod64Vector3 {
 
 impl Mod64Vector3 {
     /// Returns a modulo 3D vector with the given coordinates and quotients.
-    pub fn new(x: f64, y: f64, z: f64, m: (f64, f64, f64)) -> Mod64Vector3 {
+    pub fn new(x: f64, y: f64, z: f64, m: [f64;3]) -> Mod64Vector3 {
         Mod64Vector3 {
-            x: Mf64::new(x, m.0),
-            y: Mf64::new(y, m.1),
-            z: Mf64::new(z, m.2),
+            x: Mf64::new(x, m[0]),
+            y: Mf64::new(y, m[1]),
+            z: Mf64::new(z, m[2]),
         }
     }
 }
@@ -99,10 +99,10 @@ pub struct Mod64Vector2 {
 
 impl Mod64Vector2 {
     /// Returns a modulo 3D vector with the given coordinates and quotients.
-    pub fn new(x: f64, y: f64, m: (f64, f64)) -> Mod64Vector2 {
+    pub fn new(x: f64, y: f64, m: [f64; 2]) -> Mod64Vector2 {
         Mod64Vector2 {
-            x: Mf64::new(x, m.0),
-            y: Mf64::new(y, m.1),
+            x: Mf64::new(x, m[0]),
+            y: Mf64::new(y, m[1]),
         }
     }
 }
@@ -190,7 +190,7 @@ mod tests {
     quickcheck!{
         fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
             const DIV: f64 = 3.45;
-            let boxsize = (3.45, 3.45, 3.45);
+            let boxsize = [3.45, 3.45, 3.45];
             let a = Mod64Vector3::new(x, y, z, boxsize);
             let b = a * rhs;
             0. <= *b.x.as_ref() && *b.x.as_ref() < DIV && 0. <= *b.y.as_ref() &&

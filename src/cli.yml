@@ -1,0 +1,15 @@
+name: S3
+author: Kevin K. <kbknapp@gmail.com>
+about: Stochastic Sampling Solver for Fokker-Planck equations, magnetic microswimmers with hydro-dynamic interactions.
+args:
+    - parameter_file:
+        short: p
+        long: parameters
+        value_name: PARAMETER_FILE
+        help: Path to a parameter file in YAML format. See 'test/parameter.toml' for an example.
+        takes_value: true
+        required: true
+    - initial_condition:
+        short: i
+        long: initial
+        help: When this flag is set, the program listens to a CBOR formatted STDIN for a initial particle configuration
