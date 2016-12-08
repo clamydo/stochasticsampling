@@ -2,6 +2,7 @@
 //! the simulation.
 mod distribution;
 mod integrator;
+pub mod output;
 
 use coordinates::TWOPI;
 use coordinates::particle::Particle;
@@ -228,7 +229,7 @@ impl Simulation {
         snapshot
     }
 
-    // Getters
+    // Getter
 
     /// Returns the first `n` particles
     pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
@@ -243,6 +244,11 @@ impl Simulation {
     /// Returns sampled flow field
     pub fn get_flow_field(&self) -> Distribution {
         self.state.distribution.clone()
+    }
+
+    /// Returns current timestep
+    pub fn get_timestep(&self) -> usize {
+        self.state.timestep
     }
 }
 

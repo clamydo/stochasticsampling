@@ -32,6 +32,9 @@ use stochasticsampling::settings::{self, Settings};
 use stochasticsampling::settings::OutputFormat;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
+use stochasticsampling::simulation::output::Output;
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     // initialize the env_logger implementation
@@ -58,6 +61,15 @@ fn main() {
 }
 
 
+fn create_file_path(settings: &Settings) -> String {
+    let filename = format!("{prefix}-{time}_v{version}",
+                           prefix = settings.environment.prefix,
+                           time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
+                           version = VERSION);
+
+    Path::new(&settings.environment.output_dir).join(filename).to_str().unwrap().into()
+}
+
 /// Main function
 fn run() -> Result<()> {
     // Parse command line
@@ -75,11 +87,13 @@ fn run() -> Result<()> {
         InitType::Random
     };
 
+    let path = create_file_path(&settings);
+
     let mut simulation = init_simulation(&settings, init_type)
         .chain_err(|| "Error during initialization of simulation.")?;
-    let file = prepare_output_file(&settings).chain_err(|| "Cannot prepare output file.")?;
+    let file = prepare_output_file(&settings, &path).chain_err(|| "Cannot prepare output file.")?;
 
-    Ok(run_simulation(&settings, file, &mut simulation)?)
+    Ok(run_simulation(&settings, path.into(), file, &mut simulation)?)
 }
 
 
@@ -113,22 +127,14 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
     Ok(simulation)
 }
 
-
 /// Creates an output file. Already writes header for metadata.
-fn prepare_output_file(settings: &Settings) -> Result<File> {
+fn prepare_output_file(settings: &Settings, path: &str) -> Result<File> {
     let fileext = match settings.environment.output_format {
         OutputFormat::CBOR => "cbor",
         OutputFormat::Bincode => "bincode",
     };
 
-    // Create and initialize output file
-    let filename = format!("{prefix}-{time}_v{version}.{fileext}",
-                           prefix = settings.environment.prefix,
-                           time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
-                           version = VERSION,
-                           fileext = fileext);
-
-    let filepath = Path::new(&settings.environment.output_dir).join(filename);
+    let filepath = Path::new(path).with_extension(fileext);
 
     let mut file = File::create(&filepath)
         .chain_err(|| format!("couldn't create output file '{}'.", filepath.display()))?;
@@ -148,12 +154,14 @@ fn prepare_output_file(settings: &Settings) -> Result<File> {
 /// Message type for the IO worker thread channel.
 enum IOWorkerMsg {
     Quit,
-    Data(Snapshot),
+    Snapshot(Snapshot),
+    Output(Output),
 }
 
 
 /// Spawns output thread and run simulation.
 fn run_simulation(settings: &Settings,
+                  path: String,
                   mut file: File,
                   mut simulation: &mut Simulation)
                   -> Result<()> {
@@ -165,13 +173,32 @@ fn run_simulation(settings: &Settings,
     // Copy output_format, so it can be captured by the thread closure.
     let output_format = settings.environment.output_format;
 
+
+    let mut snapshot_counter = 0;
+
     // Spawn worker thread, that periodically flushes collections of simulation
     // states to disk.
     let io_worker = thread::spawn(move || -> Result<()> {
         loop {
             match rx.recv().unwrap() {
                 IOWorkerMsg::Quit => break,
-                IOWorkerMsg::Data(v) => {
+
+                IOWorkerMsg::Snapshot(s) => {
+                    snapshot_counter += 1;
+                    let filepath = Path::new(&path)
+                        .with_extension(format!("bincode.{}", snapshot_counter));
+
+                    let mut snapshot_file = File::create(&filepath).chain_err(|| {
+                            format!("couldn't create snapshot file '{}'.", filepath.display())
+                        })?;
+
+                    serialize_into(&mut snapshot_file, &s, bincode::SizeLimit::Infinite)
+                        .chain_err(||
+                            format!("Cannot write snapshot with number {}", snapshot_counter)
+                        )?
+                }
+
+                IOWorkerMsg::Output(v) => {
                     // write all snapshots into one cbor file
                     match output_format {
                         OutputFormat::CBOR => {
@@ -193,8 +220,11 @@ fn run_simulation(settings: &Settings,
     });
 
     // Run the simulation and send data to asynchronous to the IO-thread.
-    for data in (&mut simulation).take(n) {
-        tx.send(IOWorkerMsg::Data(data)).unwrap();
+    for _ in 0..n {
+        simulation.do_timestep();
+        let mut output = Output::default();
+        output.distribution = Some(simulation.get_distribution());
+        tx.send(IOWorkerMsg::Output(output)).unwrap();
     }
 
     // Stop worker
