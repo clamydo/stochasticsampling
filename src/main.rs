@@ -87,7 +87,7 @@ fn run() -> Result<()> {
         InitType::Random
     };
 
-    let output_dir = cli_matches.value_of("output_file").unwrap();
+    let output_dir = cli_matches.value_of("output_directory").unwrap();
     let filename = create_filename(&settings);
     let path = Path::new(&output_dir).join(filename).to_str().unwrap().to_string();
 
@@ -222,7 +222,7 @@ fn run_simulation(settings: &Settings,
     });
 
     let mut pb = ProgressBar::new(n as u64);
-    pb.format("╢▌▌░╟");
+    pb.format("╢██░╟");
 
     // Run the simulation and send data to asynchronous to the IO-thread.
     for _ in 0..n {
