@@ -13,3 +13,10 @@ args:
         short: i
         long: initial
         help: When this flag is set, the program listens to a CBOR formatted STDIN for a initial particle configuration
+    - output_directory:
+        short: o
+        long: output_directory
+        value_name: OUTPUT_FILE
+        help: Path where output is written to
+        takes_value: true
+        required: true

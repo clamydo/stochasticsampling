@@ -50,7 +50,7 @@ pub struct Parameters {
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
     /// Assumes that b points in x-direction
-    pub magnetic_reoriantation: f64,
+    pub magnetic_reorientation: f64,
 }
 
 /// Holds simulation specific settings.
@@ -75,7 +75,6 @@ serde_enum_str!(OutputFormat {
 pub struct EnvironmentSettings {
     #[serde(default = "default_io_queue_size")]
     pub io_queue_size: usize,
-    pub output_dir: String,
     #[serde(default = "default_output_format")]
     pub output_format: OutputFormat,
     pub prefix: String,
@@ -133,7 +132,6 @@ mod tests {
 
         assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
         assert_eq!(settings.environment.io_queue_size, 50);
-        assert_eq!(settings.environment.output_dir, "./out/");
         assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
         assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");
@@ -141,7 +139,7 @@ mod tests {
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
-        assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
+        assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.simulation.box_size, [1., 1.]);
         assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
         assert_eq!(settings.simulation.number_of_particles, 100);

@@ -1,7 +1,6 @@
 [environment]
     io_queue_size = 50
     output_format = "bincode"
-    output_dir = "./out/"
     prefix = "foo"
 
 [simulation]
@@ -13,7 +12,7 @@
     seed = [ 1, 1 ]
 
 [parameters]
-    magnetic_reoriantation = 1.0
+    magnetic_reorientation = 1.0
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0

@@ -2,6 +2,7 @@
 //! the simulation.
 mod distribution;
 mod integrator;
+pub mod output;
 
 use coordinates::TWOPI;
 use coordinates::particle::Particle;
@@ -14,29 +15,8 @@ use rand::distributions::{IndependentSample, Normal};
 use self::distribution::Distribution;
 use self::integrator::{FlowField, IntegrationParameter, Integrator};
 use settings::{BoxSize, GridSize, Settings};
-use std::error::Error;
 use std::f64;
-use std::fmt;
-use std::fmt::Display;
 
-
-/// Error type that merges all errors that can happen during loading and parsing
-/// of the settings file.
-#[derive(Debug)]
-pub enum SimulationError {
-}
-
-impl Display for SimulationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "")
-    }
-}
-
-impl Error for SimulationError {
-    fn description(&self) -> &str {
-        "SimulationError"
-    }
-}
 
 
 /// Structure that holds state variables needed for MPI.
@@ -65,7 +45,23 @@ struct SimulationState {
     flow_field: FlowField,
     particles: Vec<Particle>,
     rng: Pcg64,
+    /// count timesteps
+    timestep: usize,
 }
+
+
+/// Seed of PCG PRNG
+type Pcg64Seed = [u64; 4];
+
+/// Captures the full state of the simulation
+#[derive(Debug, Clone, Serialize)]
+pub struct Snapshot {
+    particles: Vec<Particle>,
+    rng_seed: Pcg64Seed,
+    /// current timestep number
+    timestep: usize,
+}
+
 
 macro_rules! zinfo {
     ($rank:expr, $($arg:tt)*) => {
@@ -126,23 +122,12 @@ impl Simulation {
             rank: mpi_world.rank(),
         };
 
-        // deterministically seed every mpi process (slightly) differently
-        // normal distribution with variance timestep
-        let seed = [sim.seed[0], sim.seed[1] + mpi.rank as u64];
-
-        let state = SimulationState {
-            distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
-            flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
-            particles: Vec::with_capacity(ranklocal_number_of_particles),
-            rng: SeedableRng::from_seed(seed),
-        };
-
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
             trans_diffusion: param.diffusion.translational.sqrt() * 2.,
             rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
             stress: param.stress,
-            magnetic_reoriantation: param.magnetic_reoriantation * 2.,
+            magnetic_reorientation: param.magnetic_reorientation * 2.,
         };
 
         let integrator = Integrator::new(sim.grid_size,
@@ -151,6 +136,19 @@ impl Simulation {
 
         // initialize a normal distribution with variance sqrt(timestep)
         let normal = Normal::new(0.0, sim.timestep.sqrt());
+
+        // deterministically seed every mpi process (slightly) differently
+        // normal distribution with variance timestep
+        let seed = [sim.seed[0], sim.seed[1] + mpi.rank as u64];
+
+        // initialize state with zeros
+        let state = SimulationState {
+            distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
+            flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
+            particles: Vec::with_capacity(ranklocal_number_of_particles),
+            rng: SeedableRng::from_seed(seed),
+            timestep: 0,
+        };
 
         Simulation {
             integrator: integrator,
@@ -162,31 +160,41 @@ impl Simulation {
         }
     }
 
+    /// Initialize the state of the simulation
+    pub fn init(&mut self, mut particles: Vec<Particle>) {
+        assert!(particles.len() == self.settings.simulation.number_of_particles,
+                "Given initial condition has not the same number of particles ({}) as given in \
+                 the parameter file ({}).",
+                particles.len(),
+                self.settings.simulation.number_of_particles);
 
-    /// Initialise the initial condition of the simulation. At the moment it is
-    /// sampled from a uniform random distribution.
-    pub fn init(&mut self, particles: Vec<Particle>) {
-        // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
-        // provided for user given input.
 
         let bs = self.settings.simulation.box_size;
 
-        self.state.particles = particles;
-        assert!(self.state.particles.len() == self.settings.simulation.number_of_particles,
-                "Given initial condition has not the same number of particles ({}) as given in \
-                 the parameter file ({}).",
-                self.state.particles.len(),
-                self.settings.simulation.number_of_particles);
-
-        for p in &mut self.state.particles {
+        // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
+        // provided for user given input.
+        for p in particles.iter_mut() {
             p.position.x.m = bs[0];
             p.position.y.m = bs[1];
             p.orientation.m = TWOPI;
         }
-        println!("{:?}", self.state.particles);
+
+        self.state.particles = particles;
     }
 
-    pub fn do_timestep(&mut self) {
+
+    /// Resumes from a given snapshot
+    pub fn resume(&mut self, snapshot: Snapshot) {
+        self.init(snapshot.particles);
+
+        // Reset timestep
+        self.state.timestep = snapshot.timestep;
+        self.state.rng.reseed(snapshot.rng_seed);
+    }
+
+
+    /// Do the actual simulation timestep
+    pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble
         self.state.distribution.sample_from(&self.state.particles);
 
@@ -201,54 +209,53 @@ impl Simulation {
         self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
                                                                          &random_samples,
                                                                          &self.state.distribution);
+
+        // increment timestep counter to keep a continous identifier when resuming
+        self.state.timestep += 1;
+        self.state.timestep
     }
 
-    /// Run the simulation for the number of timesteps specified in the
-    /// settings file.
-    pub fn run(&mut self) -> Result<(), SimulationError> {
-        for step in 0..self.settings.simulation.number_of_timesteps {
-            self.do_timestep();
-
-            for (i, p) in self.state.particles.iter().enumerate() {
-                zdebug!(self.mpi.rank, "{}, {}, {}, {}",
-                    step,
-                    i,
-                    p.position.x.as_ref(),
-                    p.position.y.as_ref(),
-                );
-
-            }
-        }
-
-        Ok(())
-    }
-}
-
-type Pcg64Seed = [u64; 4];
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Snapshot {
-    distribution: Distribution,
-    flow_field: FlowField,
-    particles: Vec<Particle>,
-    rng_seed: Pcg64Seed,
-}
-
-
-impl Iterator for Simulation {
-    type Item = Snapshot;
-
-    fn next(&mut self) -> Option<Snapshot> {
-        self.do_timestep();
+    /// Returns a fill Snapshot
+    pub fn get_snapshot(&self) -> Snapshot {
         let seed = self.state.rng.extract_seed();
 
         let snapshot = Snapshot {
-            distribution: self.state.distribution.clone(),
-            flow_field: self.state.flow_field.clone(),
             particles: self.state.particles.clone(),
             // assuming little endianess
-            rng_seed: [seed[0].lo, seed[0].hi, seed[0].lo, seed[1].hi],
+            rng_seed: [seed[0].lo, seed[0].hi, seed[1].lo, seed[1].hi],
+            timestep: self.state.timestep,
         };
-        Some(snapshot)
+
+        snapshot
+    }
+
+    // Getter
+
+    /// Returns the first `n` particles
+    pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
+        self.state.particles[..n].to_vec()
+    }
+
+    /// Returns sampled distribution field
+    pub fn get_distribution(&self) -> Distribution {
+        self.state.distribution.clone()
+    }
+
+    /// Returns sampled flow field
+    pub fn get_flow_field(&self) -> Distribution {
+        self.state.distribution.clone()
+    }
+
+    /// Returns current timestep
+    pub fn get_timestep(&self) -> usize {
+        self.state.timestep
+    }
+}
+
+impl Iterator for Simulation {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<usize> {
+        Some(self.do_timestep())
     }
 }
