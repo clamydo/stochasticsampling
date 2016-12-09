@@ -50,7 +50,7 @@ pub struct Parameters {
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
     /// Assumes that b points in x-direction
-    pub magnetic_reoriantation: f64,
+    pub magnetic_reorientation: f64,
 }
 
 /// Holds simulation specific settings.
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
-        assert_eq!(settings.parameters.magnetic_reoriantation, 1.0);
+        assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.simulation.box_size, [1., 1.]);
         assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
         assert_eq!(settings.simulation.number_of_particles, 100);

@@ -127,7 +127,7 @@ impl Simulation {
             trans_diffusion: param.diffusion.translational.sqrt() * 2.,
             rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
             stress: param.stress,
-            magnetic_reoriantation: param.magnetic_reoriantation * 2.,
+            magnetic_reorientation: param.magnetic_reorientation * 2.,
         };
 
         let integrator = Integrator::new(sim.grid_size,

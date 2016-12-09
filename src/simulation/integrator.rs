@@ -18,7 +18,7 @@ pub struct IntegrationParameter {
     pub stress: StressPrefactors,
     pub timestep: f64,
     pub trans_diffusion: f64,
-    pub magnetic_reoriantation: f64,
+    pub magnetic_reorientation: f64,
 }
 
 /// Holds precomuted values
@@ -298,7 +298,7 @@ impl Integrator {
         // Get vorticity dx uy - dy ux
         let vort = vort[nearest_grid_point_index];
 
-        p.orientation += (param.magnetic_reoriantation * p.orientation.as_ref().sin() + vort) *
+        p.orientation += (param.magnetic_reorientation * p.orientation.as_ref().sin() + vort) *
                          param.timestep +
                          param.rot_diffusion * random_samples[2];
     }
