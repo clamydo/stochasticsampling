@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 
 [[bin]]
