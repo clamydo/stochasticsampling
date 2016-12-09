@@ -1,4 +1,3 @@
-use super::Simulation;
 use super::integrator::FlowField;
 use super::distribution::Distribution;
 use super::super::coordinates::particle::Particle;
