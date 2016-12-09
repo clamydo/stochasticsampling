@@ -77,9 +77,7 @@ impl Integrator {
     /// kernel, the value of the filter at a grid point is the value at a
     /// corner of the grid cell. To get an interpolated value at the center of
     /// the cell an average of all cell corners is calculated.
-    fn calc_oseen_kernel(grid_size: GridSize,
-                         grid_width: GridWidth)
-                         -> Array<Complex<f64>, Ix4> {
+    fn calc_oseen_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<Complex<f64>, Ix4> {
 
         // Grid size must be even, because the oseen tensor diverges at the origin.
         assert_eq!(grid_size[0] % 2,
@@ -308,7 +306,8 @@ impl Integrator {
     pub fn evolve_particles_inplace(&self,
                                     particles: &mut Vec<Particle>,
                                     random_samples: &[f64; 3],
-                                    distribution: &Distribution) -> FlowField {
+                                    distribution: &Distribution)
+                                    -> FlowField {
         // Calculate flow field from distribution
         let u = self.calculate_flow_field(distribution);
         // Calculate vorticity dx uy - dy ux
@@ -364,7 +363,8 @@ fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
 
     assert!(len % 2 == 0,
             "Periodic Simpson's rule only works for even number of sample points, since the \
-             first point in the integration interval is also the last.");
+             first point in the integration interval is also the last. Please specify an even \
+             number of grid cells.");
 
     unsafe {
         let mut s = samples.uget(0) + samples.uget(0);
@@ -534,6 +534,7 @@ mod tests {
 
         let res = i.calc_stress_divergence(&d);
 
-        assert_eq!(Array::from_elem((2, gs[0], gs[1]), Complex::new(0., 0.)), res);
+        assert_eq!(Array::from_elem((2, gs[0], gs[1]), Complex::new(0., 0.)),
+                   res);
     }
 }
