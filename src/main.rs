@@ -10,6 +10,7 @@ extern crate env_logger;
 extern crate error_chain;
 #[macro_use]
 extern crate log;
+extern crate pbr;
 extern crate serde_cbor;
 extern crate time;
 
@@ -21,6 +22,7 @@ mod errors {
 use bincode::serde::serialize_into;
 use clap::App;
 use errors::*;
+use pbr::ProgressBar;
 use serde_cbor::{de, ser};
 use std::fs::File;
 use std::io;
@@ -219,13 +221,18 @@ fn run_simulation(settings: &Settings,
         Ok(())
     });
 
+    let mut pb = ProgressBar::new(n as u64);
+    pb.format("╢▌▌░╟");
+
     // Run the simulation and send data to asynchronous to the IO-thread.
     for _ in 0..n {
+        pb.inc();
         simulation.do_timestep();
         let mut output = Output::default();
         output.distribution = Some(simulation.get_distribution());
         tx.send(IOWorkerMsg::Output(output)).unwrap();
     }
+    pb.finish_print("done");
 
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
