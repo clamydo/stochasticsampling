@@ -222,7 +222,7 @@ fn run_simulation(settings: &Settings,
     });
 
     let mut pb = ProgressBar::new(n as u64);
-    pb.format("╢██░╟");
+    pb.format("┫██░┣");
 
     // Run the simulation and send data to asynchronous to the IO-thread.
     for _ in 0..n {
