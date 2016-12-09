@@ -75,7 +75,6 @@ serde_enum_str!(OutputFormat {
 pub struct EnvironmentSettings {
     #[serde(default = "default_io_queue_size")]
     pub io_queue_size: usize,
-    pub output_dir: String,
     #[serde(default = "default_output_format")]
     pub output_format: OutputFormat,
     pub prefix: String,
@@ -133,7 +132,6 @@ mod tests {
 
         assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
         assert_eq!(settings.environment.io_queue_size, 50);
-        assert_eq!(settings.environment.output_dir, "./out/");
         assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
         assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");

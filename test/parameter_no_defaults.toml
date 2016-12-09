@@ -1,5 +1,4 @@
 [environment]
-    output_dir = "./out/"
     prefix = "foo"
 
 [simulation]

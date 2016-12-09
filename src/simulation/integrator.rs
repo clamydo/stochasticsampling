@@ -409,7 +409,7 @@ mod tests {
             trans_diffusion: 1.,
             rot_diffusion: 1.,
             stress: s,
-            magnetic_reoriantation: 1.,
+            magnetic_reorientation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);
@@ -452,7 +452,7 @@ mod tests {
             trans_diffusion: 1.,
             rot_diffusion: 1.,
             stress: s,
-            magnetic_reoriantation: 1.,
+            magnetic_reorientation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);
@@ -524,7 +524,7 @@ mod tests {
             trans_diffusion: 1.,
             rot_diffusion: 1.,
             stress: s,
-            magnetic_reoriantation: 1.,
+            magnetic_reorientation: 1.,
         };
 
         let i = Integrator::new(gs, gw, int_param);

@@ -63,13 +63,11 @@ fn main() {
 }
 
 
-fn create_file_path(settings: &Settings) -> String {
-    let filename = format!("{prefix}-{time}_v{version}",
+fn create_filename(settings: &Settings) -> String {
+    format!("{prefix}-{time}_v{version}",
                            prefix = settings.environment.prefix,
                            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
-                           version = VERSION);
-
-    Path::new(&settings.environment.output_dir).join(filename).to_str().unwrap().into()
+                           version = VERSION)
 }
 
 /// Main function
@@ -89,7 +87,9 @@ fn run() -> Result<()> {
         InitType::Random
     };
 
-    let path = create_file_path(&settings);
+    let output_dir = cli_matches.value_of("output_file").unwrap();
+    let filename = create_filename(&settings);
+    let path = Path::new(&output_dir).join(filename).to_str().unwrap().to_string();
 
     let mut simulation = init_simulation(&settings, init_type)
         .chain_err(|| "Error during initialization of simulation.")?;
