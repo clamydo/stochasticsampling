@@ -124,8 +124,8 @@ impl Simulation {
 
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
-            trans_diffusion: param.diffusion.translational.sqrt() * 2.,
-            rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
+            trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
+            rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             stress: param.stress,
             magnetic_reorientation: param.magnetic_reorientation * 2.,
         };
