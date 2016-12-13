@@ -298,9 +298,9 @@ impl Integrator {
         // Get vorticity dx uy - dy ux
         let vort = vort[nearest_grid_point_index];
 
-        p.orientation += (param.magnetic_reorientation * p.orientation.as_ref().sin() + vort) *
-                         param.timestep +
-                         param.rot_diffusion * random_samples[2];
+        p.orientation +=
+            -0.5 * (param.magnetic_reorientation * p.orientation.as_ref().sin() + vort) *
+            param.timestep + param.rot_diffusion * random_samples[2];
     }
 
     pub fn evolve_particles_inplace(&self,
