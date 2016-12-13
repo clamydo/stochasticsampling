@@ -64,7 +64,9 @@ fn main() {
 
 
 fn create_filename(settings: &Settings) -> String {
-    format!("{prefix}-{time}_v{version}",
+    // Need to introduce placeholder `.ext`, since otherwise the patch version
+    // number is chopped of later, when using `.with_extension()` method later.
+    format!("{prefix}-{time}_v{version}.ext",
             prefix = settings.environment.prefix,
             time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
             version = VERSION)
