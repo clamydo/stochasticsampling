@@ -180,6 +180,9 @@ impl Simulation {
         }
 
         self.state.particles = particles;
+
+        // Do a first sampling, so that the initial condition can also be obtained
+        self.state.distribution.sample_from(&self.state.particles);
     }
 
 
@@ -195,7 +198,7 @@ impl Simulation {
 
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
-        // Sample probability distribution from ensemble
+        // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
 
         // Dirty hack, pretty inelegant! Problem is, that sampling will mutate self,

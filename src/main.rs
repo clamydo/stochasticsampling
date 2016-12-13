@@ -65,9 +65,9 @@ fn main() {
 
 fn create_filename(settings: &Settings) -> String {
     format!("{prefix}-{time}_v{version}",
-                           prefix = settings.environment.prefix,
-                           time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
-                           version = VERSION)
+            prefix = settings.environment.prefix,
+            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
+            version = VERSION)
 }
 
 /// Main function
@@ -220,6 +220,14 @@ fn run_simulation(settings: &Settings,
 
         Ok(())
     });
+
+    // Output sampled distribtuion for initial state. Scope, so `initial` is
+    // directly discarted.
+    {
+        let mut initial = Output::default();
+        initial.distribution = Some(simulation.get_distribution());
+        tx.send(IOWorkerMsg::Output(initial)).unwrap();
+    }
 
     let mut pb = ProgressBar::new(n as u64);
     pb.format("┫██░┣");

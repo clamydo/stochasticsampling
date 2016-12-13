@@ -173,7 +173,7 @@ mod tests {
         d.histogram_from(&p);
 
         let sum = d.dist.fold(0., |s, x| s + x);
-        // Sum over all bins should be partcle number
+        // Sum over all bins should be particle number
         assert_eq!(sum, n as f64);
 
         let p2 = vec![Particle::new(0.6, 0.3, 0., box_size)];
@@ -287,10 +287,12 @@ mod tests {
         assert_eq!(grad.subview(Axis(0), 1), res_y);
 
         d.dist = Array::zeros(grid_size);
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, grid_size[0], grid_size[1], grid_size[2])));
+        assert!(d.spatgrad() ==
+                Array::<f64, _>::zeros((2, grid_size[0], grid_size[1], grid_size[2])));
 
         d.dist = Array::zeros(grid_size) + 1.;
-        assert!(d.spatgrad() == Array::<f64, _>::zeros((2, grid_size[0], grid_size[1], grid_size[2])));
+        assert!(d.spatgrad() ==
+                Array::<f64, _>::zeros((2, grid_size[0], grid_size[1], grid_size[2])));
     }
 
     #[test]
