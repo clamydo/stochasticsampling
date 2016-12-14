@@ -238,6 +238,11 @@ fn run_simulation(settings: &Settings,
 
     // only show bar, if flag was present
     pb.show_bar = show_progress;
+    pb.show_counter = show_progress;
+    pb.show_percent = show_progress;
+    pb.show_speed = show_progress;
+    pb.show_time_left = show_progress;
+    pb.show_message = show_progress;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
     for _ in 0..n {
