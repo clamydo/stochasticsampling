@@ -124,10 +124,11 @@ impl Simulation {
 
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
+            // see documentation of `integrator.evolve_particle_inplace` for a rational
             trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
             rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             stress: param.stress,
-            magnetic_reorientation: param.magnetic_reorientation * 2.,
+            magnetic_reorientation: param.magnetic_reorientation,
         };
 
         let integrator = Integrator::new(sim.grid_size,
@@ -202,15 +203,18 @@ impl Simulation {
         self.state.distribution.sample_from(&self.state.particles);
 
         // Dirty hack, pretty inelegant! Problem is, that sampling will mutate self,
-        // needs to
-        // borrow mutably, can only be done once!
-        let random_samples = [self.normaldist.ind_sample(&mut self.state.rng),
-                              self.normaldist.ind_sample(&mut self.state.rng),
-                              self.normaldist.ind_sample(&mut self.state.rng)];
+        // needs to borrow mutably, can only be done once!
+        let mut random_samples: Vec<[f64; 3]> = Vec::with_capacity(self.state.particles.len());
+
+        for mut r in random_samples.iter_mut() {
+            *r = [self.normaldist.ind_sample(&mut self.state.rng),
+                 self.normaldist.ind_sample(&mut self.state.rng),
+                 self.normaldist.ind_sample(&mut self.state.rng)];
+        }
 
         // Update particle positions
         self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                                         &random_samples,
+                                                                         random_samples,
                                                                          &self.state.distribution);
 
         // increment timestep counter to keep a continous identifier when resuming

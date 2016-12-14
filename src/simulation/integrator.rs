@@ -267,13 +267,14 @@ impl Integrator {
     /// Updates a test particle configuration according to the given parameters.
     ///
     /// Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1,
-    /// then
-    /// Y is normally distributed with variance t.
-    /// Diffusioncoefficient `d` translates to variance of normal distribuion
-    /// `s^2`
-    /// as `d = s^2 / 2`.
+    /// then Y is normally distributed with variance t.
+    /// A diffusion coefficient `d` translates to a normal distribuion with
+    /// variance `s^2` as `d = s^2 / 2`.
     /// Together this leads to an update of the position due to the diffusion of
-    /// x_d(t + dt) = sqrt(2 d dt) N(0, 1)
+    /// `x_d(t + dt) = sqrt(2 d dt) N(0, 1)``.
+    ///
+    /// *IMPRTANT*: This function expects `sqrt(2 d dt)` as a precomputed
+    /// effective diffusion constant.
     fn evolve_particle_inplace(&self,
                                p: &mut Particle,
                                random_samples: &[f64; 3],
@@ -295,17 +296,17 @@ impl Integrator {
                         param.trans_diffusion * random_samples[1];
 
 
-        // Get vorticity dx uy - dy ux
+        // Get vorticity d/dx uy - d/dy ux
         let vort = vort[nearest_grid_point_index];
 
-        p.orientation +=
-            -0.5 * (param.magnetic_reorientation * p.orientation.as_ref().sin() + vort) *
-            param.timestep + param.rot_diffusion * random_samples[2];
+        p.orientation += param.rot_diffusion * random_samples[2] -
+                         (param.magnetic_reorientation * p.orientation.as_ref().sin() +
+                          0.5 * vort) * param.timestep;
     }
 
     pub fn evolve_particles_inplace(&self,
                                     particles: &mut Vec<Particle>,
-                                    random_samples: &[f64; 3],
+                                    random_samples: Vec<[f64; 3]>,
                                     distribution: &Distribution)
                                     -> FlowField {
         // Calculate flow field from distribution
@@ -313,8 +314,8 @@ impl Integrator {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &u.view());
 
-        for p in particles {
-            self.evolve_particle_inplace(p, random_samples, &u.view(), &vort.view());
+        for (mut p, r) in particles.iter_mut().zip(random_samples.iter()) {
+            self.evolve_particle_inplace(p, r, &u.view(), &vort.view());
         }
 
         u
