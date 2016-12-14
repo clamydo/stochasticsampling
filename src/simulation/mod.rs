@@ -44,6 +44,7 @@ struct SimulationState {
     distribution: Distribution,
     flow_field: FlowField,
     particles: Vec<Particle>,
+    random_samples: Vec<[f64; 3]>,
     rng: Pcg64,
     /// count timesteps
     timestep: usize,
@@ -147,6 +148,7 @@ impl Simulation {
             distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
             flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
             particles: Vec::with_capacity(ranklocal_number_of_particles),
+            random_samples: vec![[0f64; 3]; ranklocal_number_of_particles],
             rng: SeedableRng::from_seed(seed),
             timestep: 0,
         };
@@ -196,7 +198,6 @@ impl Simulation {
         self.state.rng.reseed(snapshot.rng_seed);
     }
 
-
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
@@ -205,9 +206,7 @@ impl Simulation {
         // Generate all needed random numbers here, because otherwise the random number
         // generator would be needed to be borrowed mutably.
         // TODO: Look into a way, to make this more elegant
-        let mut random_samples: Vec<[f64; 3]> = Vec::with_capacity(self.state.particles.len());
-
-        for mut r in random_samples.iter_mut() {
+        for r in self.state.random_samples.iter_mut() {
             *r = [self.normaldist.ind_sample(&mut self.state.rng),
                   self.normaldist.ind_sample(&mut self.state.rng),
                   self.normaldist.ind_sample(&mut self.state.rng)];
@@ -215,7 +214,7 @@ impl Simulation {
 
         // Update particle positions
         self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                                         random_samples,
+                                                                         &self.state.random_samples,
                                                                          &self.state.distribution);
 
         // increment timestep counter to keep a continous identifier when resuming

@@ -273,7 +273,7 @@ impl Integrator {
     /// Together this leads to an update of the position due to the diffusion of
     /// `x_d(t + dt) = sqrt(2 d dt) N(0, 1)``.
     ///
-    /// *IMPRTANT*: This function expects `sqrt(2 d dt)` as a precomputed
+    /// *IMPORTANT*: This function expects `sqrt(2 d dt)` as a precomputed
     /// effective diffusion constant.
     fn evolve_particle_inplace(&self,
                                p: &mut Particle,
@@ -306,7 +306,7 @@ impl Integrator {
 
     pub fn evolve_particles_inplace(&self,
                                     particles: &mut Vec<Particle>,
-                                    random_samples: Vec<[f64; 3]>,
+                                    random_samples: &Vec<[f64; 3]>,
                                     distribution: &Distribution)
                                     -> FlowField {
         // Calculate flow field from distribution
@@ -314,7 +314,7 @@ impl Integrator {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &u.view());
 
-        for (mut p, r) in particles.iter_mut().zip(random_samples.iter()) {
+        for (p, r) in particles.iter_mut().zip(random_samples.iter()) {
             self.evolve_particle_inplace(p, r, &u.view(), &vort.view());
         }
 
