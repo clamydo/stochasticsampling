@@ -1,5 +1,5 @@
 name: S3
-author: Kevin K. <kbknapp@gmail.com>
+author: Fabian Kössel <fkoessel@uni-mainz.de>
 about: Stochastic Sampling Solver for Fokker-Planck equations, magnetic microswimmers with hydro-dynamic interactions.
 args:
     - parameter_file:
@@ -20,3 +20,7 @@ args:
         help: Path where output is written to
         takes_value: true
         required: true
+    - progress_bar:
+        long: progress
+        value_name: PROGRESS_BAR
+        help: Show a progress bar.
