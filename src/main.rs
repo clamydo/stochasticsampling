@@ -97,7 +97,8 @@ fn run() -> Result<()> {
         .chain_err(|| "Error during initialization of simulation.")?;
     let file = prepare_output_file(&settings, &path).chain_err(|| "Cannot prepare output file.")?;
 
-    Ok(run_simulation(&settings, path.into(), file, &mut simulation)?)
+    let show_progress = cli_matches.is_present("progress_bar");
+    Ok(run_simulation(&settings, path.into(), file, &mut simulation, show_progress)?)
 }
 
 
@@ -167,7 +168,8 @@ enum IOWorkerMsg {
 fn run_simulation(settings: &Settings,
                   path: String,
                   mut file: File,
-                  mut simulation: &mut Simulation)
+                  mut simulation: &mut Simulation,
+                  show_progress: bool)
                   -> Result<()> {
     let n = settings.simulation.number_of_timesteps;
 
@@ -233,6 +235,9 @@ fn run_simulation(settings: &Settings,
 
     let mut pb = ProgressBar::new(n as u64);
     pb.format("┫██░┣");
+
+    // only show bar, if flag was present
+    pb.show_bar = show_progress;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
     for _ in 0..n {
