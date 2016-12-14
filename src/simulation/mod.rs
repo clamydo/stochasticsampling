@@ -202,14 +202,15 @@ impl Simulation {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
 
-        // Dirty hack, pretty inelegant! Problem is, that sampling will mutate self,
-        // needs to borrow mutably, can only be done once!
+        // Generate all needed random numbers here, because otherwise the random number
+        // generator would be needed to be borrowed mutably.
+        // TODO: Look into a way, to make this more elegant
         let mut random_samples: Vec<[f64; 3]> = Vec::with_capacity(self.state.particles.len());
 
         for mut r in random_samples.iter_mut() {
             *r = [self.normaldist.ind_sample(&mut self.state.rng),
-                 self.normaldist.ind_sample(&mut self.state.rng),
-                 self.normaldist.ind_sample(&mut self.state.rng)];
+                  self.normaldist.ind_sample(&mut self.state.rng),
+                  self.normaldist.ind_sample(&mut self.state.rng)];
         }
 
         // Update particle positions
