@@ -446,11 +446,11 @@ mod tests {
         };
 
         let int_param = IntegrationParameter {
-            timestep: 1.,
-            trans_diffusion: 1.,
-            rot_diffusion: 1.,
+            timestep: 0.1,
+            trans_diffusion: 0.1,
+            rot_diffusion: 0.1,
             stress: s,
-            magnetic_reorientation: 1.,
+            magnetic_reorientation: 0.1,
         };
 
         let i = Integrator::new(gs, gw, int_param);
@@ -459,12 +459,12 @@ mod tests {
         let mut d = Distribution::new(gs, grid_width(gs, bs));
         d.sample_from(&p);
 
-        i.evolve_particles_inplace(&mut p, &[0.1, 0.1, 0.1], &d);
+        i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], &d);
 
         // TODO Check these values!
-        assert_eq!(p[0].position.x.v, 0.6103050484831503);
-        assert_eq!(p[0].position.y.v, 0.6996604681894043);
-        assert_eq!(p[0].orientation.v, 3.7339859830525484);
+        assert_eq!(p[0].position.x.v, 0.701030504848315);
+        assert_eq!(p[0].position.y.v, 0.1399660468189404);
+        assert_eq!(p[0].orientation.v, 1.7132562930012487);
     }
 
     #[test]
