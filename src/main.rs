@@ -64,10 +64,12 @@ fn main() {
 
 
 fn create_filename(settings: &Settings) -> String {
-    format!("{prefix}-{time}_v{version}",
-                           prefix = settings.environment.prefix,
-                           time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
-                           version = VERSION)
+    // Need to introduce placeholder `.ext`, since otherwise the patch version
+    // number is chopped of later, when using `.with_extension()` method later.
+    format!("{prefix}-{time}_v{version}.ext",
+            prefix = settings.environment.prefix,
+            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
+            version = VERSION)
 }
 
 /// Main function
@@ -95,7 +97,8 @@ fn run() -> Result<()> {
         .chain_err(|| "Error during initialization of simulation.")?;
     let file = prepare_output_file(&settings, &path).chain_err(|| "Cannot prepare output file.")?;
 
-    Ok(run_simulation(&settings, path.into(), file, &mut simulation)?)
+    let show_progress = cli_matches.is_present("progress_bar");
+    Ok(run_simulation(&settings, path.into(), file, &mut simulation, show_progress)?)
 }
 
 
@@ -165,7 +168,8 @@ enum IOWorkerMsg {
 fn run_simulation(settings: &Settings,
                   path: String,
                   mut file: File,
-                  mut simulation: &mut Simulation)
+                  mut simulation: &mut Simulation,
+                  show_progress: bool)
                   -> Result<()> {
     let n = settings.simulation.number_of_timesteps;
 
@@ -221,8 +225,24 @@ fn run_simulation(settings: &Settings,
         Ok(())
     });
 
+    // Output sampled distribtuion for initial state. Scope, so `initial` is
+    // directly discarted.
+    {
+        let mut initial = Output::default();
+        initial.distribution = Some(simulation.get_distribution());
+        tx.send(IOWorkerMsg::Output(initial)).unwrap();
+    }
+
     let mut pb = ProgressBar::new(n as u64);
     pb.format("┫██░┣");
+
+    // only show bar, if flag was present
+    pb.show_bar = show_progress;
+    pb.show_counter = show_progress;
+    pb.show_percent = show_progress;
+    pb.show_speed = show_progress;
+    pb.show_time_left = show_progress;
+    pb.show_message = show_progress;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
     for _ in 0..n {

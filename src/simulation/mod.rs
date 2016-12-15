@@ -10,8 +10,9 @@ use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
 use ndarray::Array;
 use pcg_rand::Pcg64;
+use rand::Rand;
 use rand::SeedableRng;
-use rand::distributions::{IndependentSample, Normal};
+use rand::distributions::normal::StandardNormal;
 use self::distribution::Distribution;
 use self::integrator::{FlowField, IntegrationParameter, Integrator};
 use settings::{BoxSize, GridSize, Settings};
@@ -32,7 +33,6 @@ struct MPIState {
 pub struct Simulation {
     integrator: Integrator,
     mpi: MPIState,
-    normaldist: Normal,
     number_of_particles: usize,
     settings: Settings,
     state: SimulationState,
@@ -44,6 +44,7 @@ struct SimulationState {
     distribution: Distribution,
     flow_field: FlowField,
     particles: Vec<Particle>,
+    random_samples: Vec<[f64; 3]>,
     rng: Pcg64,
     /// count timesteps
     timestep: usize,
@@ -124,18 +125,17 @@ impl Simulation {
 
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
-            trans_diffusion: param.diffusion.translational.sqrt() * 2.,
-            rot_diffusion: param.diffusion.rotational.sqrt() * 2.,
+            // see documentation of `integrator.evolve_particle_inplace` for a rational
+            trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
+            rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             stress: param.stress,
-            magnetic_reorientation: param.magnetic_reorientation * 2.,
+            magnetic_reorientation: param.magnetic_reorientation,
         };
 
         let integrator = Integrator::new(sim.grid_size,
                                          grid_width(sim.grid_size, sim.box_size),
                                          int_param);
 
-        // initialize a normal distribution with variance sqrt(timestep)
-        let normal = Normal::new(0.0, sim.timestep.sqrt());
 
         // deterministically seed every mpi process (slightly) differently
         // normal distribution with variance timestep
@@ -146,6 +146,7 @@ impl Simulation {
             distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
             flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
             particles: Vec::with_capacity(ranklocal_number_of_particles),
+            random_samples: vec![[0f64; 3]; ranklocal_number_of_particles],
             rng: SeedableRng::from_seed(seed),
             timestep: 0,
         };
@@ -153,7 +154,6 @@ impl Simulation {
         Simulation {
             integrator: integrator,
             mpi: mpi,
-            normaldist: normal,
             number_of_particles: ranklocal_number_of_particles,
             settings: settings,
             state: state,
@@ -180,6 +180,9 @@ impl Simulation {
         }
 
         self.state.particles = particles;
+
+        // Do a first sampling, so that the initial condition can also be obtained
+        self.state.distribution.sample_from(&self.state.particles);
     }
 
 
@@ -192,22 +195,24 @@ impl Simulation {
         self.state.rng.reseed(snapshot.rng_seed);
     }
 
-
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
-        // Sample probability distribution from ensemble
+        // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
 
-        // Dirty hack, pretty inelegant! Problem is, that sampling will mutate self,
-        // needs to
-        // borrow mutably, can only be done once!
-        let random_samples = [self.normaldist.ind_sample(&mut self.state.rng),
-                              self.normaldist.ind_sample(&mut self.state.rng),
-                              self.normaldist.ind_sample(&mut self.state.rng)];
+        // Generate all needed random numbers here, because otherwise the random number
+        // generator would be needed to be borrowed mutably.
+        // TODO: Look into a way, to make this more elegant
+        for r in self.state.random_samples.iter_mut() {
+            *r = [StandardNormal::rand(&mut self.state.rng).0,
+                  StandardNormal::rand(&mut self.state.rng).0,
+                  StandardNormal::rand(&mut self.state.rng).0];
+        }
 
         // Update particle positions
         self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                                         &random_samples,
+                                                                         &self.state
+                                                                             .random_samples,
                                                                          &self.state.distribution);
 
         // increment timestep counter to keep a continous identifier when resuming
