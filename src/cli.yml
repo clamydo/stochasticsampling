@@ -22,5 +22,4 @@ args:
         required: true
     - progress_bar:
         long: progress
-        value_name: PROGRESS_BAR
         help: Show a progress bar.
