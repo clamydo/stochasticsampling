@@ -80,14 +80,11 @@ impl Integrator {
     fn calc_oseen_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<Complex<f64>, Ix4> {
 
         // Grid size must be even, because the oseen tensor diverges at the origin.
-        assert_eq!(grid_size[0] % 2,
-                   0,
-                   "Greed needs to have even number of cells. But found {}",
-                   grid_size[0]);
-        assert_eq!(grid_size[1] % 2,
-                   0,
-                   "Greed needs to have even number of cells. But found {}",
-                   grid_size[1]);
+        assert!(grid_size[0] % 2 == 0 && grid_size[1] % 2 == 0,
+                "Greed needs to have even number of cells, to avoid origin when calculating \
+                 sampled Oseen tensor. But found ({}, {})",
+                grid_size[0],
+                grid_size[1]);
 
         // Define Oseen-Tensor
         let oseen = |x: f64, y: f64| {

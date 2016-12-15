@@ -10,8 +10,9 @@ use mpi::topology::{SystemCommunicator, Universe};
 use mpi::traits::*;
 use ndarray::Array;
 use pcg_rand::Pcg64;
+use rand::Rand;
 use rand::SeedableRng;
-use rand::distributions::{IndependentSample, Normal};
+use rand::distributions::normal::StandardNormal;
 use self::distribution::Distribution;
 use self::integrator::{FlowField, IntegrationParameter, Integrator};
 use settings::{BoxSize, GridSize, Settings};
@@ -32,7 +33,6 @@ struct MPIState {
 pub struct Simulation {
     integrator: Integrator,
     mpi: MPIState,
-    normaldist: Normal,
     number_of_particles: usize,
     settings: Settings,
     state: SimulationState,
@@ -136,8 +136,6 @@ impl Simulation {
                                          grid_width(sim.grid_size, sim.box_size),
                                          int_param);
 
-        // initialize a normal distribution with variance sqrt(timestep)
-        let normal = Normal::new(0.0, sim.timestep.sqrt());
 
         // deterministically seed every mpi process (slightly) differently
         // normal distribution with variance timestep
@@ -156,7 +154,6 @@ impl Simulation {
         Simulation {
             integrator: integrator,
             mpi: mpi,
-            normaldist: normal,
             number_of_particles: ranklocal_number_of_particles,
             settings: settings,
             state: state,
@@ -207,14 +204,15 @@ impl Simulation {
         // generator would be needed to be borrowed mutably.
         // TODO: Look into a way, to make this more elegant
         for r in self.state.random_samples.iter_mut() {
-            *r = [self.normaldist.ind_sample(&mut self.state.rng),
-                  self.normaldist.ind_sample(&mut self.state.rng),
-                  self.normaldist.ind_sample(&mut self.state.rng)];
+            *r = [StandardNormal::rand(&mut self.state.rng).0,
+                  StandardNormal::rand(&mut self.state.rng).0,
+                  StandardNormal::rand(&mut self.state.rng).0];
         }
 
         // Update particle positions
         self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                                         &self.state.random_samples,
+                                                                         &self.state
+                                                                             .random_samples,
                                                                          &self.state.distribution);
 
         // increment timestep counter to keep a continous identifier when resuming
