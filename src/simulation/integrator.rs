@@ -94,8 +94,8 @@ impl Integrator {
             let fft_norm = (grid_size[0] * grid_size[1]) as f64;
             let p = 1. / 8. / PI / norm / norm / norm / fft_norm;
 
-            [[Complex::new(2 * x * x + y * y, 0.) * p, Complex::new(x * y, 0.) * p],
-             [Complex::new(y * x, 0.) * p, Complex::new(x * x + 2 * y * y, 0.) * p]]
+            [[Complex::new(2. * x * x + y * y, 0.) * p, Complex::new(x * y, 0.) * p],
+             [Complex::new(y * x, 0.) * p, Complex::new(x * x + 2. * y * y, 0.) * p]]
         };
 
         // Allocate array to prepare FFT
@@ -315,9 +315,9 @@ impl Integrator {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &u.view());
 
-        // for (p, r) in particles.iter_mut().zip(random_samples.iter()) {
-        //     self.evolve_particle_inplace(p, r, &u.view(), &vort.view());
-        // }
+        for (p, r) in particles.iter_mut().zip(random_samples.iter()) {
+            self.evolve_particle_inplace(p, r, &u.view(), &vort.view());
+        }
 
         u
     }
