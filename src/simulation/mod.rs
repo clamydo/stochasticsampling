@@ -201,8 +201,8 @@ impl Simulation {
     }
 
     /// Returns sampled flow field
-    pub fn get_flow_field(&self) -> Distribution {
-        self.state.distribution.clone()
+    pub fn get_flow_field(&self) -> FlowField {
+        self.state.flow_field.clone()
     }
 
     /// Returns current timestep
