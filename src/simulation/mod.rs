@@ -6,8 +6,6 @@ pub mod output;
 
 use coordinates::TWOPI;
 use coordinates::particle::Particle;
-use mpi::topology::{SystemCommunicator, Universe};
-use mpi::traits::*;
 use ndarray::Array;
 use pcg_rand::Pcg64;
 use rand::Rand;
@@ -19,20 +17,9 @@ use settings::{BoxSize, GridSize, Settings};
 use std::f64;
 
 
-
-/// Structure that holds state variables needed for MPI.
-#[allow(dead_code)]
-struct MPIState {
-    universe: Universe,
-    world: SystemCommunicator,
-    size: i32,
-    rank: i32,
-}
-
 /// Main data structure representing the simulation.
 pub struct Simulation {
     integrator: Integrator,
-    mpi: MPIState,
     number_of_particles: usize,
     settings: Settings,
     state: SimulationState,
@@ -64,26 +51,6 @@ pub struct Snapshot {
 }
 
 
-macro_rules! zinfo {
-    ($rank:expr, $($arg:tt)*) => {
-        if $rank == 0 {
-            info!($($arg)*);
-        }
-    }
-}
-
-macro_rules! zdebug {
-    ($rank: expr, $($arg:tt)*) => {
-        // only compile this when in debug mode
-        if cfg!(debug_assertions) {
-            if $rank == 0 {
-                debug!($($arg)*);
-            }
-        }
-    }
-}
-
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct GridWidth {
     x: f64,
@@ -104,24 +71,13 @@ impl Simulation {
     /// Return a new simulation data structure, holding the state of the
     /// simulation.
     pub fn new(settings: Settings) -> Simulation {
-        let mpi_universe = ::mpi::initialize().unwrap();
-        let mpi_world = mpi_universe.world();
-
         // helper bindings for brevity
         let sim = settings.simulation;
         let param = settings.parameters;
 
 
         // share particles evenly between all ranks
-        let ranklocal_number_of_particles: usize = sim.number_of_particles /
-                                                   (mpi_world.size() as usize);
-
-        let mpi = MPIState {
-            universe: mpi_universe,
-            world: mpi_world,
-            size: mpi_world.size(),
-            rank: mpi_world.rank(),
-        };
+        let ranklocal_number_of_particles: usize = sim.number_of_particles;
 
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
@@ -137,9 +93,8 @@ impl Simulation {
                                          int_param);
 
 
-        // deterministically seed every mpi process (slightly) differently
         // normal distribution with variance timestep
-        let seed = [sim.seed[0], sim.seed[1] + mpi.rank as u64];
+        let seed = [sim.seed[0], sim.seed[1]];
 
         // initialize state with zeros
         let state = SimulationState {
@@ -153,7 +108,6 @@ impl Simulation {
 
         Simulation {
             integrator: integrator,
-            mpi: mpi,
             number_of_particles: ranklocal_number_of_particles,
             settings: settings,
             state: state,

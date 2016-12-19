@@ -14,7 +14,6 @@ env_logger = "0.3.5"
 error-chain = "0.7.1"
 fftw3 = { path = "crates/fftw3" }
 log = "0.3.6"
-mpi = { git = "https://github.com/bsteinb/rsmpi.git", tag = "0.4.0" }
 ndarray = { version = "0.7.1", features = ["serde"] }
 pcg_rand = { path = "crates/external/pcg_rand"}
 pbr = "1.0.0-alpha.1"

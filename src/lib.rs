@@ -13,7 +13,6 @@ extern crate error_chain;
 #[macro_use]
 extern crate log;
 extern crate fftw3;
-extern crate mpi;
 extern crate ndarray;
 extern crate pcg_rand;
 extern crate rand;
