@@ -307,7 +307,7 @@ impl Integrator {
 
     pub fn evolve_particles_inplace(&self,
                                     particles: &mut Vec<Particle>,
-                                    random_samples: &Vec<[f64; 3]>,
+                                    random_samples: &[[f64; 3]],
                                     distribution: &Distribution)
                                     -> FlowField {
         // Calculate flow field from distribution

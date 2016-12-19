@@ -127,7 +127,7 @@ impl Simulation {
 
         // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
         // provided for user given input.
-        for p in particles.iter_mut() {
+        for p in &mut particles {
             p.position.x.m = bs[0];
             p.position.y.m = bs[1];
             p.orientation.m = TWOPI;
@@ -157,7 +157,7 @@ impl Simulation {
         // Generate all needed random numbers here, because otherwise the random number
         // generator would be needed to be borrowed mutably.
         // TODO: Look into a way, to make this more elegant
-        for r in self.state.random_samples.iter_mut() {
+        for r in &mut self.state.random_samples {
             *r = [StandardNormal::rand(&mut self.state.rng).0,
                   StandardNormal::rand(&mut self.state.rng).0,
                   StandardNormal::rand(&mut self.state.rng).0];
@@ -178,14 +178,12 @@ impl Simulation {
     pub fn get_snapshot(&self) -> Snapshot {
         let seed = self.state.rng.extract_seed();
 
-        let snapshot = Snapshot {
+        Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
             rng_seed: [seed[0].lo, seed[0].hi, seed[1].lo, seed[1].hi],
             timestep: self.state.timestep,
-        };
-
-        snapshot
+        }
     }
 
     // Getter

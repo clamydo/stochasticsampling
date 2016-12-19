@@ -107,7 +107,7 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(&param_file).chain_err(|| "Unable to read parameter file.")?;
+    let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
 
     let mut parser = toml::Parser::new(&toml_string);
 
