@@ -466,9 +466,9 @@ mod tests {
         i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], &d);
 
         // TODO Check these values!
-        assert_eq!(p[0].position.x.v, 0.701030504848315);
-        assert_eq!(p[0].position.y.v, 0.1399660468189404);
-        assert_eq!(p[0].orientation.v, 1.7132562930012487);
+        assert_eq!(p[0].position.x.v, 0.7099999999999991);
+        assert_eq!(p[0].position.y.v, 0.3100000000000054);
+        assert_eq!(p[0].orientation.v, 1.8901361416090765);
     }
 
     #[test]
