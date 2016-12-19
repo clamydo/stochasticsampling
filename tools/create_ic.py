@@ -2,7 +2,7 @@
 
 import sys
 import json
-import cbor2
+import cbor
 import toml
 import random
 import argparse
@@ -34,15 +34,15 @@ box_size = config['simulation']['box_size']
 
 output = [
     {
-        'orientation': a,
+        'orientation': float(a),
         'position': {
-            'x': random.uniform(0., box_size[0]),
-            'y': random.uniform(0., box_size[1])
+            'x': float(random.uniform(0., box_size[0])),
+            'y': float(random.uniform(0., box_size[1]))
         }
     }
     for a in angles[:n]
 ]
 
-cbor2.dump(output, sys.stdout.buffer)
+cbor.dump(output, sys.stdout.buffer)
 
 sys.exit(0)
