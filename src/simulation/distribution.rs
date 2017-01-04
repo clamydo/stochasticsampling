@@ -76,7 +76,6 @@ impl Distribution {
         // build histogram
         for p in particles {
             let c = self.coord_to_grid(p);
-            println!("{:?}", c);
             // WARNING: Does not check boundaries at compile time!
             self.dist[c] += 1.;
         }
