@@ -245,12 +245,46 @@ fn run_simulation(settings: &Settings,
     pb.show_message = show_progress;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
-    for _ in 0..n {
+    for timestep in 0..n {
         pb.inc();
         simulation.do_timestep();
-        let mut output = Output::default();
-        output.distribution = Some(simulation.get_distribution());
-        tx.send(IOWorkerMsg::Output(output)).unwrap();
+
+        // TODO: Refactor this ugly code
+
+        // Build output
+        let output = Output {
+            distribution: settings.simulation.output.distribution_every_timestep.and_then(|x| {
+                if timestep % x == 0 {
+                    Some(simulation.get_distribution())
+                } else {
+                    None
+                }
+            }),
+            flow_field: settings.simulation.output.flowfield_every_timestep.and_then(|x| {
+                if timestep % x == 0 {
+                    Some(simulation.get_flow_field())
+                } else {
+                    None
+                }
+            }),
+            particles: settings.simulation.output.distribution_every_timestep.and_then(|x| {
+                if timestep % x == 0 {
+                    settings.simulation
+                        .output
+                        .particle_head
+                        .and_then(|x| Some(simulation.get_particles_head(x)))
+                        .or_else(|| Some(simulation.get_particles()))
+                } else {
+                    None
+                }
+            }),
+            timestep: timestep,
+        };
+
+        if output.distribution.is_some() || output.flow_field.is_some() ||
+           output.particles.is_some() {
+            tx.send(IOWorkerMsg::Output(output)).unwrap();
+        }
     }
     pb.finish_print("done");
 

@@ -10,6 +10,11 @@
     number_of_timesteps = 500
     timestep = 0.1
     seed = [ 1, 1 ]
+    [simulation.output]
+        distribution_every_timestep = 12
+        flowfield_every_timestep = 42
+        particle_every_timestep = 100
+        particle_head = 10
 
 [parameters]
     magnetic_reorientation = 1.0

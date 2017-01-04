@@ -188,6 +188,11 @@ impl Simulation {
 
     // Getter
 
+    /// Returns all particles
+    pub fn get_particles(&self) -> Vec<Particle> {
+        self.state.particles.clone()
+    }
+
     /// Returns the first `n` particles
     pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
         self.state.particles[..n].to_vec()

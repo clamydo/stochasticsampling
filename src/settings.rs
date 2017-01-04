@@ -53,6 +53,20 @@ pub struct Parameters {
     pub magnetic_reorientation: f64,
 }
 
+
+/// Holds output configuration
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct Output {
+    #[serde(default)]
+    pub distribution_every_timestep: Option<usize>,
+    #[serde(default)]
+    pub flowfield_every_timestep: Option<usize>,
+    #[serde(default)]
+    pub particle_head: Option<usize>,
+    #[serde(default)]
+    pub particle_every_timestep: Option<usize>,
+}
+
 /// Holds simulation specific settings.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
@@ -60,6 +74,7 @@ pub struct SimulationSettings {
     pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
+    pub output: Output,
     pub timestep: f64,
     pub seed: [u64; 2],
 }
@@ -146,5 +161,14 @@ mod tests {
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.seed, [1, 1]);
+
+        assert_eq!(settings.simulation.output.distribution_every_timestep, Some(12));
+        assert_eq!(settings_default.simulation.output.distribution_every_timestep, None);
+        assert_eq!(settings.simulation.output.flowfield_every_timestep, Some(42));
+        assert_eq!(settings_default.simulation.output.flowfield_every_timestep, None);
+        assert_eq!(settings.simulation.output.particle_every_timestep, Some(100));
+        assert_eq!(settings_default.simulation.output.particle_every_timestep, None);
+        assert_eq!(settings.simulation.output.particle_head, Some(10));
+        assert_eq!(settings_default.simulation.output.particle_head, None);
     }
 }
