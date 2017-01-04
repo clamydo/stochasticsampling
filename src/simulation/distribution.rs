@@ -58,7 +58,10 @@ impl Distribution {
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
         let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as Ix;
 
-        [gx, gy, ga]
+        // make sure to produce valid indeces
+        // (necessary, because in some cases this function produces out of bound indeces for value
+        // nearly at the box border)
+        [gx % self.dist.dim().0, gy % self.dist.dim().1, ga % self.dist.dim().2]
     }
 
     /// Initialises the distribution with a number histogram. It counts the
@@ -73,6 +76,8 @@ impl Distribution {
         // build histogram
         for p in particles {
             let c = self.coord_to_grid(p);
+            println!("{:?}", c);
+            // WARNING: Does not check boundaries at compile time!
             self.dist[c] += 1.;
         }
 
@@ -130,15 +135,12 @@ impl Distribution {
     }
 }
 
+
 /// Implement index operator that wraps around for periodic boundaries.
-/// WARNING: Assumes only positive indeces!
 impl Index<[i32; 3]> for Distribution {
     type Output = f64;
 
     fn index(&self, index: [i32; 3]) -> &f64 {
-
-        debug_assert!(index[0] >= 0 && index[1] >= 0 && index[2] >= 0);
-
         fn wrap(i: i32, b: i32) -> usize {
             (((i % b) + b) % b) as usize
         }
@@ -152,9 +154,12 @@ impl Index<[i32; 3]> for Distribution {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
+    use coordinates::modulofloat::Mf64;
     use coordinates::particle::Particle;
+    use coordinates::vector::Mod64Vector2;
     use ndarray::{Array, Axis, arr3};
     use std::f64::EPSILON;
     use super::*;
@@ -229,7 +234,34 @@ mod tests {
         let box_size = [1., 1.];
         let grid_size = [50, 50, 10];
 
+        let check = |i: &[f64; 3], o: &[usize; 3], p: Particle, s| {
+            let dist = Distribution::new(grid_size, grid_width(grid_size, box_size));
+
+            let g = dist.coord_to_grid(&p);
+
+            assert!(g[0] == o[0],
+                    "{}: For input {:?}. Expected first coordinate to be '{}', got '{}'.",
+                    s,
+                    i,
+                    o[0],
+                    g[0]);
+            assert!(g[1] == o[1],
+                    "{}: For input {:?}. Expected second coordinate to be '{}', got '{}'.",
+                    s,
+                    i,
+                    o[1],
+                    g[1]);
+            assert!(g[2] == o[2],
+                    "{}: For input {:?}. Expected third coordinate to be '{}', got '{}'.",
+                    s,
+                    i,
+                    o[2],
+                    g[2]);
+        };
+
         let input = [[0., 0., 0.],
+                     // gets rounded to 0 by Mf64
+                     // [0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
                      [1., 0., 0.],
                      [0., 1., 0.],
                      [0., 0., 0.5],
@@ -237,9 +269,12 @@ mod tests {
                      [0., 0., -1.],
                      [0.96, 0., 0.],
                      [0.5, 0.5, -1.],
-                     [0.5, 0.5, 0.]];
+                     [0.5, 0.5, 0.],
+                     [0., 0., 2. * ::std::f64::consts::PI],
+                     [0.51000000000000005, 0.5, 6.283185307179586]];
 
         let result = [[0, 0, 0],
+                      // [0usize, 0, 0],
                       [0, 0, 0],
                       [0, 0, 0],
                       [0, 0, 0],
@@ -247,30 +282,34 @@ mod tests {
                       [0, 0, 8],
                       [48, 0, 0],
                       [25, 25, 8],
+                      [25, 25, 0],
+                      [0, 0, 0],
                       [25, 25, 0]];
+
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle::new(i[0], i[1], i[2], box_size);
-            let dist = Distribution::new(grid_size, grid_width(grid_size, box_size));
 
-            let g = dist.coord_to_grid(&p);
-
-            assert!(g[0] == o[0],
-                    "For input {:?}. Expected first coordinate to be '{}', got '{}'.",
-                    i,
-                    o[0],
-                    g[0]);
-            assert!(g[1] == o[1],
-                    "For input {:?}. Expected second coordinate to be '{}', got '{}'.",
-                    i,
-                    o[1],
-                    g[1]);
-            assert!(g[2] == o[2],
-                    "For input {:?}. Expected third coordinate to be '{}', got '{}'.",
-                    i,
-                    o[2],
-                    g[2]);
+            check(i, o, p, "mod");
         }
+
+        // In some cases the modulo produces values, that only nearly wrap around
+        let input = [[0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON]];
+        // Would expect 9, but it results in 10 = 0. Just make sure, it is not 10!
+        let result = [[0usize, 0, 0]];
+
+        for (i, o) in input.iter().zip(result.iter()) {
+            let p = Particle {
+                position: Mod64Vector2 {
+                    x: Mf64 { v: i[0], m: 0. },
+                    y: Mf64 { v: i[1], m: 0. },
+                },
+                orientation: Mf64 { v: i[2], m: 0. },
+            };
+
+            check(i, o, p, "nomod");
+        }
+
     }
 
     #[test]
@@ -321,6 +360,7 @@ mod tests {
         d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]], [[4., 4.5], [5., 5.5], [6., 6.5]]]);
 
         assert_eq!(d[[0, 0, 0]], 1.0);
+        assert_eq!(d[[2, 3, 2]], 1.0);
         assert_eq!(d[[-1, 0, 0]], 4.0);
         assert_eq!(d[[-9, 0, 0]], 4.0);
         assert_eq!(d[[-9, -3, 0]], 4.0);

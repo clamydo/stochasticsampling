@@ -128,9 +128,8 @@ impl Simulation {
         // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
         // provided for user given input.
         for p in &mut particles {
-            p.position.x.m = bs[0];
-            p.position.y.m = bs[1];
-            p.orientation.m = TWOPI;
+            // this makes sure, the input is sanitized
+            *p = Particle::new(p.position.x.v, p.position.y.v, p.orientation.v, bs);
         }
 
         self.state.particles = particles;
