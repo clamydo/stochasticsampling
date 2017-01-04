@@ -50,6 +50,10 @@ impl Distribution {
     /// The first grid point does not lie on the box border, but a half cell
     /// width from it.
     pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
+        debug_assert!(p.position.x.v >= 0. && p.position.y.v >= 0. && p.orientation.v >= 0.,
+                      "Got negative position or orientation {:?}",
+                      p);
+
         let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as Ix;
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
         let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as Ix;
@@ -127,10 +131,13 @@ impl Distribution {
 }
 
 /// Implement index operator that wraps around for periodic boundaries.
+/// WARNING: Assumes only positive indeces!
 impl Index<[i32; 3]> for Distribution {
     type Output = f64;
 
     fn index(&self, index: [i32; 3]) -> &f64 {
+
+        debug_assert!(index[0] >= 0 && index[1] >= 0 && index[2] >= 0);
 
         fn wrap(i: i32, b: i32) -> usize {
             (((i % b) + b) % b) as usize
@@ -220,7 +227,7 @@ mod tests {
     #[test]
     fn coord_to_grid() {
         let box_size = [1., 1.];
-        let grid_size = [10, 10, 6];
+        let grid_size = [50, 50, 10];
 
         let input = [[0., 0., 0.],
                      [1., 0., 0.],
@@ -228,9 +235,19 @@ mod tests {
                      [0., 0., 0.5],
                      [0., 0., 7.],
                      [0., 0., -1.],
-                     [0.96, 0., 0.]];
+                     [0.96, 0., 0.],
+                     [0.5, 0.5, -1.],
+                     [0.5, 0.5, 0.]];
 
-        let result = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 5], [9, 0, 0]];
+        let result = [[0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 1],
+                      [0, 0, 8],
+                      [48, 0, 0],
+                      [25, 25, 8],
+                      [25, 25, 0]];
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle::new(i[0], i[1], i[2], box_size);
@@ -239,17 +256,17 @@ mod tests {
             let g = dist.coord_to_grid(&p);
 
             assert!(g[0] == o[0],
-                    "For input {:?}. Expected '{}', got '{}'.",
+                    "For input {:?}. Expected first coordinate to be '{}', got '{}'.",
                     i,
                     o[0],
                     g[0]);
             assert!(g[1] == o[1],
-                    "For input {:?}. Expected '{}', got '{}'.",
+                    "For input {:?}. Expected second coordinate to be '{}', got '{}'.",
                     i,
                     o[1],
                     g[1]);
             assert!(g[2] == o[2],
-                    "For input {:?}. Expected '{}', got '{}'.",
+                    "For input {:?}. Expected third coordinate to be '{}', got '{}'.",
                     i,
                     o[2],
                     g[2]);

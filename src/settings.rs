@@ -88,6 +88,8 @@ serde_enum_str!(OutputFormat {
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentSettings {
+    #[serde(default)]
+    pub init_file: Option<String>,
     #[serde(default = "default_io_queue_size")]
     pub io_queue_size: usize,
     #[serde(default = "default_output_format")]
@@ -145,6 +147,8 @@ mod tests {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
         let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
 
+        assert_eq!(settings_default.environment.init_file, None);
+        assert_eq!(settings.environment.init_file, Some("foo/bar.cbor".to_string()));
         assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
         assert_eq!(settings.environment.io_queue_size, 50);
         assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);

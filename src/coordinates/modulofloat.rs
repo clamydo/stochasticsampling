@@ -220,6 +220,8 @@ impl Serialize for Mf64 {
 
 /// Implement a custom Deserialize trait, that deserializes a value to a Mf64
 /// with default modulo quotient.
+/// WARNING: Modulo quotient of zero means, that this is just a float, without
+/// wrapping! This means, `Mf64` can also have a negative value for `v`!
 impl Deserialize for Mf64 {
     fn deserialize<D>(deserializer: &mut D) -> Result<Mf64, D::Error>
         where D: Deserializer

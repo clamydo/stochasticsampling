@@ -83,11 +83,16 @@ fn run() -> Result<()> {
     let settings = settings::read_parameter_file(settings_file_name)
             .chain_err(|| "Error reading parameter file.")?;
 
-    let init_type = if cli_matches.is_present("initial_condition") {
-        InitType::Stdin
+    let init_type = if cli_matches.is_present("initial_condition_file") {
+        InitType::File
     } else {
-        InitType::Random
+        if cli_matches.is_present("initial_condition") {
+            InitType::Stdin
+        } else {
+            InitType::Random
+        }
     };
+
 
     let output_dir = cli_matches.value_of("output_directory").unwrap();
     let filename = create_filename(&settings);
@@ -105,6 +110,7 @@ fn run() -> Result<()> {
 /// Type of setting up initial condition.
 enum InitType {
     Stdin,
+    File,
     Random,
 }
 
@@ -119,6 +125,14 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
     let initial_condition = match init_type {
         InitType::Stdin => {
             de::from_reader(io::stdin()).chain_err(|| "Can't read given initial condition.")?
+        }
+        InitType::File => {
+            let f = match settings.environment.init_file {
+                Some(ref fname) => File::open(fname).chain_err(|| "Unable to open input file.")?,
+                None => bail!("No input file provided in the parameterfile."),
+            };
+
+            de::from_reader(f).chain_err(|| "Can't read given initial condition.")?
         }
         InitType::Random => {
             Particle::randomly_placed_particles(settings.simulation.number_of_particles,
