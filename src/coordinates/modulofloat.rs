@@ -31,9 +31,17 @@ pub struct Mf64 {
 
 /// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.
 /// Make sure, not to do that!
-fn modulo(f: f64, m: f64) -> f64 {
+/// WARNING! Can in some cases produce values on the right interverl border.
+/// This is due to floating point arithmetic. See test case for an example.
+fn unchecked_modulo(f: f64, m: f64) -> f64 {
     f - (f / m).floor() * m
 }
+
+/// Function to to restrict value to box. Additional modulo % operation to
+/// prevent edge case.
+// fn unchecked_modulo(f: f64, m: f64) -> f64 {
+//     (f - (f / m).floor() * m) % m
+// }
 
 impl Mf64 {
     /// Construct a modulo float from a float.
@@ -41,7 +49,7 @@ impl Mf64 {
     /// the divisor will lead to unwanted results.
     fn unchecked_new(f: f64, div: f64) -> Mf64 {
         Mf64 {
-            v: modulo(f, div),
+            v: unchecked_modulo(f, div),
             m: div,
         }
     }
@@ -80,13 +88,13 @@ impl Add<f64> for Mf64 {
 // Implement inplace adding a value
 impl AddAssign for Mf64 {
     fn add_assign(&mut self, _rhs: Mf64) {
-        self.v = modulo(self.v + _rhs.v, self.m);
+        self.v = unchecked_modulo(self.v + _rhs.v, self.m);
     }
 }
 
 impl AddAssign<f64> for Mf64 {
     fn add_assign(&mut self, _rhs: f64) {
-        self.v = modulo(self.v + _rhs, self.m);
+        self.v = unchecked_modulo(self.v + _rhs, self.m);
     }
 }
 
@@ -111,13 +119,13 @@ impl Sub<f64> for Mf64 {
 // Implement inplace subtraction
 impl SubAssign for Mf64 {
     fn sub_assign(&mut self, _rhs: Mf64) {
-        self.v = modulo(self.v - _rhs.v, self.m);
+        self.v = unchecked_modulo(self.v - _rhs.v, self.m);
     }
 }
 
 impl SubAssign<f64> for Mf64 {
     fn sub_assign(&mut self, _rhs: f64) {
-        self.v = modulo(self.v - _rhs, self.m);
+        self.v = unchecked_modulo(self.v - _rhs, self.m);
     }
 }
 
@@ -142,13 +150,13 @@ impl Mul<f64> for Mf64 {
 // Implement inplace multiplication
 impl MulAssign for Mf64 {
     fn mul_assign(&mut self, _rhs: Mf64) {
-        self.v = modulo(self.v * _rhs.v, self.m);
+        self.v = unchecked_modulo(self.v * _rhs.v, self.m);
     }
 }
 
 impl MulAssign<f64> for Mf64 {
     fn mul_assign(&mut self, _rhs: f64) {
-        self.v = modulo(self.v * _rhs, self.m);
+        self.v = unchecked_modulo(self.v * _rhs, self.m);
     }
 }
 
@@ -173,13 +181,13 @@ impl Div<f64> for Mf64 {
 // Implement inplace multiplication
 impl DivAssign for Mf64 {
     fn div_assign(&mut self, _rhs: Mf64) {
-        self.v = modulo(self.v / _rhs.v, self.m);
+        self.v = unchecked_modulo(self.v / _rhs.v, self.m);
     }
 }
 
 impl DivAssign<f64> for Mf64 {
     fn div_assign(&mut self, _rhs: f64) {
-        self.v = modulo(self.v / _rhs, self.m);
+        self.v = unchecked_modulo(self.v / _rhs, self.m);
     }
 }
 
@@ -256,6 +264,34 @@ mod tests {
     use quickcheck::TestResult;
     use std::f64;
     use super::*;
+    use test;
+    use test::Bencher;
+
+    #[test]
+    fn modulo_test() {
+        // This edge case would fail
+        // [-4.440892098500626e-16, 2. * ::std::f64::consts::PI]
+        let input = [[2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI]];
+        let output = [0.];
+
+        for (i, o) in input.iter().zip(output.iter()) {
+            let a = unchecked_modulo(i[0], i[1]);
+            assert!(a == *o,
+                    "in: {} mod {}, out: {}, expected: {}",
+                    i[0],
+                    i[1],
+                    a,
+                    *o);
+        }
+    }
+
+    #[bench]
+    fn bench_modulo(b: &mut Bencher) {
+        let m = test::black_box(1.);
+        b.iter(|| for i in 1..1000 {
+            unchecked_modulo(i as f64, m);
+        });
+    }
 
     #[test]
     #[should_panic]
@@ -289,7 +325,11 @@ mod tests {
 
         for (i, o) in input.into_iter().zip(output.into_iter()) {
             let a = Mf64::new(*i, 1.);
-            assert!(a.v == *o, "a = {}, b ={}", a.v, *o);
+            assert!(a.v == *o,
+                    "in = {} mod 1, got: {}, expected ={}",
+                    *i,
+                    a.v,
+                    *o);
         }
     }
 

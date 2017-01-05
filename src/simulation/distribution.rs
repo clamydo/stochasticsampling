@@ -58,10 +58,12 @@ impl Distribution {
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
         let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as Ix;
 
-        // make sure to produce valid indeces
-        // (necessary, because in some cases this function produces out of bound indeces for value
-        // nearly at the box border)
-        [gx % self.dist.dim().0, gy % self.dist.dim().1, ga % self.dist.dim().2]
+        // make sure to produce valid indeces (necessary, because in some cases
+        // Mf64 containes values that lie on the box border.
+        // It is cheaper to do it here, instead for every particle, since the grid size
+        // is normally smaller than the number of test particles.
+        let (sx, sy, sa) = self.dist.dim();
+        [gx % sx, gy % sy, ga % sa]
     }
 
     /// Initialises the distribution with a number histogram. It counts the
@@ -159,6 +161,7 @@ mod tests {
     use coordinates::modulofloat::Mf64;
     use coordinates::particle::Particle;
     use coordinates::vector::Mod64Vector2;
+    use ieee754::Ieee754;
     use ndarray::{Array, Axis, arr3};
     use std::f64::EPSILON;
     use super::*;
@@ -233,8 +236,13 @@ mod tests {
         let box_size = [1., 1.];
         let grid_size = [50, 50, 10];
 
-        let check = |i: &[f64; 3], o: &[usize; 3], p: Particle, s| {
-            let dist = Distribution::new(grid_size, grid_width(grid_size, box_size));
+        fn check(i: &[f64; 3],
+                 o: &[usize; 3],
+                 p: Particle,
+                 s: &str,
+                 gs: [usize; 3],
+                 bs: [f64; 2]) {
+            let dist = Distribution::new(gs, grid_width(gs, bs));
 
             let g = dist.coord_to_grid(&p);
 
@@ -289,13 +297,19 @@ mod tests {
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle::new(i[0], i[1], i[2], box_size);
 
-            check(i, o, p, "mod");
+            check(i, o, p, "mod", grid_size, box_size);
         }
 
+
+        // check without modulo floats in between
+        let box_size = [10., 10.];
+        let grid_size = [50, 50, 10];
+
         // In some cases the modulo produces values, that only nearly wrap around
-        let input = [[0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON]];
+        let input = [[0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
+                     [0., 0., (2. * ::std::f64::consts::PI).prev()]];
         // Would expect 9, but it results in 10 = 0. Just make sure, it is not 10!
-        let result = [[0usize, 0, 0]];
+        let result = [[0usize, 0, 0], [0, 0, 9]];
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
@@ -306,7 +320,7 @@ mod tests {
                 orientation: Mf64 { v: i[2], m: 0. },
             };
 
-            check(i, o, p, "nomod");
+            check(i, o, p, "nomod", grid_size, box_size);
         }
 
     }

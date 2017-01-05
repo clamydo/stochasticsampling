@@ -123,8 +123,7 @@ impl Integrator {
             // using an even dimensioned kernel.
             // Because of the linearity of the fourier transform, it does not matter if the
             // average is calculated before or after the transformation.
-            *v = (oseen(x, y)[i.0][i.1] +
-                  oseen(x - gw_x, y)[i.0][i.1] +
+            *v = (oseen(x, y)[i.0][i.1] + oseen(x - gw_x, y)[i.0][i.1] +
                   oseen(x, y - gw_y)[i.0][i.1] +
                   oseen(x - gw_x, y - gw_y)[i.0][i.1]) / 4.;
         }
@@ -300,6 +299,8 @@ impl Integrator {
         // Get vorticity d/dx uy - d/dy ux
         let vort = vort[nearest_grid_point_index];
 
+        // Keep in mind, in some cases Mf64 can produces values equal to 2 * PI. But in
+        // this case, the trigonometric functions do not care.
         p.orientation += param.rot_diffusion * random_samples[2] -
                          (param.magnetic_reorientation * p.orientation.as_ref().sin() +
                           0.5 * vort) * param.timestep;
