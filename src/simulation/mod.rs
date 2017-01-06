@@ -20,7 +20,6 @@ use std::f64;
 /// Main data structure representing the simulation.
 pub struct Simulation {
     integrator: Integrator,
-    number_of_particles: usize,
     settings: Settings,
     state: SimulationState,
 }
@@ -108,7 +107,6 @@ impl Simulation {
 
         Simulation {
             integrator: integrator,
-            number_of_particles: ranklocal_number_of_particles,
             settings: settings,
             state: state,
         }
@@ -168,7 +166,6 @@ impl Simulation {
         // Update particle positions
         self.integrator.evolve_particles_inplace(&mut self.state.particles,
                                                  &self.state.random_samples,
-                                                 &self.state.distribution,
                                                  self.state.flow_field.view());
 
         // increment timestep counter to keep a continous identifier when resuming

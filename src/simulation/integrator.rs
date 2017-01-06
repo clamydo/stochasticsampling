@@ -308,11 +308,9 @@ impl Integrator {
     }
 
     pub fn evolve_particles_inplace<'a>(&self,
-                                    particles: &mut Vec<Particle>,
-                                    random_samples: &[[f64; 3]],
-                                    distribution: &Distribution,
-                                    flow_field: ArrayView<'a, f64, Ix3>)
-                                    {
+                                        particles: &mut Vec<Particle>,
+                                        random_samples: &[[f64; 3]],
+                                        flow_field: ArrayView<'a, f64, Ix3>) {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &flow_field);
 
