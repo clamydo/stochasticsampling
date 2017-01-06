@@ -49,11 +49,25 @@ impl Distribution {
     /// point to that grid point.
     /// The first grid point does not lie on the box border, but a half cell
     /// width from it.
+    /// WARNING: Expects coordinates to be in interval `[0, box_size)],
+    /// excluding the right border.
     pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
+        debug_assert!(p.position.x.v >= 0. && p.position.y.v >= 0. && p.orientation.v >= 0.,
+                      "Got negative position or orientation {:?}",
+                      p);
+
         let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as Ix;
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
         let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as Ix;
 
+        // make sure to produce valid indeces (necessary, because in some cases
+        // Mf64 containes values that lie on the box border.
+        // It is cheaper to do it here, instead for every particle, since the grid size
+        // is normally smaller than the number of test particles.
+        // let (sx, sy, sa) = self.dist.dim();
+        // [gx % sx, gy % sy, ga % sa]
+
+        // trust in Mf64 for being in bound
         [gx, gy, ga]
     }
 
@@ -69,6 +83,7 @@ impl Distribution {
         // build histogram
         for p in particles {
             let c = self.coord_to_grid(p);
+            // WARNING: Does not check boundaries at compile time!
             self.dist[c] += 1.;
         }
 
@@ -126,12 +141,12 @@ impl Distribution {
     }
 }
 
+
 /// Implement index operator that wraps around for periodic boundaries.
 impl Index<[i32; 3]> for Distribution {
     type Output = f64;
 
     fn index(&self, index: [i32; 3]) -> &f64 {
-
         fn wrap(i: i32, b: i32) -> usize {
             (((i % b) + b) % b) as usize
         }
@@ -145,9 +160,13 @@ impl Index<[i32; 3]> for Distribution {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
+    use coordinates::modulofloat::Mf64;
     use coordinates::particle::Particle;
+    use coordinates::vector::Mod64Vector2;
+    use ieee754::Ieee754;
     use ndarray::{Array, Axis, arr3};
     use std::f64::EPSILON;
     use super::*;
@@ -220,40 +239,92 @@ mod tests {
     #[test]
     fn coord_to_grid() {
         let box_size = [1., 1.];
-        let grid_size = [10, 10, 6];
+        let grid_size = [50, 50, 10];
+
+        fn check(i: &[f64; 3],
+                 o: &[usize; 3],
+                 p: Particle,
+                 s: &str,
+                 gs: [usize; 3],
+                 bs: [f64; 2]) {
+            let dist = Distribution::new(gs, grid_width(gs, bs));
+
+            let g = dist.coord_to_grid(&p);
+
+            assert!(g[0] == o[0],
+                    "{}: For input {:?}. Expected first coordinate to be '{}', got '{}'.",
+                    s,
+                    i,
+                    o[0],
+                    g[0]);
+            assert!(g[1] == o[1],
+                    "{}: For input {:?}. Expected second coordinate to be '{}', got '{}'.",
+                    s,
+                    i,
+                    o[1],
+                    g[1]);
+            assert!(g[2] == o[2],
+                    "{}: For input {:?}. Expected third coordinate to be '{}', got '{}'.",
+                    s,
+                    i,
+                    o[2],
+                    g[2]);
+        };
 
         let input = [[0., 0., 0.],
+                     // gets rounded to 0 by Mf64
+                     // [0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
                      [1., 0., 0.],
                      [0., 1., 0.],
                      [0., 0., 0.5],
                      [0., 0., 7.],
                      [0., 0., -1.],
-                     [0.96, 0., 0.]];
+                     [0.96, 0., 0.],
+                     [0.5, 0.5, -1.],
+                     [0.5, 0.5, 0.],
+                     [0., 0., 2. * ::std::f64::consts::PI],
+                     [0.51000000000000005, 0.5, 6.283185307179586]];
 
-        let result = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 5], [9, 0, 0]];
+        let result = [[0, 0, 0],
+                      // [0usize, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 0],
+                      [0, 0, 1],
+                      [0, 0, 8],
+                      [48, 0, 0],
+                      [25, 25, 8],
+                      [25, 25, 0],
+                      [0, 0, 0],
+                      [25, 25, 0]];
+
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle::new(i[0], i[1], i[2], box_size);
-            let dist = Distribution::new(grid_size, grid_width(grid_size, box_size));
 
-            let g = dist.coord_to_grid(&p);
-
-            assert!(g[0] == o[0],
-                    "For input {:?}. Expected '{}', got '{}'.",
-                    i,
-                    o[0],
-                    g[0]);
-            assert!(g[1] == o[1],
-                    "For input {:?}. Expected '{}', got '{}'.",
-                    i,
-                    o[1],
-                    g[1]);
-            assert!(g[2] == o[2],
-                    "For input {:?}. Expected '{}', got '{}'.",
-                    i,
-                    o[2],
-                    g[2]);
+            check(i, o, p, "mod", grid_size, box_size);
         }
+
+
+        // check without modulo floats in between
+        let box_size = [10., 10.];
+        let grid_size = [50, 50, 10];
+
+        let input = [[0., 0., (2. * ::std::f64::consts::PI).prev()]];
+        let result = [[0, 0, 9]];
+
+        for (i, o) in input.iter().zip(result.iter()) {
+            let p = Particle {
+                position: Mod64Vector2 {
+                    x: Mf64 { v: i[0], m: 0. },
+                    y: Mf64 { v: i[1], m: 0. },
+                },
+                orientation: Mf64 { v: i[2], m: 0. },
+            };
+
+            check(i, o, p, "nomod", grid_size, box_size);
+        }
+
     }
 
     #[test]
@@ -304,6 +375,7 @@ mod tests {
         d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]], [[4., 4.5], [5., 5.5], [6., 6.5]]]);
 
         assert_eq!(d[[0, 0, 0]], 1.0);
+        assert_eq!(d[[2, 3, 2]], 1.0);
         assert_eq!(d[[-1, 0, 0]], 4.0);
         assert_eq!(d[[-9, 0, 0]], 4.0);
         assert_eq!(d[[-9, -3, 0]], 4.0);

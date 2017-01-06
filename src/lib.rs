@@ -7,6 +7,15 @@
 #![feature(proc_macro)]
 #![feature(slice_patterns)]
 #![recursion_limit = "1024"]
+#![feature(test)]
+
+#[cfg(test)]
+extern crate test;
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+#[cfg(test)]
+extern crate ieee754;
 
 #[macro_use]
 extern crate error_chain;
@@ -22,9 +31,6 @@ extern crate serde_cbor;
 extern crate serde_derive;
 extern crate toml;
 
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
 
 pub mod coordinates;
 #[macro_use]

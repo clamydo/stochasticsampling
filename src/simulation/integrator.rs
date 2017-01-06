@@ -72,7 +72,7 @@ impl Integrator {
     /// The Oseen tensor diverges at the origin and is not defined. Thus, it
     /// can't be sampled in the origin. To work around this, a Oseen kernel at
     /// an even number of grid points is used. Since this also means, that the
-    /// Oseen kernel has no identical center, and can't be centered on the
+    /// Oseen kernel has no identical center it cannot be centered on the
     /// 'image'. When just using an even sampled Oseen tensor as a filter
     /// kernel, the value of the filter at a grid point is the value at a
     /// corner of the grid cell. To get an interpolated value at the center of
@@ -92,10 +92,10 @@ impl Integrator {
             // Normalization due to forth and back Fourier transformation. FFTW3 does not
             // do this!
             let fft_norm = (grid_size[0] * grid_size[1]) as f64;
-            let p = 1. / 8. / PI / norm / fft_norm;
+            let p = 1. / 8. / PI / norm / norm / norm / fft_norm;
 
-            [[Complex::new(1. + x * x, 0.) * p, Complex::new(x * y, 0.) * p],
-             [Complex::new(y * x, 0.) * p, Complex::new(1. + y * y, 0.) * p]]
+            [[Complex::new(2. * x * x + y * y, 0.) * p, Complex::new(x * y, 0.) * p],
+             [Complex::new(y * x, 0.) * p, Complex::new(x * x + 2. * y * y, 0.) * p]]
         };
 
         // Allocate array to prepare FFT
@@ -103,16 +103,19 @@ impl Integrator {
         let mut res = Array::<Complex<f64>, _>::from_elem((2, 2, grid_size[0], grid_size[1]),
                                                           Complex::new(0., 0.));
 
+        let gw_x = grid_width.x;
+        let gw_y = grid_width.y;
+
+        let gx = grid_size[0] as i64;
+        let gy = grid_size[1] as i64;
+
         for (i, v) in res.indexed_iter_mut() {
             // sample Oseen tensor, so that the origin lies on the 'upper left'
             // corner of the 'upper left' cell.
-            let gw_x = grid_width.x;
-            let gw_y = grid_width.y;
-
-            let xi = (i.2 as i64 - grid_size[0] as i64 / 2) as f64;
-            let yi = (i.3 as i64 - grid_size[0] as i64 / 2) as f64;
-            let x = grid_width.x * xi + grid_width.x / 2.;
-            let y = grid_width.y * yi + grid_width.y / 2.;
+            let xi = ((i.2 as i64 + gx as i64 / 2) % gx) - gx as i64 / 2;
+            let yi = ((i.3 as i64 + gy as i64 / 2) % gy) - gy as i64 / 2;
+            let x = gw_x * xi as f64 + gw_x / 2.;
+            let y = gw_y * yi as f64 + gw_y / 2.;
 
             // Calcualte the average of a shifted kernel, where all four points next to the
             // origin are shifted once into the center. This is done, to get an estimate of
@@ -181,9 +184,9 @@ impl Integrator {
     fn calc_stress_divergence(&self, dist: &Distribution) -> Array<Complex<f64>, Ix3> {
         // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the
         // grid and j = 0.
-        // This makes implicit and explicit use of broadcasting. Implicetly the
-        // stress/ kernel ´sk´ is broadcasted for all points in space. Then,
-        // explicetly, the gradient ´g´ is broadcasted along the last axis. This
+        // This makes implicit and explicit use of broadcasting. Implicitly the
+        // stress_kernel ´sk´ is broadcasted for all points in space. Then,
+        // explicitly, the gradient ´g´ is broadcasted along the last axis. This
         // effectively repeats the gradient along the second index of the stress
         // kernel ´sk´. Multiplying it elementwise results in
         //
@@ -220,7 +223,7 @@ impl Integrator {
 
         // TODO: Test if this actually works, as expected. Should produce a
         // matrix-vector-product for every (x, y, alpha) coordinate.
-        // .to_owned() creates a unquily owned array that will contain the result and
+        // .to_owned() creates a uniquly owned array that will contain the result and
         // `int` is then bound to.
         let int = (g.to_owned() * sk).sum(Axis(1));
 
@@ -238,6 +241,7 @@ impl Integrator {
         // f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
 
         // Fourier transform force density component-wise
+        // WARNING: Not thread safe!
         for mut a in f.outer_iter_mut() {
             let plan = FFTPlan::new_c2c_inplace(&mut a,
                                                 fft::FFTDirection::Forward,
@@ -296,26 +300,24 @@ impl Integrator {
         // Get vorticity d/dx uy - d/dy ux
         let vort = vort[nearest_grid_point_index];
 
+        // Keep in mind, in some cases Mf64 can produces values equal to 2 * PI. But in
+        // this case, the trigonometric functions do not care.
         p.orientation += param.rot_diffusion * random_samples[2] -
                          (param.magnetic_reorientation * p.orientation.as_ref().sin() +
                           0.5 * vort) * param.timestep;
     }
 
-    pub fn evolve_particles_inplace(&self,
-                                    particles: &mut Vec<Particle>,
-                                    random_samples: &Vec<[f64; 3]>,
-                                    distribution: &Distribution)
-                                    -> FlowField {
-        // Calculate flow field from distribution
-        let u = self.calculate_flow_field(distribution);
+    pub fn evolve_particles_inplace<'a>(&self,
+                                        particles: &mut Vec<Particle>,
+                                        random_samples: &[[f64; 3]],
+                                        flow_field: ArrayView<'a, f64, Ix3>) {
         // Calculate vorticity dx uy - dy ux
-        let vort = vorticity(self.grid_width, &u.view());
+        let vort = vorticity(self.grid_width, &flow_field);
 
         for (p, r) in particles.iter_mut().zip(random_samples.iter()) {
-            self.evolve_particle_inplace(p, r, &u.view(), &vort.view());
+            self.evolve_particle_inplace(p, r, &flow_field, &vort.view());
         }
 
-        u
     }
 }
 
@@ -459,12 +461,14 @@ mod tests {
         let mut d = Distribution::new(gs, grid_width(gs, bs));
         d.sample_from(&p);
 
-        i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], &d);
+        let u = i.calculate_flow_field(&d);
+
+        i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], &d, u.view());
 
         // TODO Check these values!
-        assert_eq!(p[0].position.x.v, 0.701030504848315);
-        assert_eq!(p[0].position.y.v, 0.1399660468189404);
-        assert_eq!(p[0].orientation.v, 1.7132562930012487);
+        assert_eq!(p[0].position.x.v, 0.7099999999999991);
+        assert_eq!(p[0].position.y.v, 0.3100000000000054);
+        assert_eq!(p[0].orientation.v, 1.8901361416090765);
     }
 
     #[test]

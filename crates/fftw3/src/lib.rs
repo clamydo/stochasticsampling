@@ -22,6 +22,7 @@ mod tests {
 
     /// Transforming for and back should be an identity operation (except for
     /// normalization factors)
+    /// WARNING: Not thread safe. Run with `env RUST_TEST_THREADS=1 cargo test`.
     #[test]
     fn test_fft_identity() {
         let shape = (11usize, 11);

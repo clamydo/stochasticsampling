@@ -36,6 +36,7 @@ impl FFTPlan {
         let outp = outa.as_ptr() as *mut FFTWComplex;
 
         let plan;
+        // WARNING: Not thread safe!
         unsafe {
             plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
                                                  n1 as std::os::raw::c_int,

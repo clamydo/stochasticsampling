@@ -20,7 +20,6 @@ use std::f64;
 /// Main data structure representing the simulation.
 pub struct Simulation {
     integrator: Integrator,
-    number_of_particles: usize,
     settings: Settings,
     state: SimulationState,
 }
@@ -108,7 +107,6 @@ impl Simulation {
 
         Simulation {
             integrator: integrator,
-            number_of_particles: ranklocal_number_of_particles,
             settings: settings,
             state: state,
         }
@@ -127,10 +125,9 @@ impl Simulation {
 
         // IMPORTANT: Set also the modulo quotiont for every particle, since it is not
         // provided for user given input.
-        for p in particles.iter_mut() {
-            p.position.x.m = bs[0];
-            p.position.y.m = bs[1];
-            p.orientation.m = TWOPI;
+        for p in &mut particles {
+            // this makes sure, the input is sanitized
+            *p = Particle::new(p.position.x.v, p.position.y.v, p.orientation.v, bs);
         }
 
         self.state.particles = particles;
@@ -154,20 +151,22 @@ impl Simulation {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
 
+        // Calculate flow field from distribution
+        self.state.flow_field = self.integrator.calculate_flow_field(&self.state.distribution);
+
         // Generate all needed random numbers here, because otherwise the random number
         // generator would be needed to be borrowed mutably.
         // TODO: Look into a way, to make this more elegant
-        for r in self.state.random_samples.iter_mut() {
+        for r in &mut self.state.random_samples {
             *r = [StandardNormal::rand(&mut self.state.rng).0,
                   StandardNormal::rand(&mut self.state.rng).0,
                   StandardNormal::rand(&mut self.state.rng).0];
         }
 
         // Update particle positions
-        self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                                         &self.state
-                                                                             .random_samples,
-                                                                         &self.state.distribution);
+        self.integrator.evolve_particles_inplace(&mut self.state.particles,
+                                                 &self.state.random_samples,
+                                                 self.state.flow_field.view());
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
@@ -178,17 +177,20 @@ impl Simulation {
     pub fn get_snapshot(&self) -> Snapshot {
         let seed = self.state.rng.extract_seed();
 
-        let snapshot = Snapshot {
+        Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
             rng_seed: [seed[0].lo, seed[0].hi, seed[1].lo, seed[1].hi],
             timestep: self.state.timestep,
-        };
-
-        snapshot
+        }
     }
 
     // Getter
+
+    /// Returns all particles
+    pub fn get_particles(&self) -> Vec<Particle> {
+        self.state.particles.clone()
+    }
 
     /// Returns the first `n` particles
     pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
@@ -201,8 +203,8 @@ impl Simulation {
     }
 
     /// Returns sampled flow field
-    pub fn get_flow_field(&self) -> Distribution {
-        self.state.distribution.clone()
+    pub fn get_flow_field(&self) -> FlowField {
+        self.state.flow_field.clone()
     }
 
     /// Returns current timestep

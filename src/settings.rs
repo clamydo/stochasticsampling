@@ -53,6 +53,20 @@ pub struct Parameters {
     pub magnetic_reorientation: f64,
 }
 
+
+/// Holds output configuration
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct Output {
+    #[serde(default)]
+    pub distribution_every_timestep: Option<usize>,
+    #[serde(default)]
+    pub flowfield_every_timestep: Option<usize>,
+    #[serde(default)]
+    pub particle_head: Option<usize>,
+    #[serde(default)]
+    pub particle_every_timestep: Option<usize>,
+}
+
 /// Holds simulation specific settings.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
@@ -60,6 +74,7 @@ pub struct SimulationSettings {
     pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
+    pub output: Output,
     pub timestep: f64,
     pub seed: [u64; 2],
 }
@@ -73,6 +88,8 @@ serde_enum_str!(OutputFormat {
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentSettings {
+    #[serde(default)]
+    pub init_file: Option<String>,
     #[serde(default = "default_io_queue_size")]
     pub io_queue_size: usize,
     #[serde(default = "default_output_format")]
@@ -107,7 +124,7 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(&param_file).chain_err(|| "Unable to read parameter file.")?;
+    let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
 
     let mut parser = toml::Parser::new(&toml_string);
 
@@ -130,6 +147,8 @@ mod tests {
         let settings = read_parameter_file("./test/parameter.toml").unwrap();
         let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
 
+        assert_eq!(settings_default.environment.init_file, None);
+        assert_eq!(settings.environment.init_file, Some("foo/bar.cbor".to_string()));
         assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
         assert_eq!(settings.environment.io_queue_size, 50);
         assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
@@ -146,5 +165,14 @@ mod tests {
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.seed, [1, 1]);
+
+        assert_eq!(settings.simulation.output.distribution_every_timestep, Some(12));
+        assert_eq!(settings_default.simulation.output.distribution_every_timestep, None);
+        assert_eq!(settings.simulation.output.flowfield_every_timestep, Some(42));
+        assert_eq!(settings_default.simulation.output.flowfield_every_timestep, None);
+        assert_eq!(settings.simulation.output.particle_every_timestep, Some(100));
+        assert_eq!(settings_default.simulation.output.particle_every_timestep, None);
+        assert_eq!(settings.simulation.output.particle_head, Some(10));
+        assert_eq!(settings_default.simulation.output.particle_head, None);
     }
 }

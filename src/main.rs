@@ -83,11 +83,16 @@ fn run() -> Result<()> {
     let settings = settings::read_parameter_file(settings_file_name)
             .chain_err(|| "Error reading parameter file.")?;
 
-    let init_type = if cli_matches.is_present("initial_condition") {
-        InitType::Stdin
+    let init_type = if cli_matches.is_present("initial_condition_file") {
+        InitType::File
     } else {
-        InitType::Random
+        if cli_matches.is_present("initial_condition") {
+            InitType::Stdin
+        } else {
+            InitType::Random
+        }
     };
+
 
     let output_dir = cli_matches.value_of("output_directory").unwrap();
     let filename = create_filename(&settings);
@@ -105,6 +110,7 @@ fn run() -> Result<()> {
 /// Type of setting up initial condition.
 enum InitType {
     Stdin,
+    File,
     Random,
 }
 
@@ -119,6 +125,14 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
     let initial_condition = match init_type {
         InitType::Stdin => {
             de::from_reader(io::stdin()).chain_err(|| "Can't read given initial condition.")?
+        }
+        InitType::File => {
+            let f = match settings.environment.init_file {
+                Some(ref fname) => File::open(fname).chain_err(|| "Unable to open input file.")?,
+                None => bail!("No input file provided in the parameterfile."),
+            };
+
+            de::from_reader(f).chain_err(|| "Can't read given initial condition.")?
         }
         InitType::Random => {
             Particle::randomly_placed_particles(settings.simulation.number_of_particles,
@@ -230,6 +244,12 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = Output::default();
         initial.distribution = Some(simulation.get_distribution());
+        initial.particles = settings.simulation
+            .output
+            .particle_head
+            .and_then(|x| Some(simulation.get_particles_head(x)))
+            .or_else(|| Some(simulation.get_particles()));
+
         tx.send(IOWorkerMsg::Output(initial)).unwrap();
     }
 
@@ -245,12 +265,46 @@ fn run_simulation(settings: &Settings,
     pb.show_message = show_progress;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
-    for _ in 0..n {
+    for timestep in 1..(n + 1) {
         pb.inc();
         simulation.do_timestep();
-        let mut output = Output::default();
-        output.distribution = Some(simulation.get_distribution());
-        tx.send(IOWorkerMsg::Output(output)).unwrap();
+
+        // TODO: Refactor this ugly code
+
+        // Build output
+        let output = Output {
+            distribution: settings.simulation.output.distribution_every_timestep.and_then(|x| {
+                if timestep % x == 0 {
+                    Some(simulation.get_distribution())
+                } else {
+                    None
+                }
+            }),
+            flow_field: settings.simulation.output.flowfield_every_timestep.and_then(|x| {
+                if timestep % x == 0 {
+                    Some(simulation.get_flow_field())
+                } else {
+                    None
+                }
+            }),
+            particles: settings.simulation.output.particle_every_timestep.and_then(|x| {
+                if timestep % x == 0 {
+                    settings.simulation
+                        .output
+                        .particle_head
+                        .and_then(|x| Some(simulation.get_particles_head(x)))
+                        .or_else(|| Some(simulation.get_particles()))
+                } else {
+                    None
+                }
+            }),
+            timestep: timestep,
+        };
+
+        if output.distribution.is_some() || output.flow_field.is_some() ||
+           output.particles.is_some() {
+            tx.send(IOWorkerMsg::Output(output)).unwrap();
+        }
     }
     pb.finish_print("done");
 

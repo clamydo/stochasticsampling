@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.2.5"
+version = "0.2.9"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 
 [[bin]]
@@ -26,9 +26,11 @@ toml = { version = "0.2.1", default-features = false, features = ["serde"] }
 
 [dev-dependencies]
 quickcheck = "0.3"
+ieee754 = "0.1"
 
 [workspace]
 members = ["crates/fftw3"]
 
 [profile.release]
 lto = true
+#debug = true

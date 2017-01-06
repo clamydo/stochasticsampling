@@ -29,10 +29,13 @@ pub struct Mf64 {
     pub m: f64,
 }
 
+// Restricts value `f` to interval of size `[0,m)`. Additional modulo %
+// operation to
+// prevent edge case documented in the test.
 /// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.
 /// Make sure, not to do that!
 fn modulo(f: f64, m: f64) -> f64 {
-    f - (f / m).floor() * m
+    (f - (f / m).floor() * m) % m
 }
 
 impl Mf64 {
@@ -220,6 +223,8 @@ impl Serialize for Mf64 {
 
 /// Implement a custom Deserialize trait, that deserializes a value to a Mf64
 /// with default modulo quotient.
+/// WARNING: Modulo quotient of zero means, that this is just a float, without
+/// wrapping! This means, `Mf64` can also have a negative value for `v`!
 impl Deserialize for Mf64 {
     fn deserialize<D>(deserializer: &mut D) -> Result<Mf64, D::Error>
         where D: Deserializer
@@ -254,6 +259,33 @@ mod tests {
     use quickcheck::TestResult;
     use std::f64;
     use super::*;
+    use test;
+    use test::Bencher;
+
+    #[test]
+    fn modulo_test() {
+        let input = [[2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI],
+                     [-4.440892098500626e-16, 2. * ::std::f64::consts::PI]];
+        let output = [0., 0.];
+
+        for (i, o) in input.iter().zip(output.iter()) {
+            let a = modulo(i[0], i[1]);
+            assert!(a == *o,
+                    "in: {} mod {}, out: {}, expected: {}",
+                    i[0],
+                    i[1],
+                    a,
+                    *o);
+        }
+    }
+
+    #[bench]
+    fn bench_modulo(b: &mut Bencher) {
+        let m = test::black_box(1.);
+        b.iter(|| for i in 1..1000 {
+            modulo(i as f64, m);
+        });
+    }
 
     #[test]
     #[should_panic]
@@ -287,7 +319,11 @@ mod tests {
 
         for (i, o) in input.into_iter().zip(output.into_iter()) {
             let a = Mf64::new(*i, 1.);
-            assert!(a.v == *o, "a = {}, b ={}", a.v, *o);
+            assert!(a.v == *o,
+                    "in = {} mod 1, got: {}, expected ={}",
+                    *i,
+                    a.v,
+                    *o);
         }
     }
 
