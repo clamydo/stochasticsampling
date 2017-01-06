@@ -241,6 +241,7 @@ impl Integrator {
         // f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
 
         // Fourier transform force density component-wise
+        // WARNING: Not thread safe!
         for mut a in f.outer_iter_mut() {
             let plan = FFTPlan::new_c2c_inplace(&mut a,
                                                 fft::FFTDirection::Forward,
