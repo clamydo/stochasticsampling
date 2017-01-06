@@ -61,8 +61,8 @@ impl Integrator {
 
         for (mut e, a) in s.axis_iter_mut(Axis(2)).zip(&angles) {
             e[[0, 0]] = stress.active * 0.5 * (2. * a).cos();
-            e[[0, 1]] = stress.active * a.sin() * a.cos() - stress.magnetic * a.sin();
-            e[[1, 0]] = stress.active * a.sin() * a.cos() + stress.magnetic * a.sin();
+            e[[0, 1]] = stress.active * a.sin() * a.cos() + stress.magnetic * a.cos();
+            e[[1, 0]] = stress.active * a.sin() * a.cos() - stress.magnetic * a.cos();
             e[[1, 1]] = -e[[0, 0]];
         }
 
@@ -274,6 +274,8 @@ impl Integrator {
     /// Together this leads to an update of the position due to the diffusion of
     /// `x_d(t + dt) = sqrt(2 d dt) N(0, 1)``.
     ///
+    /// Assumes the magnetic field to be oriented along Y-axis.
+    ///
     /// *IMPORTANT*: This function expects `sqrt(2 d dt)` as a precomputed
     /// effective diffusion constant.
     fn evolve_particle_inplace(&self,
@@ -290,7 +292,7 @@ impl Integrator {
 
         let param = &self.parameter;
 
-        // Draw independently for every coordinate
+        // Evolve particle position.
         p.position.x += (flow_x + p.orientation.as_ref().cos()) * param.timestep +
                         param.trans_diffusion * random_samples[0];
         p.position.y += (flow_y + p.orientation.as_ref().sin()) * param.timestep +
@@ -300,10 +302,10 @@ impl Integrator {
         // Get vorticity d/dx uy - d/dy ux
         let vort = vort[nearest_grid_point_index];
 
-        // Keep in mind, in some cases Mf64 can produces values equal to 2 * PI. But in
-        // this case, the trigonometric functions do not care.
-        p.orientation += param.rot_diffusion * random_samples[2] -
-                         (param.magnetic_reorientation * p.orientation.as_ref().sin() +
+        // Evolve particle orientation. Assumes magnetic field to be oriented along
+        // Y-axis.
+        p.orientation += param.rot_diffusion * random_samples[2] +
+                         (param.magnetic_reorientation * p.orientation.as_ref().cos() +
                           0.5 * vort) * param.timestep;
     }
 
@@ -386,7 +388,7 @@ mod tests {
     use fftw3::complex::Complex;
     use ndarray::{Array, Axis, arr2};
     use settings::StressPrefactors;
-    use std::f64::EPSILON;
+    use std::f64::{EPSILON, MAX};
     use std::f64::consts::PI;
     use super::*;
     use super::super::distribution::Distribution;
@@ -396,6 +398,11 @@ mod tests {
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
+        fn equal_floats(a: f64, b: f64) -> bool {
+            let diff = (a - b).abs();
+            diff / (a.abs() + b.abs()).min(MAX) < EPSILON
+        }
+
         let bs = [1., 1.];
         let gs = [10, 10, 3];
         let gw = grid_width(gs, bs);
@@ -414,22 +421,20 @@ mod tests {
 
         let i = Integrator::new(gs, gw, int_param);
 
-        let should0 = arr2(&[[-0.25, -0.4330127018922193], [1.299038105676658, 0.25]]);
-        let should1 = arr2(&[[0.5, -2.449293598294707e-16], [0.0, -0.5]]);
+        let should0 = arr2(&[[-0.2499999999999999, 0.9330127018922195],
+                             [-0.0669872981077807, 0.2499999999999999]]);
+        let should1 = arr2(&[[0.5, -1.0], [1.0, -0.5]]);
+        let should2 = arr2(&[[-0.25, 0.066987298107780712], [-0.9330127018922195, 0.25]]);
 
-        for e in (should0.clone() - i.stress_kernel.subview(Axis(2), 0)).map(|x| x.abs()).iter() {
-            assert!(*e < EPSILON,
-                    "{} != {}",
-                    should0,
-                    i.stress_kernel.subview(Axis(2), 0));
-        }
+        let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| {
+            for (a, b) in should.iter().zip(stress.iter()) {
+                assert!(equal_floats(*a, *b), "{} != {}", should, stress);
+            }
+        };
 
-        for e in (should1.clone() - i.stress_kernel.subview(Axis(2), 1)).map(|x| x.abs()).iter() {
-            assert!(*e < EPSILON,
-                    "{} != {}",
-                    should1,
-                    i.stress_kernel.subview(Axis(2), 1));
-        }
+        check(should0, i.stress_kernel.subview(Axis(2), 0));
+        check(should1, i.stress_kernel.subview(Axis(2), 1));
+        check(should2, i.stress_kernel.subview(Axis(2), 2));
 
         assert_eq!(i.stress_kernel.dim(), (2, 2, 3));
         assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs[0], gs[1]));
@@ -466,9 +471,9 @@ mod tests {
         i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], u.view());
 
         // TODO Check these values!
-        assert_eq!(p[0].position.x.v, 0.7099999999999991);
-        assert_eq!(p[0].position.y.v, 0.3100000000000054);
-        assert_eq!(p[0].orientation.v, 1.8901361416090765);
+        assert_eq!(p[0].position.x.v, 0.710000000000004);
+        assert_eq!(p[0].position.y.v, 0.30999999999999917);
+        assert_eq!(p[0].orientation.v, 1.9001361416090674);
     }
 
     #[test]
