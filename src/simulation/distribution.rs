@@ -49,6 +49,8 @@ impl Distribution {
     /// point to that grid point.
     /// The first grid point does not lie on the box border, but a half cell
     /// width from it.
+    /// WARNING: Expects coordinates to be in interval `[0, box_size)],
+    /// excluding the right border.
     pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
         debug_assert!(p.position.x.v >= 0. && p.position.y.v >= 0. && p.orientation.v >= 0.,
                       "Got negative position or orientation {:?}",
@@ -62,8 +64,11 @@ impl Distribution {
         // Mf64 containes values that lie on the box border.
         // It is cheaper to do it here, instead for every particle, since the grid size
         // is normally smaller than the number of test particles.
-        let (sx, sy, sa) = self.dist.dim();
-        [gx % sx, gy % sy, ga % sa]
+        // let (sx, sy, sa) = self.dist.dim();
+        // [gx % sx, gy % sy, ga % sa]
+
+        // trust in Mf64 for being in bound
+        [gx, gy, ga]
     }
 
     /// Initialises the distribution with a number histogram. It counts the
@@ -305,11 +310,8 @@ mod tests {
         let box_size = [10., 10.];
         let grid_size = [50, 50, 10];
 
-        // In some cases the modulo produces values, that only nearly wrap around
-        let input = [[0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
-                     [0., 0., (2. * ::std::f64::consts::PI).prev()]];
-        // Would expect 9, but it results in 10 = 0. Just make sure, it is not 10!
-        let result = [[0usize, 0, 0], [0, 0, 9]];
+        let input = [[0., 0., (2. * ::std::f64::consts::PI).prev()]];
+        let result = [[0, 0, 9]];
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle {
