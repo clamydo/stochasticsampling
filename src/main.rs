@@ -193,6 +193,8 @@ fn run_simulation(settings: &Settings,
     // Copy output_format, so it can be captured by the thread closure.
     let output_format = settings.environment.output_format;
 
+    // make copy, that is not moved into closure
+    let filepath = path.clone();
 
     let mut snapshot_counter = 0;
 
@@ -306,7 +308,8 @@ fn run_simulation(settings: &Settings,
             tx.send(IOWorkerMsg::Output(output)).unwrap();
         }
     }
-    pb.finish_print("done");
+    // FIXME: substitute .ext with correct string
+    pb.finish_print(&format!("done. Written '{}'.", filepath));
 
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
