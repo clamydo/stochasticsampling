@@ -7,7 +7,7 @@
 #![feature(proc_macro)]
 #![feature(slice_patterns)]
 #![recursion_limit = "1024"]
-#![feature(test)]
+#![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
 extern crate test;
