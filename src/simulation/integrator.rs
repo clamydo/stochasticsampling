@@ -38,12 +38,18 @@ impl Integrator {
                parameter: IntegrationParameter)
                -> Integrator {
 
+        if (grid_size[2] - 2) % 4 != 0 {
+            warn!("To have an orientation grid point in the direction of magnetic field, use a \
+                   grid size of 2 + 4 * n, with n an integer.");
+        }
+
         Integrator {
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
             avg_oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size, grid_width),
             parameter: parameter,
             grid_width: grid_width,
         }
+
     }
 
     /// Calculates approximation of discretized stress kernel, to be used in
