@@ -153,6 +153,9 @@ impl Simulation {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
 
+        // Calculate flow field from distribution
+        self.state.flow_field = self.integrator.calculate_flow_field(&self.state.distribution);
+
         // Generate all needed random numbers here, because otherwise the random number
         // generator would be needed to be borrowed mutably.
         // TODO: Look into a way, to make this more elegant
@@ -163,10 +166,10 @@ impl Simulation {
         }
 
         // Update particle positions
-        self.state.flow_field = self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                                         &self.state
-                                                                             .random_samples,
-                                                                         &self.state.distribution);
+        self.integrator.evolve_particles_inplace(&mut self.state.particles,
+                                                 &self.state.random_samples,
+                                                 &self.state.distribution,
+                                                 self.state.flow_field.view());
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;

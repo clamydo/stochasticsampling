@@ -244,6 +244,12 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = Output::default();
         initial.distribution = Some(simulation.get_distribution());
+        initial.particles = settings.simulation
+            .output
+            .particle_head
+            .and_then(|x| Some(simulation.get_particles_head(x)))
+            .or_else(|| Some(simulation.get_particles()));
+
         tx.send(IOWorkerMsg::Output(initial)).unwrap();
     }
 
@@ -259,7 +265,7 @@ fn run_simulation(settings: &Settings,
     pb.show_message = show_progress;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
-    for timestep in 0..n {
+    for timestep in 1..(n + 1) {
         pb.inc();
         simulation.do_timestep();
 
@@ -281,7 +287,7 @@ fn run_simulation(settings: &Settings,
                     None
                 }
             }),
-            particles: settings.simulation.output.distribution_every_timestep.and_then(|x| {
+            particles: settings.simulation.output.particle_every_timestep.and_then(|x| {
                 if timestep % x == 0 {
                     settings.simulation
                         .output
