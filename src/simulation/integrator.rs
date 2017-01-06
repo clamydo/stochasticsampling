@@ -463,7 +463,9 @@ mod tests {
         let mut d = Distribution::new(gs, grid_width(gs, bs));
         d.sample_from(&p);
 
-        i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], &d);
+        let u = i.calculate_flow_field(&d);
+
+        i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], &d, u.view());
 
         // TODO Check these values!
         assert_eq!(p[0].position.x.v, 0.7099999999999991);
