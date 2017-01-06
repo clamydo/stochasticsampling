@@ -307,21 +307,19 @@ impl Integrator {
                           0.5 * vort) * param.timestep;
     }
 
-    pub fn evolve_particles_inplace(&self,
+    pub fn evolve_particles_inplace<'a>(&self,
                                     particles: &mut Vec<Particle>,
                                     random_samples: &[[f64; 3]],
-                                    distribution: &Distribution)
-                                    -> FlowField {
-        // Calculate flow field from distribution
-        let u = self.calculate_flow_field(distribution);
+                                    distribution: &Distribution,
+                                    flow_field: ArrayView<'a, f64, Ix3>)
+                                    {
         // Calculate vorticity dx uy - dy ux
-        let vort = vorticity(self.grid_width, &u.view());
+        let vort = vorticity(self.grid_width, &flow_field);
 
         for (p, r) in particles.iter_mut().zip(random_samples.iter()) {
-            self.evolve_particle_inplace(p, r, &u.view(), &vort.view());
+            self.evolve_particle_inplace(p, r, &flow_field, &vort.view());
         }
 
-        u
     }
 }
 
