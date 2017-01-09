@@ -4,6 +4,7 @@ use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
+use rayon::prelude::*;
 use settings::{GridSize, StressPrefactors};
 use std::f64::consts::PI;
 use super::GridWidth;
@@ -322,10 +323,10 @@ impl Integrator {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &flow_field);
 
-        for (p, r) in particles.iter_mut().zip(random_samples.iter()) {
-            self.evolve_particle_inplace(p, r, &flow_field, &vort.view());
-        }
 
+        particles.par_iter_mut()
+            .zip(random_samples.par_iter())
+            .map(|x| self.evolve_particle_inplace(x.0, x.1, &flow_field, &vort.view()));
     }
 }
 
