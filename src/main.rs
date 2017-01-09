@@ -246,11 +246,15 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = Output::default();
         initial.distribution = Some(simulation.get_distribution());
-        initial.particles = settings.simulation
-            .output
-            .particle_head
-            .and_then(|x| Some(simulation.get_particles_head(x)))
-            .or_else(|| Some(simulation.get_particles()));
+        initial.particles = if let Some(_) = settings.simulation.output.particle_every_timestep {
+            settings.simulation
+                .output
+                .particle_head
+                .and_then(|n| Some(simulation.get_particles_head(n)))
+                .or_else(|| Some(simulation.get_particles()))
+        } else {
+            None
+        };
 
         tx.send(IOWorkerMsg::Output(initial)).unwrap();
     }
