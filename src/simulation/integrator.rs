@@ -326,7 +326,9 @@ impl Integrator {
 
         particles.par_iter_mut()
             .zip(random_samples.par_iter())
-            .map(|x| self.evolve_particle_inplace(x.0, x.1, &flow_field, &vort.view()));
+            .for_each(|(ref mut p, r)|
+                self.evolve_particle_inplace(p, &r, &flow_field, &vort.view())
+            );
     }
 }
 
