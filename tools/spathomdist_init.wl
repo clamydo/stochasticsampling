@@ -1,6 +1,6 @@
 #!/usr/bin/env wolframscript -script
 
-f=Exp[\[Kappa] Cos[\[Phi]]];
+f=Exp[\[Kappa] Sin[\[Phi]]];
 norm = Integrate[f,{\[Phi],0,2\[Pi]}];
 \[Psi][\[Phi]_,\[Kappa]_]=f/norm;
 
