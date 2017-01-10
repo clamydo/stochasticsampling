@@ -169,7 +169,7 @@ fn prepare_output_file(settings: &Settings, path: &str) -> Result<File> {
     Ok(file)
 }
 
-
+#[allow(dead_code)]
 /// Message type for the IO worker thread channel.
 enum IOWorkerMsg {
     Quit,

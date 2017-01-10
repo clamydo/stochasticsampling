@@ -25,6 +25,7 @@ extern crate fftw3;
 extern crate ndarray;
 extern crate pcg_rand;
 extern crate rand;
+extern crate rayon;
 extern crate serde;
 extern crate serde_cbor;
 #[macro_use]
