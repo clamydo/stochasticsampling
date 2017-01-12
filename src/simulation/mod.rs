@@ -134,6 +134,10 @@ impl Simulation {
 
         // Do a first sampling, so that the initial condition can also be obtained
         self.state.distribution.sample_from(&self.state.particles);
+
+        self.state.distribution.dist *= self.settings.parameters.number_density *
+                                        self.settings.simulation.box_size[0] *
+                                        self.settings.simulation.box_size[1];
     }
 
 
