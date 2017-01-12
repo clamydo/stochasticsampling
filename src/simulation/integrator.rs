@@ -97,8 +97,10 @@ impl Integrator {
         let oseen = |x: f64, y: f64| {
             let norm: f64 = (x * x + y * y).sqrt();
             // Normalization due to forth and back Fourier transformation. FFTW3 does not
-            // do this!
-            let fft_norm = (grid_size[0] * grid_size[1]) as f64;
+            // do this! Calculate it here once for further use in
+            //     1/n IFFT( 1/n FFT(oseen) * 1/n FFT(forcedensity))
+            //     == 1 / n^3 IFFT(FFT(oseen) * FFT(forcedensity))
+            let fft_norm = ((grid_size[0] * grid_size[1]) as f64).powf(3. / 2.);
             let p = 1. / 8. / PI / norm / norm / norm / fft_norm;
 
             [[Complex::new(2. * x * x + y * y, 0.) * p, Complex::new(x * y, 0.) * p],
@@ -326,9 +328,9 @@ impl Integrator {
 
         particles.par_iter_mut()
             .zip(random_samples.par_iter())
-            .for_each(|(ref mut p, r)|
+            .for_each(|(ref mut p, r)| {
                 self.evolve_particle_inplace(p, &r, &flow_field, &vort.view())
-            );
+            });
     }
 }
 
