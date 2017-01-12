@@ -4,7 +4,6 @@
 //! `simulation::integrator` module. TODO Missing docs.
 
 #![crate_type = "staticlib"]
-#![feature(proc_macro)]
 #![feature(slice_patterns)]
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
