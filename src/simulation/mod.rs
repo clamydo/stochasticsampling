@@ -134,6 +134,10 @@ impl Simulation {
 
         // Do a first sampling, so that the initial condition can also be obtained
         self.state.distribution.sample_from(&self.state.particles);
+
+        self.state.distribution.dist *= self.settings.parameters.number_density *
+                                        self.settings.simulation.box_size[0] *
+                                        self.settings.simulation.box_size[1];
     }
 
 
@@ -150,13 +154,15 @@ impl Simulation {
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
+        // Renormalize distribution to keep number density constant.
+        self.state.distribution.dist *= self.settings.parameters.number_density *
+                                        self.settings.simulation.box_size[0] *
+                                        self.settings.simulation.box_size[1];
 
-        // Calculate flow field from distribution
+        // Calculate flow field from distribution.
         self.state.flow_field = self.integrator.calculate_flow_field(&self.state.distribution);
 
-        // Generate all needed random numbers here, because otherwise the random number
-        // generator would be needed to be borrowed mutably.
-        // TODO: Look into a way, to make this more elegant
+        // Generate all needed random numbers here. Makes parallelization easier.
         for r in &mut self.state.random_samples {
             *r = [StandardNormal::rand(&mut self.state.rng).0,
                   StandardNormal::rand(&mut self.state.rng).0,
