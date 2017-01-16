@@ -405,15 +405,16 @@ mod tests {
     use super::super::distribution::Distribution;
     use super::super::grid_width;
 
+    fn equal_floats(a: f64, b: f64) -> bool {
+        let diff = (a - b).abs();
+        diff / (a.abs() + b.abs()).min(MAX) < EPSILON
+    }
+
+
     /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
-        fn equal_floats(a: f64, b: f64) -> bool {
-            let diff = (a - b).abs();
-            diff / (a.abs() + b.abs()).min(MAX) < EPSILON
-        }
-
         let bs = [1., 1.];
         let gs = [10, 10, 3];
         let gw = grid_width(gs, bs);
@@ -482,9 +483,9 @@ mod tests {
         i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], u.view());
 
         // TODO Check these values!
-        assert_eq!(p[0].position.x.v, 0.710000000000004);
-        assert_eq!(p[0].position.y.v, 0.30999999999999917);
-        assert_eq!(p[0].orientation.v, 1.9001361416090674);
+        assert!(equal_floats(p[0].position.x.v, 0.710000000000005));
+        assert!(equal_floats(p[0].position.y.v, 0.30999999999999917));
+        assert!(equal_floats(p[0].orientation.v, 1.9001361416090674));
     }
 
     #[test]
