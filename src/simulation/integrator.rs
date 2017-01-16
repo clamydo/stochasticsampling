@@ -88,8 +88,8 @@ impl Integrator {
 
         // Grid size must be even, because the oseen tensor diverges at the origin.
         assert!(grid_size[0] % 2 == 0 && grid_size[1] % 2 == 0,
-                "Greed needs to have even number of cells, to avoid origin when calculating \
-                 sampled Oseen tensor. But found ({}, {})",
+                "Odd sized grids are not supported yet for calculating the flow field. Found a \
+                 grid-size of ({}, {})",
                 grid_size[0],
                 grid_size[1]);
 
@@ -115,14 +115,14 @@ impl Integrator {
         let gw_x = grid_width.x;
         let gw_y = grid_width.y;
 
-        let gx = grid_size[0] as i64;
-        let gy = grid_size[1] as i64;
+        let gs_x = grid_size[0] as i64;
+        let gs_y = grid_size[1] as i64;
 
         for (i, v) in res.indexed_iter_mut() {
             // sample Oseen tensor, so that the origin lies on the 'upper left'
             // corner of the 'upper left' cell.
-            let xi = ((i.2 as i64 + gx as i64 / 2) % gx) - gx as i64 / 2;
-            let yi = ((i.3 as i64 + gy as i64 / 2) % gy) - gy as i64 / 2;
+            let xi = ((i.2 as i64 + gs_x as i64 / 2) % gs_x) - gs_x as i64 / 2;
+            let yi = ((i.3 as i64 + gs_y as i64 / 2) % gs_y) - gs_y as i64 / 2;
             let x = gw_x * xi as f64 + gw_x / 2.;
             let y = gw_y * yi as f64 + gw_y / 2.;
 
