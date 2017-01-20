@@ -438,10 +438,9 @@ mod tests {
         let should1 = arr2(&[[0.5, -1.0], [1.0, -0.5]]);
         let should2 = arr2(&[[-0.25, 0.066987298107780712], [-0.9330127018922195, 0.25]]);
 
-        let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| {
-            for (a, b) in should.iter().zip(stress.iter()) {
-                assert!(equal_floats(*a, *b), "{} != {}", should, stress);
-            }
+        let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
+            should.iter().zip(stress.iter()) {
+            assert!(equal_floats(*a, *b), "{} != {}", should, stress);
         };
 
         check(should0, i.stress_kernel.subview(Axis(2), 0));
@@ -494,7 +493,7 @@ mod tests {
         let f = Array::range(0., PI, h).map(|x| x.sin());
         let integral = super::periodic_simpson_integrate(f.view(), h);
 
-        assert!((integral - 2.000000010824505).abs() < EPSILON,
+        assert!(equal_floats(integral, 2.000000010824505),
                 "h: {}, result: {}",
                 h,
                 integral);
@@ -503,7 +502,7 @@ mod tests {
         let h = 4. / 100.;
         let f = Array::range(0., 4., h).map(|x| x * x);
         let integral = super::periodic_simpson_integrate(f.view(), h);
-        assert!((integral - 21.120000000000001).abs() < EPSILON,
+        assert!(equal_flaots(integral, 21.120000000000001),
                 "h: {}, result: {}",
                 h,
                 integral);
