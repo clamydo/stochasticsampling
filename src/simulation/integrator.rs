@@ -27,7 +27,7 @@ pub struct IntegrationParameter {
 pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
     stress_kernel: Array<f64, Ix3>,
-    avg_oseen_kernel_fft: Array<Complex<f64>, Ix4>,
+    oseen_kernel_fft: Array<Complex<f64>, Ix4>,
     parameter: IntegrationParameter,
     grid_width: GridWidth,
 }
@@ -46,7 +46,7 @@ impl Integrator {
 
         Integrator {
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
-            avg_oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size, grid_width),
+            oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size, grid_width),
             parameter: parameter,
             grid_width: grid_width,
         }
@@ -86,9 +86,11 @@ impl Integrator {
     /// the cell an average of all cell corners is calculated.
     fn calc_oseen_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<Complex<f64>, Ix4> {
 
-        // Grid size must be even, because the oseen tensor diverges at the origin.
-        assert!(grid_size[0] % 2 == 0 && grid_size[1] % 2 == 0,
-                "Odd sized grids are not supported yet for calculating the flow field. Found a \
+        // Grid size should be odd. Origin of the kernel must be in cell [0, 0]. To
+        // have symmetric kernel, an odd number of grid cells is needed. To fix this,
+        // insert zeros at the border of the kernel, when having an even grid.
+        assert!(grid_size[0] % 2 == 1 && grid_size[1] % 2 == 1,
+                "Even sized grids are not supported yet for calculating the flow field. Found a \
                  grid-size of ({}, {})",
                 grid_size[0],
                 grid_size[1]);
@@ -98,9 +100,9 @@ impl Integrator {
             let norm: f64 = (x * x + y * y).sqrt();
             // Normalization due to forth and back Fourier transformation. FFTW3 does not
             // do this! Calculate it here once for further use in
-            //     1/n IFFT( 1/n FFT(oseen) * 1/n FFT(forcedensity))
-            //     == 1 / n^3 IFFT(FFT(oseen) * FFT(forcedensity))
-            let fft_norm = ((grid_size[0] * grid_size[1]) as f64).powf(3. / 2.);
+            //     u = 1/n IFFT( FFT(oseen) * FFT(forcedensity))
+            //     == IFFT(FFT(1/n oseen) * FFT(forcedensity))
+            let fft_norm = (grid_size[0] * grid_size[1]) as f64;
             let p = 1. / 8. / PI / norm / norm / norm / fft_norm;
 
             [[Complex::new(2. * x * x + y * y, 0.) * p, Complex::new(x * y, 0.) * p],
@@ -119,22 +121,20 @@ impl Integrator {
         let gs_y = grid_size[1] as i64;
 
         for (i, v) in res.indexed_iter_mut() {
-            // sample Oseen tensor, so that the origin lies on the 'upper left'
-            // corner of the 'upper left' cell.
+            // sample Oseen tensor, so that the origin lies on the [0, 0]
             let xi = ((i.2 as i64 + gs_x as i64 / 2) % gs_x) - gs_x as i64 / 2;
             let yi = ((i.3 as i64 + gs_y as i64 / 2) % gs_y) - gs_y as i64 / 2;
-            let x = gw_x * xi as f64 + gw_x / 2.;
-            let y = gw_y * yi as f64 + gw_y / 2.;
+            let x = gw_x * xi as f64;
+            let y = gw_y * yi as f64;
 
-            // Calcualte the average of a shifted kernel, where all four points next to the
-            // origin are shifted once into the center. This is done, to get an estimate of
-            // the correct value in the center of the cell. It is necessary, since we're
-            // using an even dimensioned kernel.
-            // Because of the linearity of the fourier transform, it does not matter if the
-            // average is calculated before or after the transformation.
-            *v = (oseen(x, y)[i.0][i.1] + oseen(x - gw_x, y)[i.0][i.1] +
-                  oseen(x, y - gw_y)[i.0][i.1] +
-                  oseen(x - gw_x, y - gw_y)[i.0][i.1]) / 4.;
+            // because the oseen tensor diverges at the origin, set this to zero, since
+            // also the force of a singular particles onto the fluid is zero at the
+            // particle's position
+            if xi == 0 && yi == 0 {
+                *v = Complex::new(0., 0.);
+            } else {
+                *v = oseen(x, y)[i.0][i.1];
+            }
         }
 
 
@@ -260,7 +260,7 @@ impl Integrator {
         }
 
         // Make use of auto-broadcasting of lhs
-        let mut u = (&self.avg_oseen_kernel_fft * &f).sum(Axis(1));
+        let mut u = (&self.oseen_kernel_fft * &f).sum(Axis(1));
 
         // Inverse Fourier transform flow field component-wise
         for mut a in u.outer_iter_mut() {
@@ -449,7 +449,7 @@ mod tests {
         check(should2, i.stress_kernel.subview(Axis(2), 2));
 
         assert_eq!(i.stress_kernel.dim(), (2, 2, 3));
-        assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs[0], gs[1]));
+        assert_eq!(i.oseen_kernel_fft.dim(), (2, 2, gs[0], gs[1]));
 
         // TODO check if average oseen tensor is reasonable
     }
