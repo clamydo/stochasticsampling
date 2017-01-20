@@ -190,7 +190,7 @@ impl Integrator {
     /// ´´´
     ///
     /// The result as dimensions (compontent, x, y).
-    fn calc_stress_divergence(&self, dist: &Distribution) -> Array<Complex<f64>, Ix3> {
+    pub fn calc_stress_divergence(&self, dist: &Distribution) -> Array<Complex<f64>, Ix3> {
         // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the
         // grid and j = 0.
         // This makes implicit and explicit use of broadcasting. Implicitly the
