@@ -4,7 +4,6 @@
 //! `simulation::integrator` module. TODO Missing docs.
 
 #![crate_type = "staticlib"]
-#![feature(proc_macro)]
 #![feature(slice_patterns)]
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
@@ -33,10 +32,10 @@ extern crate serde_derive;
 extern crate toml;
 
 
-pub mod coordinates;
+pub mod consts;
+pub mod modulo;
 #[macro_use]
 pub mod serialization_helper;
-pub mod settings;
 pub mod simulation;
 
 mod errors {

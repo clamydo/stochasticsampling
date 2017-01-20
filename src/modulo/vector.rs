@@ -1,7 +1,7 @@
 //! 2D and 3D modulo vector types.
 
-use coordinates::modulofloat::Mf64;
 use std::ops::{Add, AddAssign, Mul, Sub};
+use super::modulofloat::Mf64;
 
 /// 3D modulo vector type
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -16,7 +16,7 @@ pub struct Mod64Vector3 {
 
 impl Mod64Vector3 {
     /// Returns a modulo 3D vector with the given coordinates and quotients.
-    pub fn new(x: f64, y: f64, z: f64, m: [f64;3]) -> Mod64Vector3 {
+    pub fn new(x: f64, y: f64, z: f64, m: [f64; 3]) -> Mod64Vector3 {
         Mod64Vector3 {
             x: Mf64::new(x, m[0]),
             y: Mf64::new(y, m[1]),

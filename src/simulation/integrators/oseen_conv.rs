@@ -1,14 +1,14 @@
-use coordinates::TWOPI;
-use coordinates::particle::Particle;
+use consts::TWOPI;
 use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
 use rayon::prelude::*;
-use settings::{GridSize, StressPrefactors};
+use ::simulation::distribution::Distribution;
+use ::simulation::grid_width::GridWidth;
+use simulation::particle::Particle;
+use simulation::settings::{GridSize, StressPrefactors};
 use std::f64::consts::PI;
-use super::GridWidth;
-use super::distribution::Distribution;
 
 pub type FlowField = Array<f64, Ix3>;
 
@@ -27,7 +27,7 @@ pub struct IntegrationParameter {
 pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
     stress_kernel: Array<f64, Ix3>,
-    avg_oseen_kernel_fft: Array<Complex<f64>, Ix4>,
+    oseen_kernel_fft: Array<Complex<f64>, Ix4>,
     parameter: IntegrationParameter,
     grid_width: GridWidth,
 }
@@ -46,7 +46,7 @@ impl Integrator {
 
         Integrator {
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
-            avg_oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size, grid_width),
+            oseen_kernel_fft: Integrator::calc_oseen_kernel(grid_size, grid_width),
             parameter: parameter,
             grid_width: grid_width,
         }
@@ -86,10 +86,12 @@ impl Integrator {
     /// the cell an average of all cell corners is calculated.
     fn calc_oseen_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<Complex<f64>, Ix4> {
 
-        // Grid size must be even, because the oseen tensor diverges at the origin.
-        assert!(grid_size[0] % 2 == 0 && grid_size[1] % 2 == 0,
-                "Greed needs to have even number of cells, to avoid origin when calculating \
-                 sampled Oseen tensor. But found ({}, {})",
+        // Grid size should be odd. Origin of the kernel must be in cell [0, 0]. To
+        // have symmetric kernel, an odd number of grid cells is needed. To fix this,
+        // insert zeros at the border of the kernel, when having an even grid.
+        assert!(grid_size[0] % 2 == 1 && grid_size[1] % 2 == 1,
+                "Even sized grids are not supported yet for calculating the flow field. Found a \
+                 grid-size of ({}, {})",
                 grid_size[0],
                 grid_size[1]);
 
@@ -97,7 +99,9 @@ impl Integrator {
         let oseen = |x: f64, y: f64| {
             let norm: f64 = (x * x + y * y).sqrt();
             // Normalization due to forth and back Fourier transformation. FFTW3 does not
-            // do this!
+            // do this! Calculate it here once for further use in
+            //     u = 1/n IFFT( FFT(oseen) * FFT(forcedensity))
+            //     == IFFT(FFT(1/n oseen) * FFT(forcedensity))
             let fft_norm = (grid_size[0] * grid_size[1]) as f64;
             let p = 1. / 8. / PI / norm / norm / norm / fft_norm;
 
@@ -113,26 +117,24 @@ impl Integrator {
         let gw_x = grid_width.x;
         let gw_y = grid_width.y;
 
-        let gx = grid_size[0] as i64;
-        let gy = grid_size[1] as i64;
+        let gs_x = grid_size[0] as i64;
+        let gs_y = grid_size[1] as i64;
 
         for (i, v) in res.indexed_iter_mut() {
-            // sample Oseen tensor, so that the origin lies on the 'upper left'
-            // corner of the 'upper left' cell.
-            let xi = ((i.2 as i64 + gx as i64 / 2) % gx) - gx as i64 / 2;
-            let yi = ((i.3 as i64 + gy as i64 / 2) % gy) - gy as i64 / 2;
-            let x = gw_x * xi as f64 + gw_x / 2.;
-            let y = gw_y * yi as f64 + gw_y / 2.;
+            // sample Oseen tensor, so that the origin lies on the [0, 0]
+            let xi = ((i.2 as i64 + gs_x as i64 / 2) % gs_x) - gs_x as i64 / 2;
+            let yi = ((i.3 as i64 + gs_y as i64 / 2) % gs_y) - gs_y as i64 / 2;
+            let x = gw_x * xi as f64;
+            let y = gw_y * yi as f64;
 
-            // Calcualte the average of a shifted kernel, where all four points next to the
-            // origin are shifted once into the center. This is done, to get an estimate of
-            // the correct value in the center of the cell. It is necessary, since we're
-            // using an even dimensioned kernel.
-            // Because of the linearity of the fourier transform, it does not matter if the
-            // average is calculated before or after the transformation.
-            *v = (oseen(x, y)[i.0][i.1] + oseen(x - gw_x, y)[i.0][i.1] +
-                  oseen(x, y - gw_y)[i.0][i.1] +
-                  oseen(x - gw_x, y - gw_y)[i.0][i.1]) / 4.;
+            // because the oseen tensor diverges at the origin, set this to zero, since
+            // also the force of a singular particles onto the fluid is zero at the
+            // particle's position
+            if xi == 0 && yi == 0 {
+                *v = Complex::new(0., 0.);
+            } else {
+                *v = oseen(x, y)[i.0][i.1];
+            }
         }
 
 
@@ -188,7 +190,7 @@ impl Integrator {
     /// ´´´
     ///
     /// The result as dimensions (compontent, x, y).
-    fn calc_stress_divergence(&self, dist: &Distribution) -> Array<Complex<f64>, Ix3> {
+    pub fn calc_stress_divergence(&self, dist: &Distribution) -> Array<Complex<f64>, Ix3> {
         // Calculates (grad Psi)_i * stress_kernel_(i, j) for every point on the
         // grid and j = 0.
         // This makes implicit and explicit use of broadcasting. Implicitly the
@@ -258,7 +260,7 @@ impl Integrator {
         }
 
         // Make use of auto-broadcasting of lhs
-        let mut u = (&self.avg_oseen_kernel_fft * &f).sum(Axis(1));
+        let mut u = (&self.oseen_kernel_fft * &f).sum(Axis(1));
 
         // Inverse Fourier transform flow field component-wise
         for mut a in u.outer_iter_mut() {
@@ -326,9 +328,9 @@ impl Integrator {
 
         particles.par_iter_mut()
             .zip(random_samples.par_iter())
-            .for_each(|(ref mut p, r)|
+            .for_each(|(ref mut p, r)| {
                 self.evolve_particle_inplace(p, &r, &flow_field, &vort.view())
-            );
+            });
     }
 }
 
@@ -393,28 +395,29 @@ fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use coordinates::particle::Particle;
     use fftw3::complex::Complex;
     use ndarray::{Array, Axis, arr2};
-    use settings::StressPrefactors;
+    use simulation::distribution::Distribution;
+    use simulation::grid_width::GridWidth;
+    use simulation::particle::Particle;
+    use simulation::settings::StressPrefactors;
     use std::f64::{EPSILON, MAX};
     use std::f64::consts::PI;
     use super::*;
-    use super::super::distribution::Distribution;
-    use super::super::grid_width;
+
+    fn equal_floats(a: f64, b: f64) -> bool {
+        let diff = (a - b).abs();
+        diff / (a.abs() + b.abs()).min(MAX) < EPSILON
+    }
+
 
     /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
-        fn equal_floats(a: f64, b: f64) -> bool {
-            let diff = (a - b).abs();
-            diff / (a.abs() + b.abs()).min(MAX) < EPSILON
-        }
-
         let bs = [1., 1.];
-        let gs = [10, 10, 3];
-        let gw = grid_width(gs, bs);
+        let gs = [11, 11, 3];
+        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -435,10 +438,9 @@ mod tests {
         let should1 = arr2(&[[0.5, -1.0], [1.0, -0.5]]);
         let should2 = arr2(&[[-0.25, 0.066987298107780712], [-0.9330127018922195, 0.25]]);
 
-        let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| {
-            for (a, b) in should.iter().zip(stress.iter()) {
-                assert!(equal_floats(*a, *b), "{} != {}", should, stress);
-            }
+        let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
+            should.iter().zip(stress.iter()) {
+            assert!(equal_floats(*a, *b), "{} != {}", should, stress);
         };
 
         check(should0, i.stress_kernel.subview(Axis(2), 0));
@@ -446,7 +448,7 @@ mod tests {
         check(should2, i.stress_kernel.subview(Axis(2), 2));
 
         assert_eq!(i.stress_kernel.dim(), (2, 2, 3));
-        assert_eq!(i.avg_oseen_kernel_fft.dim(), (2, 2, gs[0], gs[1]));
+        assert_eq!(i.oseen_kernel_fft.dim(), (2, 2, gs[0], gs[1]));
 
         // TODO check if average oseen tensor is reasonable
     }
@@ -454,8 +456,8 @@ mod tests {
     #[test]
     fn test_evolve() {
         let bs = [1., 1.];
-        let gs = [10, 10, 4];
-        let gw = grid_width(gs, bs);
+        let gs = [11, 11, 6];
+        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -472,7 +474,7 @@ mod tests {
         let i = Integrator::new(gs, gw, int_param);
 
         let mut p = vec![Particle::new(0.6, 0.3, 0., bs)];
-        let mut d = Distribution::new(gs, grid_width(gs, bs));
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
 
         let u = i.calculate_flow_field(&d);
@@ -480,9 +482,15 @@ mod tests {
         i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], u.view());
 
         // TODO Check these values!
-        assert_eq!(p[0].position.x.v, 0.710000000000004);
-        assert_eq!(p[0].position.y.v, 0.30999999999999917);
-        assert_eq!(p[0].orientation.v, 1.9001361416090674);
+        assert!(equal_floats(p[0].position.x.v, 0.71),
+                "got {}",
+                p[0].position.x.v);
+        assert!(equal_floats(p[0].position.y.v, 0.3100000000000014),
+                "got {}",
+                p[0].position.y.v);
+        assert!(equal_floats(p[0].orientation.v, 0.6322210724534258),
+                "got {}",
+                p[0].orientation.v);
     }
 
     #[test]
@@ -491,7 +499,7 @@ mod tests {
         let f = Array::range(0., PI, h).map(|x| x.sin());
         let integral = super::periodic_simpson_integrate(f.view(), h);
 
-        assert!((integral - 2.000000010824505).abs() < EPSILON,
+        assert!(equal_floats(integral, 2.000000010824505),
                 "h: {}, result: {}",
                 h,
                 integral);
@@ -500,7 +508,7 @@ mod tests {
         let h = 4. / 100.;
         let f = Array::range(0., 4., h).map(|x| x * x);
         let integral = super::periodic_simpson_integrate(f.view(), h);
-        assert!((integral - 21.120000000000001).abs() < EPSILON,
+        assert!(equal_floats(integral, 21.120000000000001),
                 "h: {}, result: {}",
                 h,
                 integral);
@@ -528,8 +536,8 @@ mod tests {
     #[test]
     fn test_calc_stress_divergence() {
         let bs = [1., 1.];
-        let gs = [10, 10, 10];
-        let gw = grid_width(gs, bs);
+        let gs = [11, 11, 10];
+        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -544,7 +552,7 @@ mod tests {
         };
 
         let i = Integrator::new(gs, gw, int_param);
-        let mut d = Distribution::new(gs, grid_width(gs, bs));
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
 
         d.dist = Array::zeros(gs);
 

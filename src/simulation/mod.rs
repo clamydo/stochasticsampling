@@ -1,19 +1,23 @@
 //! Module that defines data structures and algorithms for the integration of
 //! the simulation.
-mod distribution;
-mod integrator;
-pub mod output;
 
-use coordinates::TWOPI;
-use coordinates::particle::Particle;
+pub mod distribution;
+pub mod integrators;
+pub mod grid_width;
+pub mod output;
+pub mod particle;
+pub mod settings;
+
 use ndarray::Array;
 use pcg_rand::Pcg64;
 use rand::Rand;
 use rand::SeedableRng;
 use rand::distributions::normal::StandardNormal;
 use self::distribution::Distribution;
-use self::integrator::{FlowField, IntegrationParameter, Integrator};
-use settings::{BoxSize, GridSize, Settings};
+use self::grid_width::GridWidth;
+use self::integrators::oseen_conv::{FlowField, IntegrationParameter, Integrator};
+use self::particle::Particle;
+use self::settings::Settings;
 use std::f64;
 
 
@@ -50,22 +54,6 @@ pub struct Snapshot {
 }
 
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct GridWidth {
-    x: f64,
-    y: f64,
-    a: f64,
-}
-
-/// Calculates width of a grid cell given the number of cells and box size.
-pub fn grid_width(grid_size: GridSize, box_size: BoxSize) -> GridWidth {
-    GridWidth {
-        x: box_size[0] as f64 / grid_size[0] as f64,
-        y: box_size[1] as f64 / grid_size[1] as f64,
-        a: TWOPI / grid_size[2] as f64,
-    }
-}
-
 impl Simulation {
     /// Return a new simulation data structure, holding the state of the
     /// simulation.
@@ -74,9 +62,6 @@ impl Simulation {
         let sim = settings.simulation;
         let param = settings.parameters;
 
-
-        // share particles evenly between all ranks
-        let ranklocal_number_of_particles: usize = sim.number_of_particles;
 
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
@@ -88,7 +73,7 @@ impl Simulation {
         };
 
         let integrator = Integrator::new(sim.grid_size,
-                                         grid_width(sim.grid_size, sim.box_size),
+                                         GridWidth::new(sim.grid_size, sim.box_size),
                                          int_param);
 
 
@@ -97,10 +82,11 @@ impl Simulation {
 
         // initialize state with zeros
         let state = SimulationState {
-            distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
+            distribution: Distribution::new(sim.grid_size,
+                                            GridWidth::new(sim.grid_size, sim.box_size)),
             flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
-            particles: Vec::with_capacity(ranklocal_number_of_particles),
-            random_samples: vec![[0f64; 3]; ranklocal_number_of_particles],
+            particles: Vec::with_capacity(sim.number_of_particles),
+            random_samples: vec![[0f64; 3]; sim.number_of_particles],
             rng: SeedableRng::from_seed(seed),
             timestep: 0,
         };
@@ -150,6 +136,45 @@ impl Simulation {
         self.state.rng.reseed(snapshot.rng_seed);
     }
 
+    /// Returns a fill Snapshot
+    pub fn get_snapshot(&self) -> Snapshot {
+        let seed = self.state.rng.extract_seed();
+
+        Snapshot {
+            particles: self.state.particles.clone(),
+            // assuming little endianess
+            rng_seed: [seed[0].lo, seed[0].hi, seed[1].lo, seed[1].hi],
+            timestep: self.state.timestep,
+        }
+    }
+
+    // Getter
+    /// Returns all particles
+    pub fn get_particles(&self) -> Vec<Particle> {
+        self.state.particles.clone()
+    }
+
+    /// Returns the first `n` particles
+    pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
+        self.state.particles[..n].to_vec()
+    }
+
+    /// Returns sampled distribution field
+    pub fn get_distribution(&self) -> Distribution {
+        self.state.distribution.clone()
+    }
+
+    /// Returns sampled flow field
+    pub fn get_flow_field(&self) -> FlowField {
+        self.state.flow_field.clone()
+    }
+
+    /// Returns current timestep
+    pub fn get_timestep(&self) -> usize {
+        self.state.timestep
+    }
+
+
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
@@ -176,45 +201,6 @@ impl Simulation {
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
-        self.state.timestep
-    }
-
-    /// Returns a fill Snapshot
-    pub fn get_snapshot(&self) -> Snapshot {
-        let seed = self.state.rng.extract_seed();
-
-        Snapshot {
-            particles: self.state.particles.clone(),
-            // assuming little endianess
-            rng_seed: [seed[0].lo, seed[0].hi, seed[1].lo, seed[1].hi],
-            timestep: self.state.timestep,
-        }
-    }
-
-    // Getter
-
-    /// Returns all particles
-    pub fn get_particles(&self) -> Vec<Particle> {
-        self.state.particles.clone()
-    }
-
-    /// Returns the first `n` particles
-    pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
-        self.state.particles[..n].to_vec()
-    }
-
-    /// Returns sampled distribution field
-    pub fn get_distribution(&self) -> Distribution {
-        self.state.distribution.clone()
-    }
-
-    /// Returns sampled flow field
-    pub fn get_flow_field(&self) -> FlowField {
-        self.state.flow_field.clone()
-    }
-
-    /// Returns current timestep
-    pub fn get_timestep(&self) -> usize {
         self.state.timestep
     }
 }

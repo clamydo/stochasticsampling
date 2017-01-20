@@ -1,12 +1,12 @@
 //! Data structure representing the coordinates of a particle.
 
+use consts::TWOPI;
+use modulo::modulofloat::Mf64;
+use modulo::vector::Mod64Vector2;
 use pcg_rand::Pcg64;
 use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Range};
-use settings::BoxSize;
-use super::TWOPI;
-use super::modulofloat::Mf64;
-use super::vector::Mod64Vector2;
+use simulation::settings::BoxSize;
 
 /// Coordinates (including the orientation) of a particle in 2D.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

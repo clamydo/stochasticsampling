@@ -1,10 +1,10 @@
 //! A representation for the probability distribution function.
 
-use coordinates::particle::Particle;
 use ndarray::{Array, Ix, Ix3, Ix4};
-use settings::GridSize;
 use std::ops::Index;
-use super::GridWidth;
+use super::grid_width::GridWidth;
+use super::particle::Particle;
+use super::settings::GridSize;
 
 /// Array type, that holds the sampled function values.
 pub type Bins = Array<f64, Ix3>;
@@ -163,20 +163,20 @@ impl Index<[i32; 3]> for Distribution {
 
 #[cfg(test)]
 mod tests {
-    use coordinates::modulofloat::Mf64;
-    use coordinates::particle::Particle;
-    use coordinates::vector::Mod64Vector2;
     use ieee754::Ieee754;
+    use modulo::modulofloat::Mf64;
+    use modulo::vector::Mod64Vector2;
     use ndarray::{Array, Axis, arr3};
+    use simulation::grid_width::GridWidth;
+    use simulation::particle::Particle;
     use std::f64::EPSILON;
     use super::*;
-    use super::super::{GridWidth, grid_width};
 
     #[test]
     fn new() {
         let gs = [10, 10, 6];
         let bs = [1., 1.];
-        let dist = Distribution::new(gs, grid_width(gs, bs));
+        let dist = Distribution::new(gs, GridWidth::new(gs, bs));
         assert_eq!(dist.shape(), (10, 10, 6));
     }
 
@@ -184,7 +184,7 @@ mod tests {
     fn histogram() {
         let grid_size = [5, 5, 2];
         let box_size = [1., 1.];
-        let gw = grid_width(grid_size, box_size);
+        let gw = GridWidth::new(grid_size, box_size);
         let n = 1000;
         let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, gw);
@@ -209,7 +209,7 @@ mod tests {
         let grid_size = [5, 5, 2];
         let n = 1000;
         let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
-        let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
+        let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.sample_from(&p);
 
@@ -247,7 +247,7 @@ mod tests {
                  s: &str,
                  gs: [usize; 3],
                  bs: [f64; 2]) {
-            let dist = Distribution::new(gs, grid_width(gs, bs));
+            let dist = Distribution::new(gs, GridWidth::new(gs, bs));
 
             let g = dist.coord_to_grid(&p);
 
@@ -331,7 +331,7 @@ mod tests {
     fn spatgrad() {
         let box_size = [1., 1.];
         let grid_size = [5, 5, 1];
-        let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
+        let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
                         [[2.], [3.], [4.], [5.], [6.]],
@@ -370,7 +370,7 @@ mod tests {
     fn index() {
         let box_size = [1., 1.];
         let grid_size = [2, 3, 2];
-        let mut d = Distribution::new(grid_size, grid_width(grid_size, box_size));
+        let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]], [[4., 4.5], [5., 5.5], [6., 6.5]]]);
 
