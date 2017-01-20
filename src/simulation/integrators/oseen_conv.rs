@@ -1,4 +1,4 @@
-use coordinates::TWOPI;
+use consts::TWOPI;
 use coordinates::particle::Particle;
 use fftw3::complex::Complex;
 use fftw3::fft;
@@ -7,8 +7,8 @@ use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
 use rayon::prelude::*;
 use settings::{GridSize, StressPrefactors};
 use std::f64::consts::PI;
-use super::GridWidth;
-use super::distribution::Distribution;
+use ::simulation::grid_width::GridWidth;
+use ::simulation::distribution::Distribution;
 
 pub type FlowField = Array<f64, Ix3>;
 

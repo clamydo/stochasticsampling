@@ -1,19 +1,21 @@
 //! Module that defines data structures and algorithms for the integration of
 //! the simulation.
+
 pub mod distribution;
-pub mod integrator;
+pub mod integrators;
+pub mod grid_width;
 pub mod output;
 
-use coordinates::TWOPI;
 use coordinates::particle::Particle;
+use self::grid_width::GridWidth;
 use ndarray::Array;
 use pcg_rand::Pcg64;
 use rand::Rand;
 use rand::SeedableRng;
 use rand::distributions::normal::StandardNormal;
 use self::distribution::Distribution;
-use self::integrator::{FlowField, IntegrationParameter, Integrator};
-use settings::{BoxSize, GridSize, Settings};
+use self::integrators::oseen_conv::{FlowField, IntegrationParameter, Integrator};
+use settings::Settings;
 use std::f64;
 
 
@@ -50,22 +52,6 @@ pub struct Snapshot {
 }
 
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct GridWidth {
-    pub x: f64,
-    pub y: f64,
-    pub a: f64,
-}
-
-/// Calculates width of a grid cell given the number of cells and box size.
-pub fn grid_width(grid_size: GridSize, box_size: BoxSize) -> GridWidth {
-    GridWidth {
-        x: box_size[0] as f64 / grid_size[0] as f64,
-        y: box_size[1] as f64 / grid_size[1] as f64,
-        a: TWOPI / grid_size[2] as f64,
-    }
-}
-
 impl Simulation {
     /// Return a new simulation data structure, holding the state of the
     /// simulation.
@@ -88,7 +74,7 @@ impl Simulation {
         };
 
         let integrator = Integrator::new(sim.grid_size,
-                                         grid_width(sim.grid_size, sim.box_size),
+                                         GridWidth::new(sim.grid_size, sim.box_size),
                                          int_param);
 
 
@@ -97,7 +83,7 @@ impl Simulation {
 
         // initialize state with zeros
         let state = SimulationState {
-            distribution: Distribution::new(sim.grid_size, grid_width(sim.grid_size, sim.box_size)),
+            distribution: Distribution::new(sim.grid_size, GridWidth::new(sim.grid_size, sim.box_size)),
             flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
             particles: Vec::with_capacity(ranklocal_number_of_particles),
             random_samples: vec![[0f64; 3]; ranklocal_number_of_particles],

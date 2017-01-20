@@ -4,7 +4,7 @@ use coordinates::particle::Particle;
 use ndarray::{Array, Ix, Ix3, Ix4};
 use settings::GridSize;
 use std::ops::Index;
-use super::GridWidth;
+use super::grid_width::GridWidth;
 
 /// Array type, that holds the sampled function values.
 pub type Bins = Array<f64, Ix3>;

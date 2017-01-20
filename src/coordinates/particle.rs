@@ -4,7 +4,7 @@ use pcg_rand::Pcg64;
 use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Range};
 use settings::BoxSize;
-use super::TWOPI;
+use ::consts::TWOPI;
 use super::modulofloat::Mf64;
 use super::vector::Mod64Vector2;
 

@@ -32,6 +32,7 @@ extern crate serde_derive;
 extern crate toml;
 
 
+pub mod consts;
 pub mod coordinates;
 #[macro_use]
 pub mod serialization_helper;
