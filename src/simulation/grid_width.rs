@@ -1,7 +1,7 @@
 //! Data structure that holds the grid width's/
 
-use settings::{BoxSize, GridSize};
 use consts::TWOPI;
+use simulation::settings::{BoxSize, GridSize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct GridWidth {

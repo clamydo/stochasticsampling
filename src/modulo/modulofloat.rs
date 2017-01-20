@@ -7,7 +7,7 @@
 //!
 //! # Examples
 //! ```
-//! use ::stochasticsampling::coordinates::modulofloat::Mf64;
+//! use stochasticsampling::modulo::modulofloat::Mf64;
 //! let a = Mf64::new(-1.125, 1.0);
 //! println!("{:?}", a);
 //!

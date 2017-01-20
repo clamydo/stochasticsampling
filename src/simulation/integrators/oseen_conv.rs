@@ -1,14 +1,14 @@
 use consts::TWOPI;
-use coordinates::particle::Particle;
 use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
 use rayon::prelude::*;
-use settings::{GridSize, StressPrefactors};
-use std::f64::consts::PI;
-use ::simulation::grid_width::GridWidth;
 use ::simulation::distribution::Distribution;
+use ::simulation::grid_width::GridWidth;
+use simulation::particle::Particle;
+use simulation::settings::{GridSize, StressPrefactors};
+use std::f64::consts::PI;
 
 pub type FlowField = Array<f64, Ix3>;
 
@@ -395,15 +395,15 @@ fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use coordinates::particle::Particle;
     use fftw3::complex::Complex;
     use ndarray::{Array, Axis, arr2};
-    use settings::StressPrefactors;
+    use simulation::distribution::Distribution;
+    use simulation::grid_width::GridWidth;
+    use simulation::particle::Particle;
+    use simulation::settings::StressPrefactors;
     use std::f64::{EPSILON, MAX};
     use std::f64::consts::PI;
     use super::*;
-    use super::super::distribution::Distribution;
-    use super::super::grid_width;
 
     fn equal_floats(a: f64, b: f64) -> bool {
         let diff = (a - b).abs();
@@ -416,8 +416,8 @@ mod tests {
     #[test]
     fn new() {
         let bs = [1., 1.];
-        let gs = [10, 10, 3];
-        let gw = grid_width(gs, bs);
+        let gs = [11, 11, 3];
+        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -456,8 +456,8 @@ mod tests {
     #[test]
     fn test_evolve() {
         let bs = [1., 1.];
-        let gs = [10, 10, 4];
-        let gw = grid_width(gs, bs);
+        let gs = [11, 11, 6];
+        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -474,7 +474,7 @@ mod tests {
         let i = Integrator::new(gs, gw, int_param);
 
         let mut p = vec![Particle::new(0.6, 0.3, 0., bs)];
-        let mut d = Distribution::new(gs, grid_width(gs, bs));
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
 
         let u = i.calculate_flow_field(&d);
@@ -482,9 +482,15 @@ mod tests {
         i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], u.view());
 
         // TODO Check these values!
-        assert!(equal_floats(p[0].position.x.v, 0.710000000000005));
-        assert!(equal_floats(p[0].position.y.v, 0.30999999999999917));
-        assert!(equal_floats(p[0].orientation.v, 1.9001361416090674));
+        assert!(equal_floats(p[0].position.x.v, 0.71),
+                "got {}",
+                p[0].position.x.v);
+        assert!(equal_floats(p[0].position.y.v, 0.3100000000000014),
+                "got {}",
+                p[0].position.y.v);
+        assert!(equal_floats(p[0].orientation.v, 0.6322210724534258),
+                "got {}",
+                p[0].orientation.v);
     }
 
     #[test]
@@ -502,7 +508,7 @@ mod tests {
         let h = 4. / 100.;
         let f = Array::range(0., 4., h).map(|x| x * x);
         let integral = super::periodic_simpson_integrate(f.view(), h);
-        assert!(equal_flaots(integral, 21.120000000000001),
+        assert!(equal_floats(integral, 21.120000000000001),
                 "h: {}, result: {}",
                 h,
                 integral);
@@ -530,8 +536,8 @@ mod tests {
     #[test]
     fn test_calc_stress_divergence() {
         let bs = [1., 1.];
-        let gs = [10, 10, 10];
-        let gw = grid_width(gs, bs);
+        let gs = [11, 11, 10];
+        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -546,7 +552,7 @@ mod tests {
         };
 
         let i = Integrator::new(gs, gw, int_param);
-        let mut d = Distribution::new(gs, grid_width(gs, bs));
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
 
         d.dist = Array::zeros(gs);
 

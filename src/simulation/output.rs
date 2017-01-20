@@ -1,6 +1,6 @@
 use super::distribution::Distribution;
 use super::integrators::oseen_conv::FlowField;
-use super::super::coordinates::particle::Particle;
+use super::particle::Particle;
 
 /// Captures values that can be outputed during simulation.
 /// Not all fields need to have values, which is reflected in the Option type.

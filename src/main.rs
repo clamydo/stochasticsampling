@@ -29,12 +29,11 @@ use std::io;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
-use stochasticsampling::coordinates::particle::Particle;
-use stochasticsampling::settings::{self, Settings};
-use stochasticsampling::settings::OutputFormat;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::Snapshot;
 use stochasticsampling::simulation::output::Output;
+use stochasticsampling::simulation::particle::Particle;
+use stochasticsampling::simulation::settings::{self, OutputFormat, Settings};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -279,22 +278,26 @@ fn run_simulation(settings: &Settings,
 
         // Build output
         let output = Output {
-            distribution: settings.simulation.output.distribution_every_timestep.and_then(|x| {
-                if timestep % x == 0 {
+            distribution: settings.simulation
+                .output
+                .distribution_every_timestep
+                .and_then(|x| if timestep % x == 0 {
                     Some(simulation.get_distribution())
                 } else {
                     None
-                }
-            }),
-            flow_field: settings.simulation.output.flowfield_every_timestep.and_then(|x| {
-                if timestep % x == 0 {
+                }),
+            flow_field: settings.simulation
+                .output
+                .flowfield_every_timestep
+                .and_then(|x| if timestep % x == 0 {
                     Some(simulation.get_flow_field())
                 } else {
                     None
-                }
-            }),
-            particles: settings.simulation.output.particle_every_timestep.and_then(|x| {
-                if timestep % x == 0 {
+                }),
+            particles: settings.simulation
+                .output
+                .particle_every_timestep
+                .and_then(|x| if timestep % x == 0 {
                     settings.simulation
                         .output
                         .particle_head
@@ -302,8 +305,7 @@ fn run_simulation(settings: &Settings,
                         .or_else(|| Some(simulation.get_particles()))
                 } else {
                     None
-                }
-            }),
+                }),
             timestep: timestep,
         };
 
