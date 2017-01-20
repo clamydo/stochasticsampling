@@ -1,7 +1,7 @@
 //! Module that defines data structures and algorithms for the integration of
 //! the simulation.
-mod distribution;
-mod integrator;
+pub mod distribution;
+pub mod integrator;
 pub mod output;
 
 use coordinates::TWOPI;
@@ -52,9 +52,9 @@ pub struct Snapshot {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct GridWidth {
-    x: f64,
-    y: f64,
-    a: f64,
+    pub x: f64,
+    pub y: f64,
+    pub a: f64,
 }
 
 /// Calculates width of a grid cell given the number of cells and box size.
