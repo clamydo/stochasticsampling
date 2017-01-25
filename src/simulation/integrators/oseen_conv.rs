@@ -86,9 +86,22 @@ impl Integrator {
     /// the cell an average of all cell corners is calculated.
     fn calc_oseen_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<Complex<f64>, Ix4> {
 
+        /*
         // Grid size should be odd. Origin of the kernel must be in cell [0, 0]. To
         // have symmetric kernel, an odd number of grid cells is needed. To fix this,
         // insert zeros at the border of the kernel, when having an even grid.
+        assert!(grid_size[0] % 2 == 1 && grid_size[1] % 2 == 1,
+                "Even sized grids are not supported yet for calculating the flow field. Found a \
+                 grid-size of ({}, {})",
+                grid_size[0],
+                grid_size[1]);
+        */
+
+
+        // Grid size should be even. Origin of the kernel must be in cell [0, 0].
+        // Needs even kernel, to skip origin and do a sub-cell average sampling.
+        // To fix this,/ insert zeros at the border of the kernel, when having
+        // an odd sized grid.
         assert!(grid_size[0] % 2 == 1 && grid_size[1] % 2 == 1,
                 "Even sized grids are not supported yet for calculating the flow field. Found a \
                  grid-size of ({}, {})",
@@ -124,17 +137,29 @@ impl Integrator {
             // sample Oseen tensor, so that the origin lies on the [0, 0]
             let xi = ((i.2 as i64 + gs_x as i64 / 2) % gs_x) - gs_x as i64 / 2;
             let yi = ((i.3 as i64 + gs_y as i64 / 2) % gs_y) - gs_y as i64 / 2;
-            let x = gw_x * xi as f64;
-            let y = gw_y * yi as f64;
+            // let x = gw_x * xi as f64;
+            // let y = gw_y * yi as f64;
+            let x = gw_x * xi as f64 + gw_x / 2.;
+            let y = gw_y * yi as f64 + gw_y / 2.;
 
-            // because the oseen tensor diverges at the origin, set this to zero, since
-            // also the force of a singular particles onto the fluid is zero at the
-            // particle's position
-            if xi == 0 && yi == 0 {
-                *v = Complex::new(0., 0.);
-            } else {
-                *v = oseen(x, y)[i.0][i.1];
-            }
+            // // because the oseen tensor diverges at the origin, set this to zero, since
+            // // also the force of a singular particles onto the fluid is zero at the
+            // // particle's position
+            // if xi == 0 && yi == 0 {
+            //     *v = Complex::new(0., 0.);
+            // } else {
+            //     *v = oseen(x, y)[i.0][i.1];
+            // }
+
+            // Calcualte the average of a shifted kernel, where all four points next to the
+            // origin are shifted once into the center. This is done, to get an estimate of
+            // the correct value in the center of the cell. It is necessary, since we're
+            // using an even dimensioned kernel.
+            // Because of the linearity of the fourier transform, it does not matter if the
+            // average is calculated before or after the transformation.
+            *v = (oseen(x, y)[i.0][i.1] + oseen(x - gw_x, y)[i.0][i.1] +
+                  oseen(x, y - gw_y)[i.0][i.1] +
+                  oseen(x - gw_x, y - gw_y)[i.0][i.1]) / 4.;
         }
 
 
