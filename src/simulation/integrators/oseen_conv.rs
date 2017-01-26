@@ -448,7 +448,7 @@ mod tests {
     #[test]
     fn new() {
         let bs = [1., 1.];
-        let gs = [11, 11, 3];
+        let gs = [10, 10, 3];
         let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
@@ -486,9 +486,9 @@ mod tests {
     }
 
     #[test]
-    fn test_evolve() {
+    fn test_evolve_particles_inplace() {
         let bs = [1., 1.];
-        let gs = [11, 11, 6];
+        let gs = [10, 10, 6];
         let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
@@ -505,24 +505,46 @@ mod tests {
 
         let i = Integrator::new(gs, gw, int_param);
 
-        let mut p = vec![Particle::new(0.6, 0.3, 0., bs)];
+        let mut p = vec![Particle::new(0.6, 0.3, 0., bs),
+                         Particle::new(0.6, 0.3, 1.5707963267948966, bs),
+                         Particle::new(0.6, 0.3, 2.0943951023931953, bs),
+                         Particle::new(0.6, 0.3, 4.71238898038469, bs),
+                         Particle::new(0.6, 0.3, 6., bs)];
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
 
         let u = i.calculate_flow_field(&d);
 
-        i.evolve_particles_inplace(&mut p, &vec![[0.1, 0.1, 0.1]], u.view());
+        i.evolve_particles_inplace(&mut p,
+                                   &vec![[0.1, 0.1, 0.1],
+                                         [0.1, 0.1, 0.1],
+                                         [0.1, 0.1, 0.1],
+                                         [0.1, 0.1, 0.1],
+                                         [0.1, 0.1, 0.1]],
+                                   u.view());
 
         // TODO Check these values!
-        assert!(equal_floats(p[0].position.x.v, 0.71),
+        assert!(equal_floats(p[0].position.x.v, 0.7100000000000002),
                 "got {}",
                 p[0].position.x.v);
-        assert!(equal_floats(p[0].position.y.v, 0.3100000000000014),
+        assert!(equal_floats(p[0].position.y.v, 0.30999999999999867),
                 "got {}",
                 p[0].position.y.v);
-        assert!(equal_floats(p[0].orientation.v, 0.6322210724534258),
-                "got {}",
-                p[0].orientation.v);
+
+
+        let orientations = [1.9880564727277061,
+                            3.5488527995226065,
+                            4.067451575120913,
+                            0.4072601459328098,
+                            1.7044728684146264];
+
+        for (p, o) in p.iter().zip(&orientations) {
+            assert!(equal_floats(p.orientation.v, *o),
+                    "got {}={}",
+                    p.orientation.v,
+                    *o);
+        }
+    }
     }
 
     #[test]
@@ -568,7 +590,7 @@ mod tests {
     #[test]
     fn test_calc_stress_divergence() {
         let bs = [1., 1.];
-        let gs = [11, 11, 10];
+        let gs = [10, 10, 10];
         let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
