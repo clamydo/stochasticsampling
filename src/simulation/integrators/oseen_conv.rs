@@ -53,6 +53,7 @@ impl Integrator {
 
     }
 
+
     /// Calculates approximation of discretized stress kernel, to be used in
     /// the expectation value to obtain the stress tensor.
     fn calc_stress_kernel(grid_size: GridSize,
@@ -75,6 +76,7 @@ impl Integrator {
 
         s
     }
+
 
     /// The Oseen tensor diverges at the origin and is not defined. Thus, it
     /// can't be sampled in the origin. To work around this, a Oseen kernel at
@@ -178,6 +180,7 @@ impl Integrator {
         res
     }
 
+
     /// Calculates force on the flow field because of the sress contributions.
     /// The first axis represents the direction of the derivative, the other
     /// correspond to the spatial dimension.
@@ -266,6 +269,7 @@ impl Integrator {
                      |v| Complex::from(periodic_simpson_integrate(v, h.a)))
     }
 
+
     /// Calculate flow field by convolving the Green's function of the stokes
     /// equation (Oseen tensor) with the stress field divergence (force density)
     pub fn calculate_flow_field(&self, dist: &Distribution) -> Array<f64, Ix3> {
@@ -298,6 +302,7 @@ impl Integrator {
 
         u.map(|x| x.re())
     }
+
 
     /// Updates a test particle configuration according to the given parameters.
     ///
@@ -342,6 +347,7 @@ impl Integrator {
                          (param.magnetic_reorientation * p.orientation.as_ref().cos() +
                           0.5 * vort) * param.timestep;
     }
+
 
     pub fn evolve_particles_inplace<'a>(&self,
                                         particles: &mut Vec<Particle>,
@@ -393,6 +399,7 @@ fn vorticity(grid_width: GridWidth, u: &ArrayView<f64, Ix3>) -> Array<f64, Ix2> 
 
     res
 }
+
 
 /// Implements Simpon's Rule integration on an array, representing sampled
 /// points of a periodic function.
