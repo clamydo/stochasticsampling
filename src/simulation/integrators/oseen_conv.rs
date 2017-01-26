@@ -331,10 +331,20 @@ impl Integrator {
 
         let param = &self.parameter;
 
+        let cos_orient = p.orientation.as_ref().cos();
+        // let sin_orient = p.orientation.as_ref().sin();
+        // Calculating sqrt() is more efficient than sin().
+        let sin_orient = if (0. <= p.orientation.v && p.orientation.v <= 1.5707963267948966) ||
+                            p.orientation.v >= 4.71238898038469 {
+            (1. - cos_orient * cos_orient).sqrt()
+        } else {
+            -(1. - cos_orient * cos_orient).sqrt()
+        };
+
         // Evolve particle position.
-        p.position.x += (flow_x + p.orientation.as_ref().cos()) * param.timestep +
+        p.position.x += (flow_x + cos_orient) * param.timestep +
                         param.trans_diffusion * random_samples[0];
-        p.position.y += (flow_y + p.orientation.as_ref().sin()) * param.timestep +
+        p.position.y += (flow_y + sin_orient) * param.timestep +
                         param.trans_diffusion * random_samples[1];
 
 
@@ -344,8 +354,7 @@ impl Integrator {
         // Evolve particle orientation. Assumes magnetic field to be oriented along
         // Y-axis.
         p.orientation += param.rot_diffusion * random_samples[2] +
-                         (param.magnetic_reorientation * p.orientation.as_ref().cos() +
-                          0.5 * vort) * param.timestep;
+                         (param.magnetic_reorientation * cos_orient + 0.5 * vort) * param.timestep;
     }
 
 
@@ -436,6 +445,7 @@ mod tests {
     use std::f64::{EPSILON, MAX};
     use std::f64::consts::PI;
     use super::*;
+    use test::Bencher;
 
     fn equal_floats(a: f64, b: f64) -> bool {
         let diff = (a - b).abs();
@@ -545,6 +555,36 @@ mod tests {
                     *o);
         }
     }
+
+    #[bench]
+    fn bench_evolve_particle_inplace(b: &mut Bencher) {
+        let bs = [1., 1.];
+        let gs = [6, 6, 6];
+        let gw = GridWidth::new(gs, bs);
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 1.,
+        };
+
+        let int_param = IntegrationParameter {
+            timestep: 0.1,
+            trans_diffusion: 0.1,
+            rot_diffusion: 0.1,
+            stress: s,
+            magnetic_reorientation: 0.1,
+        };
+
+        let i = Integrator::new(gs, gw, int_param);
+
+        let mut p = Particle::new(0.6, 0.3, 0., bs);
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
+        d.sample_from(&vec![p]);
+
+        let u = i.calculate_flow_field(&d);
+
+        let vort = vorticity(gw, &u.view());
+
+        b.iter(|| i.evolve_particle_inplace(&mut p, &[0.1, 0.1, 0.1], &u.view(), &vort.view()));
     }
 
     #[test]
