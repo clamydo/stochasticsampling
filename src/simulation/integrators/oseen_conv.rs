@@ -104,8 +104,8 @@ impl Integrator {
         // Needs even kernel, to skip origin and do a sub-cell average sampling.
         // To fix this,/ insert zeros at the border of the kernel, when having
         // an odd sized grid.
-        assert!(grid_size[0] % 2 == 1 && grid_size[1] % 2 == 1,
-                "Even sized grids are not supported yet for calculating the flow field. Found a \
+        assert!(grid_size[0] % 2 == 0 && grid_size[1] % 2 == 0,
+                "Odd sized grids are not supported yet for calculating the flow field. Found a \
                  grid-size of ({}, {})",
                 grid_size[0],
                 grid_size[1]);
