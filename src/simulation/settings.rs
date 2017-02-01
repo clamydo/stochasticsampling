@@ -51,7 +51,6 @@ pub struct Parameters {
     pub stress: StressPrefactors,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
-    pub number_density: f64,
 }
 
 
@@ -160,7 +159,6 @@ mod tests {
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
-        assert_eq!(settings.parameters.number_density, 1.0);
         assert_eq!(settings.simulation.box_size, [1., 1.]);
         assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
         assert_eq!(settings.simulation.number_of_particles, 100);

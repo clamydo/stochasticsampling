@@ -19,7 +19,6 @@
 
 [parameters]
     magnetic_reorientation = 1.0
-    number_density = 1.0
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0

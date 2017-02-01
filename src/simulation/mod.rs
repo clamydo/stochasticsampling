@@ -8,16 +8,16 @@ pub mod output;
 pub mod particle;
 pub mod settings;
 
-use ndarray::Array;
-use pcg_rand::Pcg64;
-use rand::Rand;
-use rand::SeedableRng;
-use rand::distributions::normal::StandardNormal;
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
 use self::integrators::oseen_conv::{FlowField, IntegrationParameter, Integrator};
 use self::particle::Particle;
 use self::settings::Settings;
+use ndarray::Array;
+use pcg_rand::Pcg64;
+use rand::Rand;
+use rand::SeedableRng;
+use rand::distributions::normal::StandardNormal;
 use std::f64;
 
 
@@ -121,8 +121,7 @@ impl Simulation {
         // Do a first sampling, so that the initial condition can also be obtained
         self.state.distribution.sample_from(&self.state.particles);
 
-        self.state.distribution.dist *= self.settings.parameters.number_density *
-                                        self.settings.simulation.box_size[0] *
+        self.state.distribution.dist *= self.settings.simulation.box_size[0] *
                                         self.settings.simulation.box_size[1];
     }
 
@@ -180,8 +179,7 @@ impl Simulation {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
-        self.state.distribution.dist *= self.settings.parameters.number_density *
-                                        self.settings.simulation.box_size[0] *
+        self.state.distribution.dist *= self.settings.simulation.box_size[0] *
                                         self.settings.simulation.box_size[1];
 
         // Calculate flow field from distribution.
