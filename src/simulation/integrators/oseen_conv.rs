@@ -357,14 +357,13 @@ impl Integrator {
         let param = &self.parameter;
 
         let cos_orient = p.orientation.as_ref().cos();
-        // let sin_orient = p.orientation.as_ref().sin();
+        let sin_orient = p.orientation.as_ref().sin();
         // Calculating sqrt() is more efficient than sin().
-        let sin_orient = if (0. <= p.orientation.v && p.orientation.v <= 1.5707963267948966) ||
-                            p.orientation.v >= 4.71238898038469 {
-            (1. - cos_orient * cos_orient).sqrt()
-        } else {
-            -(1. - cos_orient * cos_orient).sqrt()
-        };
+        // let sin_orient = if p.orientation.v <= PI {
+        //     (1. - cos_orient * cos_orient).sqrt()
+        // } else {
+        //     -(1. - cos_orient * cos_orient).sqrt()
+        // };
 
         // Evolve particle position.
         p.position.x += (flow_x + cos_orient) * param.timestep +
