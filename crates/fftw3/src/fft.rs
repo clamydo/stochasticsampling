@@ -2,21 +2,21 @@ use complex::Complex;
 use ndarray::{ArrayViewMut, Ix2};
 use std;
 
-pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
+pub type FFTWComplex = ::cufftw_ffi::fftw_complex;
 
 /// Wrapper to manage the state of an FFTW3 plan.
 pub struct FFTPlan {
-    plan: ::fftw3_ffi::fftw_plan,
+    plan: ::cufftw_ffi::fftw_plan,
 }
 
 pub enum FFTDirection {
-    Forward = ::fftw3_ffi::FFTW_FORWARD as isize,
-    Backward = ::fftw3_ffi::FFTW_BACKWARD as isize,
+    Forward = ::cufftw_ffi::FFTW_FORWARD as isize,
+    Backward = ::cufftw_ffi::FFTW_BACKWARD as isize,
 }
 
 pub enum FFTFlags {
-    Estimate = ::fftw3_ffi::FFTW_ESTIMATE as isize,
-    Measure = ::fftw3_ffi::FFTW_MEASURE as isize,
+    Estimate = ::cufftw_ffi::FFTW_ESTIMATE as isize,
+    Measure = ::cufftw_ffi::FFTW_MEASURE as isize,
 }
 
 impl FFTPlan {
@@ -38,7 +38,7 @@ impl FFTPlan {
         let plan;
         // WARNING: Not thread safe!
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
+            plan = ::cufftw_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
                                                  n1 as std::os::raw::c_int,
                                                  inp,
                                                  outp,
@@ -69,7 +69,7 @@ impl FFTPlan {
 
         let plan;
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
+            plan = ::cufftw_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
                                                  n1 as std::os::raw::c_int,
                                                  p,
                                                  p,
@@ -87,7 +87,7 @@ impl FFTPlan {
 
     /// Execute FFTW# plan for associated given input and output.
     pub fn execute(&self) {
-        unsafe { ::fftw3_ffi::fftw_execute(self.plan) }
+        unsafe { ::cufftw_ffi::fftw_execute(self.plan) }
     }
 
     /// Reuse plan for different arrays
@@ -99,7 +99,7 @@ impl FFTPlan {
         let inp = ina.as_ptr() as *mut FFTWComplex;
         let outp = outa.as_ptr() as *mut FFTWComplex;
         unsafe {
-            ::fftw3_ffi::fftw_execute_dft(self.plan, inp, outp);
+            ::cufftw_ffi::fftw_execute_dft(self.plan, inp, outp);
         }
     }
 }
@@ -108,7 +108,7 @@ impl FFTPlan {
 impl Drop for FFTPlan {
     fn drop(&mut self) {
         unsafe {
-            ::fftw3_ffi::fftw_destroy_plan(self.plan);
+            ::cufftw_ffi::fftw_destroy_plan(self.plan);
         }
     }
 }

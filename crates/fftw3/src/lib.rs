@@ -7,7 +7,7 @@ extern crate quickcheck;
 extern crate num;
 extern crate ndarray;
 
-mod fftw3_ffi;
+mod cufftw_ffi;
 pub mod fftw_ndarray;
 pub mod fft;
 pub mod complex;
@@ -18,6 +18,7 @@ mod tests {
     use fft;
     use fft::FFTPlan;
     use fftw_ndarray::FFTData2D;
+    use ndarray;
     use std::f64::EPSILON;
 
     /// Transforming for and back should be an identity operation (except for
@@ -25,13 +26,13 @@ mod tests {
     /// WARNING: Not thread safe. Run with `env RUST_TEST_THREADS=1 cargo test`.
     #[test]
     fn test_fft_identity() {
-        let shape = (11usize, 11);
+        let shape = ndarray::Dim([11usize, 11]);
         let mut input = FFTData2D::new(shape);
         let mut fft = FFTData2D::new(shape);
         let mut ifft = FFTData2D::new(shape);
 
         // zero out input array
-        input.data.assign_scalar(&Complex::new(0., 0.));
+        input.data.fill(Complex::new(0., 0.));
 
         // define a real rectangle in the middle of the array
         input.data[[4, 4]] = Complex::new(1., 0.);
@@ -63,7 +64,7 @@ mod tests {
 
             // Since transform is not normalized, we have to divide by the numver of
             // elements to get back the original input
-            let Complex::<f64>(diff) = *left - *right / (shape.0 * shape.1) as f64;
+            let Complex::<f64>(diff) = *left - *right / (shape[0] * shape[1]) as f64;
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.
