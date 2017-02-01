@@ -1,4 +1,4 @@
-#![crate_type = "bin"]
+#!crate_type = "bin"]
 #![recursion_limit = "1024"]
 
 extern crate stochasticsampling;
@@ -63,9 +63,9 @@ fn main() {
 
 
 fn create_filename(settings: &Settings) -> String {
-    // Need to introduce placeholder `.ext`, since otherwise the patch version
+    // Need to introduce placeholder `.cbor`, since otherwise the patch version
     // number is chopped of later, when using `.with_extension()` method later.
-    format!("{prefix}-{time}_v{version}.ext",
+    format!("{prefix}-{time}_v{version}.cbor",
             prefix = settings.environment.prefix,
             time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
             version = VERSION)
@@ -245,7 +245,7 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = Output::default();
         initial.distribution = Some(simulation.get_distribution());
-        initial.particles = if let Some(_) = settings.simulation.output.particle_every_timestep {
+        initial.particles = if settings.simulation.output.particle_every_timestep.is_some() {
             settings.simulation
                 .output
                 .particle_head
