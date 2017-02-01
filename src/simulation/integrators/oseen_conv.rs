@@ -1,3 +1,26 @@
+//! Implements an hybrid integration scheme for a Fokker-Planck
+//! (Smoulochkowski) equation coupled to a continous Stokes flow field. The
+//! corresponding stochastic Langevin equation is used to evolve test particle
+//! positions and orientations. Considered as a probabilistic sample of the
+//! probability distribution function (PDF), which is described by the
+//! Fokker-Planck equation, the particle configuration is used to sample the
+//! PDF. To close the integration scheme, the flow-field is calculated in terms
+//! of probabilstic moments (i.e. expectation values) of the PDF on a grid.
+//!
+//! The integrator is implemented in dimensionless units, scaling out the
+//! self-propulsion speed of the particle and the average volue taken by a
+//! particle (i.e. the particle number density). In this units a particle needs
+//! one unit of time to cross a volume per particle, meaning a unit of length,
+//! due to self propulsion. Since the model describes an ensemble of point
+//! particles, the flow-field at the position of such a particle is undefined
+//! (die to the divergence of the Oseen-tensor). As  a consequence it is
+//! necessary to define a minimal radius around a point particle, on which the
+//! flow-field is calculated. A natural choice in the above mentioned units, is
+//! to choose the radius of the volume per particle. This means, that a grid
+//! cell on which the flow-field is calculated, should be a unit cell! The flow
+//! field is now calculated using contributions of every other cell but the
+//! cell itself.
+
 use consts::TWOPI;
 use fftw3::complex::Complex;
 use fftw3::fft;
