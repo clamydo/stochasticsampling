@@ -91,10 +91,12 @@ impl Integrator {
         let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size[2]);
 
         for (mut e, a) in s.axis_iter_mut(Axis(2)).zip(&angles) {
-            e[[0, 0]] = stress.active * 0.5 * (2. * a).cos();
+            // e[[0, 0]] = stress.active * 0.5 * (2. * a).cos();
+            e[[0, 0]] = stress.active * (a.cos() * a.cos() - 1. / 3.);
             e[[0, 1]] = stress.active * a.sin() * a.cos() + stress.magnetic * a.cos();
             e[[1, 0]] = stress.active * a.sin() * a.cos() - stress.magnetic * a.cos();
-            e[[1, 1]] = -e[[0, 0]];
+            e[[1, 1]] = stress.active * (a.sin() * a.sin() - 1. / 3.);
+            // e[[1, 1]] = -e[[0, 0]];
         }
 
         s
@@ -498,10 +500,11 @@ mod tests {
 
         let i = Integrator::new(gs, gw, int_param);
 
-        let should0 = arr2(&[[-0.2499999999999999, 0.9330127018922195],
-                             [-0.0669872981077807, 0.2499999999999999]]);
-        let should1 = arr2(&[[0.5, -1.0], [1.0, -0.5]]);
-        let should2 = arr2(&[[-0.25, 0.066987298107780712], [-0.9330127018922195, 0.25]]);
+        let should0 = arr2(&[[-0.0833333333333332, 0.9330127018922195],
+                             [-0.0669872981077807, 0.4166666666666666]]);
+        let should1 = arr2(&[[0.6666666666666666, -1.0], [1.0, -0.3333333333333333]]);
+        let should2 = arr2(&[[-0.0833333333333332, 0.0669872981077807],
+                             [-0.9330127018922195, 0.4166666666666666]]);
 
         let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
             should.iter().zip(stress.iter()) {
@@ -557,10 +560,10 @@ mod tests {
                                    u.view());
 
         // TODO Check these values!
-        assert!(equal_floats(p[0].position.x.v, 0.7100000000000002),
+        assert!(equal_floats(p[0].position.x.v, 0.7100000000000016),
                 "got {}",
                 p[0].position.x.v);
-        assert!(equal_floats(p[0].position.y.v, 0.30999999999999867),
+        assert!(equal_floats(p[0].position.y.v, 0.3100000000000015),
                 "got {}",
                 p[0].position.y.v);
 
