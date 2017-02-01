@@ -327,6 +327,7 @@ mod tests {
         }
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn new_invariant_qc(f: f64) -> TestResult {
@@ -339,6 +340,7 @@ mod tests {
         }
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn new_range_qc(f: f64) -> bool {
@@ -406,6 +408,7 @@ mod tests {
         }
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn addition_range_qc(lhs: f64, rhs: f64, range: f64) -> TestResult {
@@ -476,6 +479,7 @@ mod tests {
         }
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn subtraction_range_qc(lhs: f64, rhs: f64) -> bool {
@@ -522,6 +526,7 @@ mod tests {
         }
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn multiplication_range_qc(lhs: f64, rhs: f64) -> bool {
