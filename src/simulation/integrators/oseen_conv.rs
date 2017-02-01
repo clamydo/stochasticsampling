@@ -27,8 +27,8 @@ use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
 use rayon::prelude::*;
-use ::simulation::distribution::Distribution;
-use ::simulation::grid_width::GridWidth;
+use simulation::distribution::Distribution;
+use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{GridSize, StressPrefactors};
 use std::f64::consts::PI;
@@ -392,7 +392,7 @@ impl Integrator {
         particles.par_iter_mut()
             .zip(random_samples.par_iter())
             .for_each(|(ref mut p, r)| {
-                self.evolve_particle_inplace(p, &r, &flow_field, &vort.view())
+                self.evolve_particle_inplace(p, r, &flow_field, &vort.view())
             });
     }
 }
@@ -459,6 +459,7 @@ fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use fftw3::complex::Complex;
     use ndarray::{Array, Axis, arr2};
     use simulation::distribution::Distribution;
@@ -467,7 +468,6 @@ mod tests {
     use simulation::settings::StressPrefactors;
     use std::f64::{EPSILON, MAX};
     use std::f64::consts::PI;
-    use super::*;
     use test::Bencher;
 
     fn equal_floats(a: f64, b: f64) -> bool {
