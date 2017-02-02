@@ -1,13 +1,16 @@
 use complex::Complex;
 use ndarray::{ArrayViewMut, Ix2};
 use std;
+use std::sync::Arc;
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 
 /// Wrapper to manage the state of an FFTW3 plan.
 pub struct FFTPlan {
-    plan: ::fftw3_ffi::fftw_plan,
+    plan: Arc<::fftw3_ffi::fftw_plan>,
 }
+
+unsafe impl Send for FFTPlan {}
 
 pub enum FFTDirection {
     Forward = ::fftw3_ffi::FFTW_FORWARD as isize,
@@ -49,7 +52,7 @@ impl FFTPlan {
         if plan.is_null() {
             None
         } else {
-            Some(FFTPlan { plan: plan })
+            Some(FFTPlan { plan: Arc::new(plan) })
         }
     }
 
@@ -80,14 +83,14 @@ impl FFTPlan {
         if plan.is_null() {
             None
         } else {
-            Some(FFTPlan { plan: plan })
+            Some(FFTPlan { plan: Arc::new(plan) })
         }
     }
 
 
     /// Execute FFTW# plan for associated given input and output.
     pub fn execute(&self) {
-        unsafe { ::fftw3_ffi::fftw_execute(self.plan) }
+        unsafe { ::fftw3_ffi::fftw_execute(*self.plan) }
     }
 
     /// Reuse plan for different arrays
@@ -99,7 +102,7 @@ impl FFTPlan {
         let inp = ina.as_ptr() as *mut FFTWComplex;
         let outp = outa.as_ptr() as *mut FFTWComplex;
         unsafe {
-            ::fftw3_ffi::fftw_execute_dft(self.plan, inp, outp);
+            ::fftw3_ffi::fftw_execute_dft(*self.plan, inp, outp);
         }
     }
 }
@@ -108,7 +111,7 @@ impl FFTPlan {
 impl Drop for FFTPlan {
     fn drop(&mut self) {
         unsafe {
-            ::fftw3_ffi::fftw_destroy_plan(self.plan);
+            ::fftw3_ffi::fftw_destroy_plan(*self.plan);
         }
     }
 }
