@@ -304,26 +304,34 @@ impl Integrator {
         // f.subview(Axis(0), 0).to_owned().as_slice().unwrap();
 
         // Fourier transform force density component-wise
-        // WARNING: Not thread safe!
-        for mut a in f.outer_iter_mut() {
-            let plan = FFTPlan::new_c2c_inplace(&mut a,
-                                                fft::FFTDirection::Forward,
-                                                fft::FFTFlags::Estimate)
-                .unwrap();
-            plan.execute();
-        }
+        let mut plans: Vec<FFTPlan> = f.outer_iter_mut()
+            .map(|mut a| {
+                FFTPlan::new_c2c_inplace(&mut a,
+                                         fft::FFTDirection::Forward,
+                                         fft::FFTFlags::Estimate)
+                    .unwrap()
+            })
+            .collect();
+
+        plans.par_iter_mut()
+            .for_each(|p| p.execute());
+
 
         // Make use of auto-broadcasting of lhs
         let mut u = (&self.oseen_kernel_fft * &f).sum(Axis(1));
 
         // Inverse Fourier transform flow field component-wise
-        for mut a in u.outer_iter_mut() {
-            let plan = FFTPlan::new_c2c_inplace(&mut a,
-                                                fft::FFTDirection::Backward,
-                                                fft::FFTFlags::Estimate)
-                .unwrap();
-            plan.execute();
-        }
+        let mut plans: Vec<FFTPlan> = u.outer_iter_mut()
+            .map(|mut a| {
+                FFTPlan::new_c2c_inplace(&mut a,
+                                         fft::FFTDirection::Backward,
+                                         fft::FFTFlags::Estimate)
+                    .unwrap()
+            })
+            .collect();
+
+        plans.par_iter_mut()
+            .for_each(|p| p.execute());
 
         u.map(|x| x.re())
     }
@@ -388,7 +396,6 @@ impl Integrator {
                                         flow_field: ArrayView<'a, f64, Ix3>) {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &flow_field);
-
 
         particles.par_iter_mut()
             .zip(random_samples.par_iter())
