@@ -186,6 +186,7 @@ mod tests {
         assert_eq!(*p3.z.as_ref(), 0.25);
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn scalar_multiplication_3_qc(x: f64, y: f64, z: f64, rhs: f64) -> bool {
@@ -206,6 +207,7 @@ mod tests {
         assert_eq!(*p3.y.as_ref(), 0.5);
     }
 
+    #[test]
     #[ignore]
     quickcheck!{
         fn scalar_multiplication_2_qc(x: f64, y: f64, rhs: f64) -> bool {
