@@ -1,4 +1,4 @@
-#!crate_type = "bin"]
+#![crate_type = "bin"]
 #![recursion_limit = "1024"]
 
 extern crate stochasticsampling;
