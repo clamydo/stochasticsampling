@@ -12,7 +12,7 @@ use self::distribution::Distribution;
 use self::grid_width::GridWidth;
 use self::integrators::oseen_conv::{FlowField, IntegrationParameter, Integrator};
 use self::particle::Particle;
-use self::settings::Settings;
+use self::settings::{Settings, StressPrefactors};
 use ndarray::Array;
 use pcg_rand::Pcg64;
 use rand::Rand;
@@ -62,13 +62,17 @@ impl Simulation {
         let sim = settings.simulation;
         let param = settings.parameters;
 
+        let scaled_stress_prefactors = StressPrefactors {
+            active: 0.5 * param.stress.active,
+            magnetic: 0.5 * param.stress.magnetic,
+        };
 
         let int_param = IntegrationParameter {
             timestep: sim.timestep,
             // see documentation of `integrator.evolve_particle_inplace` for a rational
             trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
             rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
-            stress: param.stress,
+            stress: scaled_stress_prefactors,
             magnetic_reorientation: param.magnetic_reorientation,
         };
 
