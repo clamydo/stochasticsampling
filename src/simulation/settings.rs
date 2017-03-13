@@ -1,6 +1,5 @@
 //! This module handles a TOML settings file.
 
-use serde::Deserialize;
 use std::fs::File;
 use std::io::prelude::*;
 use toml;
@@ -10,8 +9,7 @@ const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::CBOR;
 
 error_chain! {
     foreign_links {
-        TOMLParser(toml::ParserError);
-        TOMLDecoder(toml::DecodeError);
+        TOMLError(toml::de::Error);
     }
 }
 
@@ -126,14 +124,7 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
     let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
 
-    let mut parser = toml::Parser::new(&toml_string);
-
-    // try to parse settings file
-    match parser.parse() {
-        // Choosing this more complicated way, to get better error messages.
-        Some(t) => Ok(Settings::deserialize(&mut toml::Decoder::new(toml::Value::Table(t)))?),
-        None => Err(parser.errors[0].to_owned().into()),
-    }
+    toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")
 }
 
 

@@ -19,7 +19,7 @@ mod errors {
     error_chain!{}
 }
 
-use bincode::serde::serialize_into;
+use bincode::serialize_into;
 use clap::App;
 use errors::*;
 use pbr::ProgressBar;
