@@ -1,7 +1,8 @@
 #!/bin/bash
 
 MYPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PARAMETER_FILE=$1
+PARAMETER_FILE="$1"
+RANDOM_SCRIPT="$2"
 
 FULLSEED=$($MYPATH/parse_toml.py "$PARAMETER_FILE" seed)
 
@@ -12,19 +13,19 @@ N=$($MYPATH/parse_toml.py "$PARAMETER_FILE" number)
 INITPATH="initial"
 mkdir $INITPATH &> /dev/null
 
-ANGLES="$INITPATH/angless-seed$SEED-kappa$KAPPA-N$N.json"
+COORDS="$INITPATH/coords-seed$SEED-kappa$KAPPA-N$N.json"
 INITCON="$INITPATH/initial-seed$SEED-kappa$KAPPA-N$N.cbor"
 
 
-echo -n "Sampling angles from distribution..."
+echo -n "Sampling coordinates from distribution..."
 
-/usr/bin/env wolframscript -script "$MYPATH/spathomdist_init.wl" $SEED $KAPPA $N > "$ANGLES"
-
-echo "done"
-
-
-echo -n "Sampling angles from distribution..."
-
-$MYPATH/create_ic.py "$PARAMETER_FILE" < "$ANGLES" > "$INITCON"
+/usr/bin/env wolframscript -script "$MYPATH/$RANDOM_SCRIPT" $SEED $KAPPA $N > "$COORDS"
 
 echo "done"
+
+
+echo -n "Creating initial condition file..."
+
+$MYPATH/create_ic.py "$PARAMETER_FILE" < "$COORDS" > "$INITCON"
+
+echo "done -> $INITCON"
