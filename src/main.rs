@@ -123,17 +123,22 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
 
     let initial_condition = match init_type {
         InitType::Stdin => {
+            info!("Reading initial condition from standard input");
             de::from_reader(io::stdin()).chain_err(|| "Can't read given initial condition.")?
         }
         InitType::File => {
             let f = match settings.environment.init_file {
-                Some(ref fname) => File::open(fname).chain_err(|| "Unable to open input file.")?,
+                Some(ref fname) => {
+                    info!("Reading initial condition from {}", *fname);
+                    File::open(fname).chain_err(|| "Unable to open input file.")?
+                }
                 None => bail!("No input file provided in the parameterfile."),
             };
 
             de::from_reader(f).chain_err(|| "Can't read given initial condition.")?
         }
         InitType::Random => {
+            info!("Using isotropic initial condition.");
             Particle::randomly_placed_particles(settings.simulation.number_of_particles,
                                                 settings.simulation.box_size,
                                                 settings.simulation.seed)
