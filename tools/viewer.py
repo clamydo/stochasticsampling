@@ -24,7 +24,7 @@ p = plt.imshow(np.zeros((gs[0], gs[1])), origin='lower')
 
 axslice = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor='lightgoldenrodyellow')
 
-sslice = Slider(axslice, 'Timestep', 1, len(ds.index) - 1, valinit=0, valfmt='%0.0f')
+sslice = Slider(axslice, 'Timestep', 1, len(ds.index) - 1, valinit=0, valfmt='%0.0f', dragging=False)
 
 
 def update(val):
