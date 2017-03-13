@@ -17,7 +17,7 @@ fftw3 = { path = "crates/fftw3" }
 log = "0.3.6"
 ndarray = { version = "0.7.1", features = ["serde"] }
 pcg_rand = { path = "crates/external/pcg_rand"}
-pbr = "1.0.0-alpha.1"
+pbr = { path = "crates/external/pb"}
 rand = "0.3.15"
 rayon = "0.6.0"
 serde = "0.8.19"
