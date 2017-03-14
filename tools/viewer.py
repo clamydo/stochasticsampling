@@ -6,6 +6,7 @@ from matplotlib.widgets import Slider, Button, RadioButtons
 from DataStreamer import Streamer
 import DataStreamer
 import argparse
+import json
 
 parser = argparse.ArgumentParser(description='Generate initial condition.')
 parser.add_argument('data',
@@ -17,7 +18,7 @@ ds = Streamer(args.data)
 sim_settings = ds.get_metadata()
 bs, gs, gw = DataStreamer.get_bs_gs_gw(sim_settings)
 
-print(sim_settings)
+print(json.dumps(sim_settings, indent=1))
 
 fig, ax = plt.subplots()
 plt.subplots_adjust(left=0.25, bottom=0.25)
@@ -32,11 +33,11 @@ sslice = Slider(axslice, 'Slice',
 
 def update_title(i, timestep):
     ax.set_title('Slice: {}/{}, Timestep: {}'.format(
-        i + 1, len(ds.index), timestep))
+        i, len(ds.index) - 1, timestep))
 
 
 def update(val):
-    i = int(val * (len(ds.index) - 1))
+    i = int(val * (len(ds.index) - 2)) + 1
     try:
         data = ds[i]
         c = DataStreamer.dist_to_concentration(
@@ -57,7 +58,7 @@ def update(val):
 def press(event):
     step = 10
 
-    max = len(ds.index) - 1
+    max = len(ds.index)
 
     if event.key == 'left':
         if sslice.val - 1/max >= 0:
@@ -76,10 +77,8 @@ def press(event):
     if event.key == 'end':
         sslice.set_val(1)
     if event.key == 'f5':
-        i = int(sslice.val * (len(ds.index) - 1))
-
         ds.rebuild_index()
-        print('Reloaded file. Now have {} slices'.format(len(ds.index)))
+        print('Reloaded file. Now have {} slices'.format(len(ds.index) - 1))
 
         sslice.set_val(1)
 
