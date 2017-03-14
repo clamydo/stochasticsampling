@@ -24,25 +24,49 @@ p = plt.imshow(np.zeros((gs[0], gs[1])), origin='lower')
 
 axslice = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor='lightgoldenrodyellow')
 
-sslice = Slider(axslice, 'Timestep', 1, len(ds.index) - 1, valinit=0, valfmt='%0.0f', dragging=False)
+sslice = Slider(axslice, 'Timestep', 1, len(ds.index) - 1,
+                valinit=0, valfmt='%0.0f', dragging=False)
 
 
 def update(val):
     i = int(val)
     try:
+        data = ds[i]
         c = DataStreamer.dist_to_concentration(
-                DataStreamer.data_to_dist(ds[i], gs),
+                DataStreamer.data_to_dist(data, gs),
                 gw
             )
+
+        ax.set_title('Timestep: {}'.format(data['timestep']))
+
+        p.set_data(c.T)
+        p.autoscale()
+        fig.canvas.draw_idle()
     except:
         ax.set_title('Failed to read timestep')
 
-    p.set_data(c.T)
-    p.autoscale()
-    fig.canvas.draw_idle()
+
+# register arrow keys
+def press(event):
+    step = 10
+
+    if event.key == 'left':
+        if sslice.val > 0:
+            sslice.set_val(sslice.val - 1)
+    if event.key == 'right':
+        if sslice.val < len(ds.index) - 1:
+            sslice.set_val(sslice.val + 1)
+    if event.key == 'down':
+        if sslice.val - step >= 0:
+            sslice.set_val(sslice.val - step)
+    if event.key == 'up':
+        if sslice.val + step <= len(ds.index) - 1:
+            sslice.set_val(sslice.val + step)
 
 
 sslice.on_changed(update)
+fig.canvas.mpl_connect('key_press_event', press)
+
 
 update(1)
 plt.show()
