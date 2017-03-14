@@ -17,6 +17,10 @@ args:
         short: f
         long: initfile
         help: Provide a path to an initial particle configuration in the CBOR format in the parameter file.
+    - resume:
+        short: r
+        long: resume
+        help: Resume to a snapshot in bincode format given in the parameter file.
     - output_directory:
         short: o
         long: output_directory

@@ -45,7 +45,7 @@ struct SimulationState {
 type Pcg64Seed = [u64; 4];
 
 /// Captures the full state of the simulation
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     particles: Vec<Particle>,
     rng_seed: Pcg64Seed,

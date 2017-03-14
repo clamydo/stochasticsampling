@@ -19,7 +19,7 @@ mod errors {
     error_chain!{}
 }
 
-use bincode::serialize_into;
+use bincode::{deserialize_from, serialize_into};
 use clap::App;
 use errors::*;
 use pbr::ProgressBar;
@@ -84,6 +84,8 @@ fn run() -> Result<()> {
 
     let init_type = if cli_matches.is_present("initial_condition_file") {
         InitType::File
+    } else if cli_matches.is_present("resume") {
+            InitType::Snapshot
     } else {
         if cli_matches.is_present("initial_condition") {
             InitType::Stdin
@@ -111,8 +113,15 @@ enum InitType {
     Stdin,
     File,
     Random,
+    Snapshot,
 }
 
+
+/// This is akward
+enum ParticlesOrSnapshot {
+    Particles(Vec<Particle>),
+    Snapshot(Snapshot),
+}
 
 /// Returns an initialized simulation. Sets initial condition according to
 /// `init_type` flag.
@@ -124,7 +133,7 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
     let initial_condition = match init_type {
         InitType::Stdin => {
             info!("Reading initial condition from standard input");
-            de::from_reader(io::stdin()).chain_err(|| "Can't read given initial condition.")?
+            ParticlesOrSnapshot::Particles(de::from_reader(io::stdin()).chain_err(|| "Can't read given initial condition.")?)
         }
         InitType::File => {
             let f = match settings.environment.init_file {
@@ -135,17 +144,34 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
                 None => bail!("No input file provided in the parameterfile."),
             };
 
-            de::from_reader(f).chain_err(|| "Can't read given initial condition.")?
+            ParticlesOrSnapshot::Particles(de::from_reader(f).chain_err(|| "Can't read given initial condition.")?)
         }
         InitType::Random => {
             info!("Using isotropic initial condition.");
-            Particle::randomly_placed_particles(settings.simulation.number_of_particles,
+            ParticlesOrSnapshot::Particles(Particle::randomly_placed_particles(settings.simulation.number_of_particles,
                                                 settings.simulation.box_size,
-                                                settings.simulation.seed)
+                                                settings.simulation.seed))
+        }
+        InitType::Snapshot => {
+            info!("Resuming snapshot.");
+            let mut f = match settings.environment.init_file {
+                Some(ref fname) => {
+                    info!("Reading snapshot from {}", *fname);
+                    File::open(fname).chain_err(|| "Unable to open input file.")?
+                }
+                None => bail!("No input file provided in the parameterfile."),
+            };
+
+            ParticlesOrSnapshot::Snapshot(
+                deserialize_from(&mut f, bincode::SizeLimit::Infinite).chain_err(|| "Cannot read given snapshot.")?
+            )
         }
     };
 
-    simulation.init(initial_condition);
+    match initial_condition {
+        ParticlesOrSnapshot::Particles(p) => simulation.init(p),
+        ParticlesOrSnapshot::Snapshot(s) => simulation.resume(s),
+    };
 
     Ok(simulation)
 }
@@ -321,6 +347,11 @@ fn run_simulation(settings: &Settings,
     }
     // FIXME: substitute .ext with correct string
     pb.finish_print(&format!("done. Written '{}'.", filepath));
+
+    println!("Write final snapshot.");
+
+    let snapshot = simulation.get_snapshot();
+    tx.send(IOWorkerMsg::Snapshot(snapshot)).unwrap();
 
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
