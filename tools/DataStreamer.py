@@ -42,6 +42,12 @@ class Streamer(object):
         filestream = bitstring.ConstBitStream(filename=self.source_fn)
         return list(filestream.findall(cbortag, bytealigned=True))
 
+    def rebuild_index(self):
+        self.index = self.build_index()
+
+    def get_index(self):
+        return self.index
+
     def get_metadata(self):
         with open(self.source_fn, 'rb') as f:
             sim_settings = cbor.load(f).value
