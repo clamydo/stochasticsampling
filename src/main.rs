@@ -348,10 +348,9 @@ fn run_simulation(settings: &Settings,
     // FIXME: substitute .ext with correct string
     pb.finish_print(&format!("done. Written '{}'.", filepath));
 
-    println!("Write final snapshot.");
-
     let snapshot = simulation.get_snapshot();
     tx.send(IOWorkerMsg::Snapshot(snapshot)).unwrap();
+    println!("Written final snapshot.");
 
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
