@@ -24,13 +24,13 @@ class Streamer(object):
         if isinstance(given, slice):
             data = []
 
-            for i in self.index[(given.start + 1):given.stop:given.step]:
-                self.__file.seek(int(i / 8))  # convert bit to byte position
+            for i in self.index[given.start:given.stop:given.step]:
+                self.__file.seek(int(i))  # convert bit to byte position
                 data.append(cbor.load(self.__file).value)
 
             return data
         else:
-            self.__file.seek(int(self.index[given] / 8))
+            self.__file.seek(int(self.index[given]))
             return cbor.load(self.__file).value
 
     def build_index(self):
@@ -40,7 +40,8 @@ class Streamer(object):
         cbortag = bitstring.BitArray(b'\xd9\xd9\xf7')
 
         filestream = bitstring.ConstBitStream(filename=self.source_fn)
-        return list(filestream.findall(cbortag, bytealigned=True))
+        index = list(filestream.findall(cbortag, bytealigned=True))
+        return np.array(index[1:]) / 8
 
     def rebuild_index(self):
         self.index = self.build_index()
@@ -73,7 +74,7 @@ def sim_output_gen(source_file, index, start=0, step=1, stop=None):
     with open(source_file, 'rb') as f:
 
         for i in index[start:stop:step]:
-            f.seek(int(i / 8))  # convert bit to byte position
+            f.seek(int(i))  # convert bit to byte position
             yield cbor.load(f).value
 
 
