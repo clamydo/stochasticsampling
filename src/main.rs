@@ -81,12 +81,12 @@ fn run() -> Result<()> {
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
     let settings = settings::read_parameter_file(settings_file_name)
-            .chain_err(|| "Error reading parameter file.")?;
+        .chain_err(|| "Error reading parameter file.")?;
 
     let init_type = if cli_matches.is_present("initial_condition_file") {
         InitType::File
     } else if cli_matches.is_present("resume") {
-            InitType::Snapshot
+        InitType::Snapshot
     } else {
         if cli_matches.is_present("initial_condition") {
             InitType::Stdin
@@ -98,7 +98,11 @@ fn run() -> Result<()> {
 
     let output_dir = cli_matches.value_of("output_directory").unwrap();
     let filename = create_filename(&settings);
-    let path = Path::new(&output_dir).join(filename).to_str().unwrap().to_string();
+    let path = Path::new(&output_dir)
+        .join(filename)
+        .to_str()
+        .unwrap()
+        .to_string();
 
     let mut simulation = init_simulation(&settings, init_type)
         .chain_err(|| "Error during initialization of simulation.")?;
@@ -134,7 +138,8 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
     let initial_condition = match init_type {
         InitType::Stdin => {
             info!("Reading initial condition from standard input");
-            ParticlesOrSnapshot::Particles(de::from_reader(io::stdin()).chain_err(|| "Can't read given initial condition.")?)
+            ParticlesOrSnapshot::Particles(de::from_reader(io::stdin())
+                .chain_err(|| "Can't read given initial condition.")?)
         }
         InitType::File => {
             let f = match settings.environment.init_file {
@@ -145,13 +150,16 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
                 None => bail!("No input file provided in the parameterfile."),
             };
 
-            ParticlesOrSnapshot::Particles(de::from_reader(f).chain_err(|| "Can't read given initial condition.")?)
+            ParticlesOrSnapshot::Particles(de::from_reader(f)
+                .chain_err(|| "Can't read given initial condition.")?)
         }
         InitType::Random => {
             info!("Using isotropic initial condition.");
-            ParticlesOrSnapshot::Particles(Particle::randomly_placed_particles(settings.simulation.number_of_particles,
-                                                settings.simulation.box_size,
-                                                settings.simulation.seed))
+            ParticlesOrSnapshot::Particles(
+                Particle::randomly_placed_particles(settings.simulation.number_of_particles,
+                                                    settings.simulation.box_size,
+                                                    settings.simulation.seed)
+            )
         }
         InitType::Snapshot => {
             info!("Resuming snapshot.");
@@ -164,7 +172,8 @@ fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulatio
             };
 
             ParticlesOrSnapshot::Snapshot(
-                deserialize_from(&mut f, bincode::SizeLimit::Infinite).chain_err(|| "Cannot read given snapshot.")?
+                deserialize_from(&mut f, bincode::SizeLimit::Infinite)
+                    .chain_err(|| "Cannot read given snapshot.")?
             )
         }
     };
@@ -244,12 +253,13 @@ fn run_simulation(settings: &Settings,
 
                 IOWorkerMsg::Snapshot(s) => {
                     snapshot_counter += 1;
-                    let filepath = Path::new(&path)
-                        .with_extension(format!("bincode.{}", snapshot_counter));
+                    let filepath =
+                        Path::new(&path).with_extension(format!("bincode.{}", snapshot_counter));
 
                     let mut snapshot_file = File::create(&filepath).chain_err(|| {
-                            format!("couldn't create snapshot file '{}'.", filepath.display())
-                        })?;
+                                       format!("Cannot create snapshot file '{}'.",
+                                               filepath.display())
+                                   })?;
 
                     serialize_into(&mut snapshot_file, &s, bincode::SizeLimit::Infinite)
                         .chain_err(||
@@ -267,8 +277,7 @@ fn run_simulation(settings: &Settings,
                     match output_format {
                         OutputFormat::CBOR => {
                             ser::to_writer_sd(&mut file, &v)
-                                .chain_err(||
-                                    "Cannot write simulation output (format: CBOR).")?
+                                .chain_err(|| "Cannot write simulation output (format: CBOR).")?
                         }
                         OutputFormat::Bincode => {
                             serialize_into(&mut file, &v, bincode::SizeLimit::Infinite)
@@ -288,7 +297,10 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = Output::default();
         initial.distribution = Some(simulation.get_distribution());
-        initial.particles = if settings.simulation.output.particle_every_timestep.is_some() {
+        initial.particles = if settings.simulation
+               .output
+               .particle_every_timestep
+               .is_some() {
             settings.simulation
                 .output
                 .particle_head
@@ -325,30 +337,30 @@ fn run_simulation(settings: &Settings,
                 .output
                 .distribution_every_timestep
                 .and_then(|x| if timestep % x == 0 {
-                    Some(simulation.get_distribution())
-                } else {
-                    None
-                }),
+                              Some(simulation.get_distribution())
+                          } else {
+                              None
+                          }),
             flow_field: settings.simulation
                 .output
                 .flowfield_every_timestep
                 .and_then(|x| if timestep % x == 0 {
-                    Some(simulation.get_flow_field())
-                } else {
-                    None
-                }),
+                              Some(simulation.get_flow_field())
+                          } else {
+                              None
+                          }),
             particles: settings.simulation
                 .output
                 .particle_every_timestep
                 .and_then(|x| if timestep % x == 0 {
-                    settings.simulation
-                        .output
-                        .particle_head
-                        .and_then(|x| Some(simulation.get_particles_head(x)))
-                        .or_else(|| Some(simulation.get_particles()))
-                } else {
-                    None
-                }),
+                              settings.simulation
+                                  .output
+                                  .particle_head
+                                  .and_then(|x| Some(simulation.get_particles_head(x)))
+                                  .or_else(|| Some(simulation.get_particles()))
+                          } else {
+                              None
+                          }),
             timestep: timestep,
         };
 
@@ -367,5 +379,7 @@ fn run_simulation(settings: &Settings,
     // Stop worker
     tx.send(IOWorkerMsg::Quit).unwrap();
 
-    Ok(io_worker.join().unwrap().chain_err(|| "Error when flushing output to disk.")?)
+    Ok(io_worker.join()
+           .unwrap()
+           .chain_err(|| "Error when flushing output to disk.")?)
 }
