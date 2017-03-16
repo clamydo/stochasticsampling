@@ -25,7 +25,8 @@ use errors::*;
 use pbr::ProgressBar;
 use serde_cbor::{de, ser};
 use std::fs::File;
-use std::io;
+use std::io::{self, Seek, SeekFrom, Write};
+use std::mem::transmute;
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
@@ -231,6 +232,12 @@ fn run_simulation(settings: &Settings,
     // Spawn worker thread, that periodically flushes collections of simulation
     // states to disk.
     let io_worker = thread::spawn(move || -> Result<()> {
+
+        let index_file_path = Path::new(&path).with_extension("index");
+        let mut index_file =
+            File::create(&index_file_path)
+                .chain_err(|| format!("Cannot create index file '{}'", index_file_path.display()))?;
+
         loop {
             match rx.recv().unwrap() {
                 IOWorkerMsg::Quit => break,
@@ -251,6 +258,11 @@ fn run_simulation(settings: &Settings,
                 }
 
                 IOWorkerMsg::Output(v) => {
+                    // write starting offset of blob into index file
+                    let pos = file.seek(SeekFrom::Current(0)).unwrap();
+                    let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
+                    index_file.write_all(&pos_le).chain_err(|| "Failed to write into index file.")?;
+
                     // write all snapshots into one cbor file
                     match output_format {
                         OutputFormat::CBOR => {
