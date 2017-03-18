@@ -16,8 +16,8 @@ error-chain = "0.7.1"
 fftw3 = { path = "crates/fftw3" }
 log = "0.3.6"
 ndarray = { version = "0.8.0", features = ["serde"] }
+pbr = { git = "https://github.com/a8m/pb.git", rev = "e6e1fe6e4aa4e99c4594aa4943a42e91cfb41f90" }
 pcg_rand = { path = "crates/external/pcg_rand"}
-pbr = { path = "crates/external/pb"}
 rand = "0.3.15"
 rayon = "0.6.0"
 serde = "0.9.11"
