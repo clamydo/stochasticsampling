@@ -14,29 +14,28 @@ extern crate pbr;
 extern crate serde_cbor;
 extern crate time;
 
+mod init;
+mod output;
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain!{}
 }
 
-use bincode::{deserialize_from, serialize_into};
+
 use clap::App;
 use errors::*;
+use init::InitType;
+use output::path::OutputPath;
+use output::worker::Worker;
 use pbr::ProgressBar;
-use serde_cbor::{de, ser};
-use std::fs::File;
-use std::io::{self, Seek, SeekFrom, Write};
-use std::mem::transmute;
 use std::path::Path;
-use std::sync::mpsc;
-use std::thread;
 use stochasticsampling::simulation::Simulation;
-use stochasticsampling::simulation::Snapshot;
 use stochasticsampling::simulation::output::Output;
-use stochasticsampling::simulation::particle::Particle;
-use stochasticsampling::simulation::settings::{self, OutputFormat, Settings};
+use stochasticsampling::simulation::settings::{self, Settings};
+
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 
 fn main() {
     // initialize the env_logger implementation
@@ -63,15 +62,6 @@ fn main() {
 }
 
 
-fn create_filename(settings: &Settings) -> String {
-    // Need to introduce placeholder `.cbor`, since otherwise the patch version
-    // number is chopped of later, when using `.with_extension()` method later.
-    format!("{prefix}-{time}_v{version}.cbor",
-            prefix = settings.environment.prefix,
-            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
-            version = VERSION)
-}
-
 /// Main function
 fn run() -> Result<()> {
     // Parse command line
@@ -96,201 +86,35 @@ fn run() -> Result<()> {
     };
 
 
-    let output_dir = cli_matches.value_of("output_directory").unwrap();
-    let filename = create_filename(&settings);
-    let path = Path::new(&output_dir)
-        .join(filename)
-        .to_str()
-        .unwrap()
-        .to_string();
+    let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
+    let path = OutputPath::new(output_dir, &settings.environment.prefix);
 
-    let mut simulation = init_simulation(&settings, init_type)
+    let mut simulation = init::init_simulation(&settings, init_type)
         .chain_err(|| "Error during initialization of simulation.")?;
-    let file = prepare_output_file(&settings, &path).chain_err(|| "Cannot prepare output file.")?;
 
     let show_progress = cli_matches.is_present("progress_bar");
-    Ok(run_simulation(&settings, path.into(), file, &mut simulation, show_progress)?)
-}
 
+    let worker = Worker::new(
+        settings.environment.io_queue_size,
+        &path,
+        settings.environment.output_format)
+    .chain_err(|| "Unable to create output thread.")?;
 
-/// Type of setting up initial condition.
-enum InitType {
-    Stdin,
-    File,
-    Random,
-    Snapshot,
-}
+    worker.write_metadata(settings.clone()).chain_err(|| "Unable to write metadata to output.")?;
 
-
-/// This is akward
-enum ParticlesOrSnapshot {
-    Particles(Vec<Particle>),
-    Snapshot(Snapshot),
-}
-
-/// Returns an initialized simulation. Sets initial condition according to
-/// `init_type` flag.
-fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simulation> {
-
-    // Setup simulation
-    let mut simulation = Simulation::new(settings.clone());
-
-    let initial_condition = match init_type {
-        InitType::Stdin => {
-            info!("Reading initial condition from standard input");
-            ParticlesOrSnapshot::Particles(de::from_reader(io::stdin())
-                .chain_err(|| "Can't read given initial condition.")?)
-        }
-        InitType::File => {
-            let f = match settings.environment.init_file {
-                Some(ref fname) => {
-                    info!("Reading initial condition from {}", *fname);
-                    File::open(fname).chain_err(|| "Unable to open input file.")?
-                }
-                None => bail!("No input file provided in the parameterfile."),
-            };
-
-            ParticlesOrSnapshot::Particles(de::from_reader(f)
-                .chain_err(|| "Can't read given initial condition.")?)
-        }
-        InitType::Random => {
-            info!("Using isotropic initial condition.");
-            ParticlesOrSnapshot::Particles(
-                Particle::randomly_placed_particles(settings.simulation.number_of_particles,
-                                                    settings.simulation.box_size,
-                                                    settings.simulation.seed)
-            )
-        }
-        InitType::Snapshot => {
-            info!("Resuming snapshot.");
-            let mut f = match settings.environment.init_file {
-                Some(ref fname) => {
-                    info!("Reading snapshot from {}", *fname);
-                    File::open(fname).chain_err(|| "Unable to open input file.")?
-                }
-                None => bail!("No input file provided in the parameterfile."),
-            };
-
-            ParticlesOrSnapshot::Snapshot(
-                deserialize_from(&mut f, bincode::SizeLimit::Infinite)
-                    .chain_err(|| "Cannot read given snapshot.")?
-            )
-        }
-    };
-
-    match initial_condition {
-        ParticlesOrSnapshot::Particles(p) => simulation.init(p),
-        ParticlesOrSnapshot::Snapshot(s) => simulation.resume(s),
-    };
-
-    Ok(simulation)
-}
-
-/// Creates an output file. Already writes header for metadata.
-fn prepare_output_file(settings: &Settings, path: &str) -> Result<File> {
-    let fileext = match settings.environment.output_format {
-        OutputFormat::CBOR => "cbor",
-        OutputFormat::Bincode => "bincode",
-    };
-
-    let filepath = Path::new(path).with_extension(fileext);
-
-    let mut file = File::create(&filepath)
-        .chain_err(|| format!("couldn't create output file '{}'.", filepath.display()))?;
-
-    // Serialize settings as first object in file
-    match settings.environment.output_format {
-        OutputFormat::CBOR => ser::to_writer_sd(&mut file, &settings).unwrap(),
-        OutputFormat::Bincode => {
-            serialize_into(&mut file, &settings, bincode::SizeLimit::Infinite).unwrap()
-        }
-    }
-
-    Ok(file)
-}
-
-#[allow(dead_code)]
-/// Message type for the IO worker thread channel.
-enum IOWorkerMsg {
-    Quit,
-    Snapshot(Snapshot),
-    Output(Output),
+    Ok(run_simulation(&settings, &mut simulation, worker, show_progress)?)
 }
 
 
 /// Spawns output thread and run simulation.
 fn run_simulation(settings: &Settings,
-                  path: String,
-                  mut file: File,
                   mut simulation: &mut Simulation,
+                  worker: Worker,
                   show_progress: bool)
                   -> Result<()> {
+
     let n = settings.simulation.number_of_timesteps;
 
-    // Create communication channel for thread
-    let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(settings.environment.io_queue_size);
-
-    // Copy output_format, so it can be captured by the thread closure.
-    let output_format = settings.environment.output_format;
-
-    // make copy, that is not moved into closure
-    let filepath = path.clone();
-
-    let mut snapshot_counter = 0;
-
-    // Spawn worker thread, that periodically flushes collections of simulation
-    // states to disk.
-    let io_worker = thread::spawn(move || -> Result<()> {
-
-        let index_file_path = Path::new(&path).with_extension("index");
-        let mut index_file =
-            File::create(&index_file_path)
-                .chain_err(|| format!("Cannot create index file '{}'", index_file_path.display()))?;
-
-        loop {
-            match rx.recv().unwrap() {
-                IOWorkerMsg::Quit => break,
-
-                IOWorkerMsg::Snapshot(s) => {
-                    snapshot_counter += 1;
-                    let filepath =
-                        Path::new(&path).with_extension(format!("bincode.{}", snapshot_counter));
-
-                    let mut snapshot_file = File::create(&filepath).chain_err(|| {
-                                       format!("Cannot create snapshot file '{}'.",
-                                               filepath.display())
-                                   })?;
-
-                    serialize_into(&mut snapshot_file, &s, bincode::SizeLimit::Infinite)
-                        .chain_err(||
-                            format!("Cannot write snapshot with number {}", snapshot_counter)
-                        )?
-                }
-
-                IOWorkerMsg::Output(v) => {
-                    // write starting offset of blob into index file
-                    let pos = file.seek(SeekFrom::Current(0)).unwrap();
-                    let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
-                    index_file.write_all(&pos_le).chain_err(|| "Failed to write into index file.")?;
-
-                    // write all snapshots into one cbor file
-                    match output_format {
-                        OutputFormat::CBOR => {
-                            ser::to_writer_sd(&mut file, &v)
-                                .chain_err(|| "Cannot write simulation output (format: CBOR).")?
-                        }
-                        OutputFormat::Bincode => {
-                            serialize_into(&mut file, &v, bincode::SizeLimit::Infinite)
-                                .chain_err(||
-                                    "Cannot write simulation output (format: bincode).")?
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    });
 
     // Output sampled distribtuion for initial state. Scope, so `initial` is
     // directly discarted.
@@ -310,7 +134,7 @@ fn run_simulation(settings: &Settings,
             None
         };
 
-        tx.send(IOWorkerMsg::Output(initial)).unwrap();
+        worker.append(initial).chain_err(|| "Unable to append initial condition.")?;
     }
 
     let mut pb = ProgressBar::new(n as u64);
@@ -366,20 +190,16 @@ fn run_simulation(settings: &Settings,
 
         if output.distribution.is_some() || output.flow_field.is_some() ||
            output.particles.is_some() {
-            tx.send(IOWorkerMsg::Output(output)).unwrap();
+            worker.append(output).chain_err(|| "Unable to append simulation output.")?;
         }
     }
-    // FIXME: substitute .ext with correct string
-    pb.finish_print(&format!("done. Written '{}'.", filepath));
+
+    pb.finish_print(&format!("done. Written '{}'.",
+                             worker.get_output_filepath().display()));
 
     let snapshot = simulation.get_snapshot();
-    tx.send(IOWorkerMsg::Snapshot(snapshot)).unwrap();
+    worker.write_snapshot(snapshot).chain_err(|| "Error writing last snapshot.")?;
     println!("Written final snapshot.");
 
-    // Stop worker
-    tx.send(IOWorkerMsg::Quit).unwrap();
-
-    Ok(io_worker.join()
-           .unwrap()
-           .chain_err(|| "Error when flushing output to disk.")?)
+    worker.quit()
 }
