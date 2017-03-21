@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.2.22"
+version = "0.2.23"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = false #"build.rs"
 
