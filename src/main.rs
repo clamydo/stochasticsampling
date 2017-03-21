@@ -77,12 +77,10 @@ fn run() -> Result<()> {
         InitType::File
     } else if cli_matches.is_present("resume") {
         InitType::Snapshot
+    } else if cli_matches.is_present("initial_condition") {
+        InitType::Stdin
     } else {
-        if cli_matches.is_present("initial_condition") {
-            InitType::Stdin
-        } else {
-            InitType::Random
-        }
+        InitType::Random
     };
 
 

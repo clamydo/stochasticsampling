@@ -47,6 +47,7 @@ impl Worker {
 
 
         // clone, so it can be moved into thread closure
+        // TODO find a more elegant solution
         let op = output_path.clone();
         let of = output_file.format;
 

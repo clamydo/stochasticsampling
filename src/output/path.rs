@@ -3,7 +3,7 @@ use std::fs::DirBuilder;
 use std::path::{Path, PathBuf};
 use time;
 
-/// OutputPath represents a common path, which all files written to disk share.
+/// ´OutputPath´ represents a common path, which all files written to disk share.
 ///
 /// The `.with_extension()` method allows for easy change of file extension, to
 /// differentiate between the outputs.
@@ -17,7 +17,7 @@ impl OutputPath {
         let id = create_output_id(prefix);
 
         // create directory containing all produced files
-        let dir = create_output_dir(&id, &root).unwrap();
+        let dir = create_output_dir(&id, root).unwrap();
 
         OutputPath { path: dir.join(&id) }
     }
