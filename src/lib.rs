@@ -42,3 +42,5 @@ mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain! { }
 }
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");

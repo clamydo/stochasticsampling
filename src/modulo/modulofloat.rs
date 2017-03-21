@@ -15,6 +15,7 @@
 //! assert_eq!(*(a * -22.0).as_ref(), 0.75);
 //! ```
 
+use std::fmt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::Visitor;
 use std::f64;
@@ -214,7 +215,7 @@ impl AsMut<f64> for Mf64 {
 /// Implement serde's Serialize in order to serialize only to a float.
 /// This skips the modulo quotient.
 impl Serialize for Mf64 {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
         serializer.serialize_f64((*self).v)
@@ -226,7 +227,7 @@ impl Serialize for Mf64 {
 /// WARNING: Modulo quotient of zero means, that this is just a float, without
 /// wrapping! This means, `Mf64` can also have a negative value for `v`!
 impl Deserialize for Mf64 {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Mf64, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Mf64, D::Error>
         where D: Deserializer
     {
         struct F64Visitor;
@@ -234,7 +235,11 @@ impl Deserialize for Mf64 {
         impl Visitor for F64Visitor {
             type Value = f64;
 
-            fn visit_f64<E>(&mut self, value: f64) -> Result<f64, E>
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an float 64")
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<f64, E>
                 where E: ::serde::de::Error
             {
                 Ok(value as f64)
