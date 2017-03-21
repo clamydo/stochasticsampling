@@ -93,6 +93,8 @@ pub struct EnvironmentSettings {
     #[serde(default = "default_output_format")]
     pub output_format: OutputFormat,
     pub prefix: String,
+    #[serde(skip_deserializing)]
+    version: String,
 }
 
 /// Default value of IO queue size
@@ -124,7 +126,13 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
     let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
 
-    toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")
+    let mut settings: Settings =
+        toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")?;
+
+    // save version to metadata
+    settings.environment.version = ::VERSION.to_string();
+
+    Ok(settings)
 }
 
 
