@@ -73,14 +73,17 @@ fn run() -> Result<()> {
     let settings = settings::read_parameter_file(settings_file_name)
         .chain_err(|| "Error reading parameter file.")?;
 
-    let init_type = if cli_matches.is_present("initial_condition_file") {
-        InitType::File
-    } else if cli_matches.is_present("resume") {
-        InitType::Snapshot
-    } else if cli_matches.is_present("initial_condition") {
+    let init_type = if cli_matches.is_present("initial_condition") {
         InitType::Stdin
-    } else {
+    } else if settings.environment.init_file.is_none() {
+        if cli_matches.is_present("resume") {
+            bail!("Cannot resume. Pleas provide snapshot in `init_file` field in parameter file.");
+        }
         InitType::Random
+    } else if cli_matches.is_present("resume") {
+        InitType::Resume
+    } else {
+        InitType::File
     };
 
 
@@ -91,6 +94,8 @@ fn run() -> Result<()> {
         .chain_err(|| "Error during initialization of simulation.")?;
 
     let show_progress = cli_matches.is_present("progress_bar");
+
+    path.create().chain_err(|| "Cannot create output directory")?;
 
     let worker = Worker::new(
         settings.environment.io_queue_size,
@@ -192,12 +197,12 @@ fn run_simulation(settings: &Settings,
         }
     }
 
-    pb.finish_print(&format!("done. Written '{}'.",
+    pb.finish_print(&format!("Done. Written '{}'.",
                              worker.get_output_filepath().display()));
 
     let snapshot = simulation.get_snapshot();
     worker.write_snapshot(snapshot).chain_err(|| "Error writing last snapshot.")?;
-    println!("Written final snapshot.");
+    print!("Writ final snapshot… done.");
 
     worker.quit()
 }

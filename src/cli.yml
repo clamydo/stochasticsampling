@@ -2,32 +2,34 @@ name: S3
 author: Fabian Kössel <fkoessel@uni-mainz.de>
 about: Stochastic Sampling Solver for Fokker-Planck equations, magnetic microswimmers with hydro-dynamic interactions.
 args:
-    - parameter_file:
-        short: p
-        long: parameters
-        value_name: PARAMETER_FILE
-        help: Path to a parameter file in YAML format. See 'test/parameter.toml' for an example.
-        takes_value: true
-        required: true
-    - initial_condition:
-        short: i
-        long: initial
-        help: When this flag is set, the program listens to a CBOR formatted STDIN for a initial particle configuration.
-    - initial_condition_file:
-        short: f
-        long: initfile
-        help: Provide a path to an initial particle configuration in the CBOR format in the parameter file.
-    - resume:
-        short: r
-        long: resume
-        help: Resume to a snapshot in bincode format given in the parameter file.
     - output_directory:
         short: o
         long: output_directory
         value_name: OUTPUT_FILE
-        help: Path where output is written to
+        help: Output path
+        takes_value: true
+        required: false
+        default_value: ./
+    - parameter_file:
+        value_name: PARAMETER_FILE
+        help: Path to a parameter file in YAML format
         takes_value: true
         required: true
+        index: 1
+    - initial_condition:
+        short: i
+        long: init
+        help: Listen on STDIN for initial condition in CBOR format. Overrules parameter file.
+    - resume:
+        short: r
+        long: resume
+        help: Resume snapshot given in the parameter file in ´environment.init_file´ field.
     - progress_bar:
+        short: p
         long: progress
-        help: Show a progress bar.
+        help: Show progress
+
+groups:
+    - mode:
+        args: [initial_condition, resume]
+        multiple: false
