@@ -1,10 +1,10 @@
 #![crate_type = "bin"]
 #![recursion_limit = "1024"]
 
-extern crate stochasticsampling;
 extern crate bincode;
 #[macro_use]
 extern crate clap;
+extern crate colored;
 extern crate env_logger;
 #[macro_use]
 extern crate error_chain;
@@ -12,6 +12,7 @@ extern crate error_chain;
 extern crate log;
 extern crate pbr;
 extern crate serde_cbor;
+extern crate stochasticsampling;
 extern crate time;
 
 mod init;
@@ -23,6 +24,7 @@ mod errors {
 
 
 use clap::App;
+use colored::*;
 use errors::*;
 use init::InitType;
 use output::path::OutputPath;
@@ -43,7 +45,7 @@ fn main() {
 
     // error handling of runner
     if let Err(ref e) = run() {
-        error!("error: {}", e);
+        error!("{}: {}", "error".red(), e);
 
         for e in e.iter().skip(1) {
             error!("caused by: {}", e);
@@ -197,12 +199,14 @@ fn run_simulation(settings: &Settings,
         }
     }
 
-    pb.finish_print(&format!("Done. Written '{}'.",
-                             worker.get_output_filepath().display()));
+    pb.finish_print(&format!("✓ {} ", "DONE".green().bold()));
+    // TODO Why is this necessary?
+    println!("");
 
     let snapshot = simulation.get_snapshot();
     worker.write_snapshot(snapshot).chain_err(|| "Error writing last snapshot.")?;
-    print!("Writ final snapshot… done.");
+
+    println!("Written '{}'.", worker.get_output_filepath().display());
 
     worker.quit()
 }
