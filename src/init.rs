@@ -14,7 +14,7 @@ pub enum InitType {
     Stdin,
     File,
     Random,
-    Snapshot,
+    Resume,
 }
 
 
@@ -74,7 +74,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
 
             simulation.init(p);
         }
-        InitType::Snapshot => {
+        InitType::Resume => {
             info!("Resuming snapshot.");
             let mut f = match settings.environment.init_file {
                 Some(ref fname) => {

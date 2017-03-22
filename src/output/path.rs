@@ -16,10 +16,12 @@ impl OutputPath {
     pub fn new<'a>(root: &'a Path, prefix: &str) -> OutputPath {
         let id = create_output_id(prefix);
 
-        // create directory containing all produced files
-        let dir = create_output_dir(&id, root).unwrap();
+        OutputPath { path: root.join(&id).join(&id) }
+    }
 
-        OutputPath { path: dir.join(&id) }
+    pub fn create(&self) -> Result<()> {
+        // create directory containing all produced files
+        create_output_dir(&self.path.parent().ok_or("Cannot create output directory")?)
     }
 
     // Returns path with given file extension.
@@ -42,10 +44,7 @@ fn create_output_id(prefix: &str) -> String {
 
 
 /// Creates own ouput directory in output path using id.
-fn create_output_dir(id: &str, root_path: &Path) -> Result<PathBuf> {
-    let dir = root_path.join(Path::new(id));
-    DirBuilder::new().create(&dir)
-        .chain_err(|| format!("Unable to create output directory '{}'", &dir.display()))?;
-
-    Ok(dir)
+fn create_output_dir(path: &Path) -> Result<()> {
+    DirBuilder::new().create(&path)
+        .chain_err(|| format!("Unable to create output directory '{}'", &path.display()))
 }
