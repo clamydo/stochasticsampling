@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::thread::{self, JoinHandle};
 use stochasticsampling::simulation::Snapshot;
-use stochasticsampling::simulation::output::Output;
+use stochasticsampling::simulation::output::OutputEntry;
 use stochasticsampling::simulation::settings::{OutputFormat, Settings};
 
 
@@ -18,7 +18,7 @@ use stochasticsampling::simulation::settings::{OutputFormat, Settings};
 pub enum IOWorkerMsg {
     Quit,
     Snapshot(Snapshot),
-    Output(Output),
+    Output(OutputEntry),
     Settings(Settings),
 }
 
@@ -68,7 +68,7 @@ impl Worker {
         )
     }
 
-    pub fn append(&self, output: Output) -> Result<()> {
+    pub fn append(&self, output: OutputEntry) -> Result<()> {
         self.tx
             .send(IOWorkerMsg::Output(output))
             .chain_err(|| "Cannot append data to file.")?;
