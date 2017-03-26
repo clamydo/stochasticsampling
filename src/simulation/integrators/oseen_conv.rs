@@ -196,7 +196,7 @@ impl Integrator {
                 let plan = FFTPlan::new_c2c_inplace(&mut elem,
                                                     fft::FFTDirection::Forward,
                                                     fft::FFTFlags::Estimate)
-                    .unwrap();
+                        .unwrap();
                 plan.execute()
 
             }
@@ -306,15 +306,14 @@ impl Integrator {
         // Fourier transform force density component-wise
         let mut plans: Vec<FFTPlan> = f.outer_iter_mut()
             .map(|mut a| {
-                FFTPlan::new_c2c_inplace(&mut a,
-                                         fft::FFTDirection::Forward,
-                                         fft::FFTFlags::Estimate)
-                    .unwrap()
-            })
+                     FFTPlan::new_c2c_inplace(&mut a,
+                                              fft::FFTDirection::Forward,
+                                              fft::FFTFlags::Estimate)
+                             .unwrap()
+                 })
             .collect();
 
-        plans.par_iter_mut()
-            .for_each(|p| p.execute());
+        plans.par_iter_mut().for_each(|p| p.execute());
 
 
         // Make use of auto-broadcasting of lhs
@@ -323,15 +322,14 @@ impl Integrator {
         // Inverse Fourier transform flow field component-wise
         let mut plans: Vec<FFTPlan> = u.outer_iter_mut()
             .map(|mut a| {
-                FFTPlan::new_c2c_inplace(&mut a,
-                                         fft::FFTDirection::Backward,
-                                         fft::FFTFlags::Estimate)
-                    .unwrap()
-            })
+                     FFTPlan::new_c2c_inplace(&mut a,
+                                              fft::FFTDirection::Backward,
+                                              fft::FFTFlags::Estimate)
+                             .unwrap()
+                 })
             .collect();
 
-        plans.par_iter_mut()
-            .for_each(|p| p.execute());
+        plans.par_iter_mut().for_each(|p| p.execute());
 
         u.map(|x| x.re())
     }
@@ -412,34 +410,71 @@ fn vorticity(grid_width: GridWidth, u: &ArrayView<f64, Ix3>) -> Array<f64, Ix2> 
     let sh = u.shape();
     let sx = sh[1];
     let sy = sh[2];
-    let mut res = Array::zeros((sx, sy));
+
+    // allocate uninitialized memory, is assigned later
+    let len = sx * sy;
+    let mut uninit = Vec::with_capacity(len);
+    unsafe {
+        uninit.set_len(len);
+    }
+
+    let mut res = Array::from_vec(uninit).into_shape((sx, sy)).unwrap();
 
     let hx = 2. * grid_width.x;
     let hy = 2. * grid_width.y;
 
-    for (i, _) in u.indexed_iter() {
-        match i {
-            (0, ix, iy) => {
-                let ym = (iy + sy - 1) % sy;
-                let yp = (iy + 1) % sy;
-                unsafe {
-                    *res.uget_mut((ix, iy)) -= (u.uget((0, ix, yp)) - u.uget((0, ix, ym))) / hy
-                }
-            }
-            (1, ix, iy) => {
-                let xm = (ix + sx - 1) % sx;
-                let xp = (ix + 1) % sx;
-                unsafe {
-                    *res.uget_mut((ix, iy)) += (u.uget((1, xp, iy)) - u.uget((1, xm, iy))) / hx
-                }
-            }
-            (_, _, _) => {}
-        }
+    let ux = u.subview(Axis(0), 0);
+    let uy = u.subview(Axis(0), 1);
+
+    // trick to calculate dx dy / hx - dy dx / hy more easily
+    let hyx = hy / hx;
+
+    // calculate dx uy
+    // bulk
+    {
+        let mut s = res.slice_mut(s![1..-1, ..]);
+        s.assign(&uy.slice(s![2.., ..]));
+        s -= &uy.slice(s![..-2, ..]);
+        s *= hyx;
+    }
+    // borders
+    {
+        let mut s = res.slice_mut(s![..1, ..]);
+        s.assign(&uy.slice(s![1..2, ..]));
+        s -= &uy.slice(s![-1.., ..]);
+        s *= hyx;
+    }
+    {
+        let mut s = res.slice_mut(s![-1.., ..]);
+        s.assign(&uy.slice(s![..1, ..]));
+        s -= &uy.slice(s![-2..-1, ..]);
+        s *= hyx;
+    }
+
+    // calculate -dy dx, mind the switched signes
+    // bulk
+    {
+        let mut s = res.slice_mut(s![.., 1..-1]);
+        s -= &ux.slice(s![.., 2..]);
+        s += &ux.slice(s![.., ..-2]);
+        s /= hy;
+    }
+    // borders
+    {
+        let mut s = res.slice_mut(s![.., ..1]);
+        s -= &ux.slice(s![.., 1..2]);
+        s += &ux.slice(s![.., -1..]);
+        s /= hy;
+    }
+    {
+        let mut s = res.slice_mut(s![.., -1..]);
+        s -= &ux.slice(s![.., ..1]);
+        s += &ux.slice(s![.., -2..-1]);
+        s /= hy;
     }
 
     res
 }
-
 
 /// Implements Simpon's Rule integration on an array, representing sampled
 /// points of a periodic function.
@@ -617,6 +652,43 @@ mod tests {
         let vort = vorticity(gw, &u.view());
 
         b.iter(|| i.evolve_particle_inplace(&mut p, &[0.1, 0.1, 0.1], &u.view(), &vort.view()));
+    }
+
+    #[test]
+    fn test_vorticity() {
+        let bs = [50., 50.];
+        let gs = [50, 50, 1];
+        let gw = GridWidth::new(gs, bs);
+
+        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50).into_shape((2, 5, 5)).unwrap();
+        u[[0, 1, 4]] = 42.;
+
+        let v = vorticity(gw, &u.view());
+
+        let should = arr2(&[[-6., -8.5, -8.5, -8.5, -6.],
+                            [22.5, 4., 4., -12., 6.5],
+                            [6.5, 4., 4., 4., 6.5],
+                            [6.5, 4., 4., 4., 6.5],
+                            [-6., -8.5, -8.5, -8.5, -6.]]);
+
+        println!("result: {}", v);
+        println!("expected: {}", should);
+
+        for (a, b) in v.iter().zip(should.iter()) {
+            assert!(equal_floats(*a, *b), "expected {}, got {}", b, a);
+        }
+    }
+
+    #[bench]
+    fn bench_vorticity(b: &mut Bencher) {
+        let bs = [400., 400.];
+        let gs = [400, 400, 1];
+        let gw = GridWidth::new(gs, bs);
+
+        let u: Array<f64, Ix3> =
+            Array::linspace(1., 80000., 80000).into_shape((2, 200, 200)).unwrap();
+
+        b.iter(|| vorticity(gw, &u.view()));
     }
 
     #[test]
