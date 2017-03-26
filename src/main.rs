@@ -32,7 +32,7 @@ use output::worker::Worker;
 use pbr::ProgressBar;
 use std::path::Path;
 use stochasticsampling::simulation::Simulation;
-use stochasticsampling::simulation::output::Output;
+use stochasticsampling::simulation::output::OutputEntry;
 use stochasticsampling::simulation::settings::{self, Settings};
 
 
@@ -114,7 +114,7 @@ fn run() -> Result<()> {
 /// Spawns output thread and run simulation.
 fn run_simulation(settings: &Settings,
                   mut simulation: &mut Simulation,
-                  worker: Worker,
+                  out: Worker,
                   show_progress: bool)
                   -> Result<()> {
 
@@ -124,7 +124,7 @@ fn run_simulation(settings: &Settings,
     // Output sampled distribtuion for initial state. Scope, so `initial` is
     // directly discarted.
     {
-        let mut initial = Output::default();
+        let mut initial = OutputEntry::default();
         initial.distribution = Some(simulation.get_distribution());
         initial.particles = if settings.simulation
                .output
@@ -139,7 +139,7 @@ fn run_simulation(settings: &Settings,
             None
         };
 
-        worker.append(initial).chain_err(|| "Unable to append initial condition.")?;
+        out.append(initial).chain_err(|| "Unable to append initial condition.")?;
     }
 
     let mut pb = ProgressBar::new(n as u64);
@@ -160,8 +160,8 @@ fn run_simulation(settings: &Settings,
 
         // TODO: Refactor this ugly code
 
-        // Build output
-        let output = Output {
+        // Build entry
+        let entry = OutputEntry {
             distribution: settings.simulation
                 .output
                 .distribution_every_timestep
@@ -193,9 +193,9 @@ fn run_simulation(settings: &Settings,
             timestep: timestep,
         };
 
-        if output.distribution.is_some() || output.flow_field.is_some() ||
-           output.particles.is_some() {
-            worker.append(output).chain_err(|| "Unable to append simulation output.")?;
+        if entry.distribution.is_some() || entry.flow_field.is_some() ||
+           entry.particles.is_some() {
+            out.append(entry).chain_err(|| "Unable to append simulation entry.")?;
         }
     }
 
@@ -204,9 +204,9 @@ fn run_simulation(settings: &Settings,
     println!("");
 
     let snapshot = simulation.get_snapshot();
-    worker.write_snapshot(snapshot).chain_err(|| "Error writing last snapshot.")?;
+    out.write_snapshot(snapshot).chain_err(|| "Error writing last snapshot.")?;
 
-    println!("Written '{}'.", worker.get_output_filepath().display());
+    println!("Written '{}'.", out.get_output_filepath().display());
 
-    worker.quit()
+    out.quit()
 }

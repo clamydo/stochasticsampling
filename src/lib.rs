@@ -15,12 +15,15 @@ extern crate test;
 extern crate quickcheck;
 #[cfg(test)]
 extern crate ieee754;
+#[cfg(test)]
+extern crate ndarray_rand;
 
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
 extern crate log;
 extern crate fftw3;
+#[macro_use(s)]
 extern crate ndarray;
 extern crate pcg_rand;
 extern crate rand;
