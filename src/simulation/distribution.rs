@@ -1,10 +1,10 @@
 //! A representation for the probability distribution function.
 
-use ndarray::{Array, Axis, Ix, Ix3, Ix4};
-use std::ops::Index;
 use super::grid_width::GridWidth;
 use super::particle::Particle;
 use super::settings::GridSize;
+use ndarray::{Array, Axis, Ix, Ix3, Ix4};
+use std::ops::Index;
 
 /// Array type, that holds the sampled function values.
 pub type Bins = Array<f64, Ix3>;
@@ -114,41 +114,56 @@ impl Distribution {
     /// quotient with wrap around coordinates.
     pub fn spatgrad(&self) -> Array<f64, Ix4> {
         let (sx, sy, sa) = self.shape();
-        let mut res: Array<f64, Ix4> = Array::zeros((2, sx, sy, sa));
+
+        // allocated unititalized memory
+        let len = 2 * sx * sy * sa;
+        let mut uninit = Vec::with_capacity(len);
+        unsafe {
+            uninit.set_len(len);
+        }
+
+        let mut res = Array::from_vec(uninit).into_shape((2, sx, sy, sa)).unwrap();
+
 
         let h = &self.grid_width;
         let hx = 2. * h.x;
         let hy = 2. * h.y;
 
+        // calculate x-component
+        // bulk
         {
             let mut s = res.slice_mut(s![..1, 1..-1, .., ..]);
-            s += &self.dist.slice(s![2.., .., ..]);
+            s.assign(&self.dist.slice(s![2.., .., ..]));
             s -= &self.dist.slice(s![..-2, .., ..]);
         }
+        // borders
         {
             let mut s = res.slice_mut(s![..1, ..1, .., ..]);
-            s += &self.dist.slice(s![1..2, .., ..]);
+            s.assign(&self.dist.slice(s![1..2, .., ..]));
             s -= &self.dist.slice(s![-1.., .., ..]);
         }
         {
             let mut s = res.slice_mut(s![..1, -1.., .., ..]);
-            s += &self.dist.slice(s![..1, .., ..]);
+            s.assign(&self.dist.slice(s![..1, .., ..]));
             s -= &self.dist.slice(s![-2..-1, .., ..]);
         }
 
+        // calculate Array
+        // bulk
         {
             let mut s = res.slice_mut(s![1..2, .., 1..-1, ..]);
-            s += &self.dist.slice(s![.., 2.., ..]);
+            s.assign(&self.dist.slice(s![.., 2.., ..]));
             s -= &self.dist.slice(s![.., ..-2, ..]);
         }
+        // borders
         {
             let mut s = res.slice_mut(s![1..2, .., ..1, ..]);
-            s += &self.dist.slice(s![.., 1..2, ..]);
+            s.assign(&self.dist.slice(s![.., 1..2, ..]));
             s -= &self.dist.slice(s![.., -1.., ..]);
         }
         {
-            let mut s = res.slice_mut(s![1..2, .., -1..,  ..]);
-            s += &self.dist.slice(s![.., ..1, ..]);
+            let mut s = res.slice_mut(s![1..2, .., -1.., ..]);
+            s.assign(&self.dist.slice(s![.., ..1, ..]));
             s -= &self.dist.slice(s![.., -2..-1, ..]);
         }
 
@@ -187,6 +202,7 @@ impl Index<[i32; 3]> for Distribution {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use ieee754::Ieee754;
     use modulo::modulofloat::Mf64;
     use modulo::vector::Mod64Vector2;
@@ -197,7 +213,6 @@ mod tests {
     use simulation::particle::Particle;
     use std::f64::EPSILON;
     use test::Bencher;
-    use super::*;
 
     #[test]
     fn new() {
@@ -363,19 +378,19 @@ mod tests {
         d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
                         [[2.], [3.], [4.], [5.], [6.]],
                         [[3.], [4.], [5.], [6.], [7.]],
-                        [[4.], [5.], [6.], [7.], [8.]],
+                        [[4.], [5.], [6.], [7.], [10.]],
                         [[5.], [6.], [7.], [8.], [9.]]]);
 
         let res_x = arr3(&[[[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]],
                            [[5.0], [5.0], [5.0], [5.0], [5.0]],
+                           [[5.0], [5.0], [5.0], [5.0], [10.0]],
                            [[5.0], [5.0], [5.0], [5.0], [5.0]],
-                           [[5.0], [5.0], [5.0], [5.0], [5.0]],
-                           [[-7.5], [-7.5], [-7.5], [-7.5], [-7.5]]]);
+                           [[-7.5], [-7.5], [-7.5], [-7.5], [-12.5]]]);
 
         let res_y = arr3(&[[[-7.5], [5.0], [5.0], [5.0], [-7.5]],
                            [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
                            [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
-                           [[-7.5], [5.0], [5.0], [5.0], [-7.5]],
+                           [[-12.5], [5.0], [5.0], [10.0], [-7.5]],
                            [[-7.5], [5.0], [5.0], [5.0], [-7.5]]]);
 
         let grad = d.spatgrad();
@@ -398,8 +413,9 @@ mod tests {
         let box_size = [1., 1.];
         let grid_size = [200, 200, 20];
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
+        // TODO provide seed for reproducibility
         d.dist = Array::random(grid_size, Range::new(-1.0, 1.0));
-        b.iter(|| d.spatgrad())
+        b.iter(|| d.spatgrad());
     }
 
     #[test]
