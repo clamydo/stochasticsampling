@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.2.25"
+version = "0.2.26"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = false #"build.rs"
 
@@ -36,5 +36,5 @@ ndarray-rand = "0.4.0"
 members = ["crates/fftw3"]
 
 [profile.release]
-lto = false
-debug = true
+lto = true
+debug = false
