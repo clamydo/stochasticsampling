@@ -36,7 +36,13 @@ pub struct Mf64 {
 /// WARNING! Unsafe because having a divisor `m <= 0` gives unwanted results.
 /// Make sure, not to do that!
 fn modulo(f: f64, m: f64) -> f64 {
-    (f - (f / m).floor() * m) % m
+    if f < 0. {
+        (f - (f / m).floor() * m) % m
+    } else if f <= m {
+        f
+    } else {
+        f % m
+    }
 }
 
 impl Mf64 {
