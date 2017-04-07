@@ -1,5 +1,5 @@
 use super::path::OutputPath;
-use bincode;
+use bincode::{self, Infinite};
 use errors::*;
 use serde_cbor;
 use std::fs::File;
@@ -152,7 +152,7 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
 
                 bincode::serialize_into(&mut snapshot_file,
                                                     &s,
-                                                    bincode::SizeLimit::Infinite).chain_err(|| {
+                                                    Infinite).chain_err(|| {
                                                    format!("Cannot write snapshot with number {}",
                                                            snapshot_counter)
                                                })?
@@ -174,7 +174,7 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
                     OutputFormat::Bincode => {
                         bincode::serialize_into(
                             &mut file, &v,
-                            bincode::SizeLimit::Infinite)
+                            Infinite)
                         .chain_err(||
                             "Cannot write simulation output (format: bincode).")?
                     }
@@ -186,7 +186,7 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
                 match format {
                     OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut file, &v, bincode::SizeLimit::Infinite)
+                        bincode::serialize_into(&mut file, &v, Infinite)
                             .unwrap()
                     }
                 }
