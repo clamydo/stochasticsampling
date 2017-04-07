@@ -1,4 +1,4 @@
-use bincode;
+use bincode::{self, Infinite};
 use errors::*;
 use serde_cbor;
 use std::fs::File;
@@ -51,7 +51,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                             simulation.init(p);
                         }
                         "bincode" => {
-                            let p = bincode::deserialize_from(&mut f, bincode::SizeLimit::Infinite)
+                            let p = bincode::deserialize_from(&mut f, Infinite)
                             .chain_err(|| "Cannot read given initial condition.")?;
                             simulation.init(p);
                         }
@@ -84,7 +84,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                 None => bail!("No input file provided in the parameterfile."),
             };
 
-            let s =  bincode::deserialize_from(&mut f, bincode::SizeLimit::Infinite)
+            let s =  bincode::deserialize_from(&mut f, Infinite)
                     .chain_err(|| "Cannot read given snapshot.")?;
 
             simulation.resume(s);
