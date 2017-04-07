@@ -17,15 +17,16 @@ parser.add_argument('data',
 args = parser.parse_args()
 
 
-index_file = Path(Path(args.data).stem + ".index")
+index_file = Path(args.data).with_suffix(".index")
 
 if index_file.is_file():
-    index = np.fromfile(index_file, dtype=np.uint64)
+    index = np.fromfile(str(index_file), dtype=np.uint64)
     ds = Streamer(args.data, index=index)
 else:
     print('Build index...')
     ds = Streamer(args.data)
     index = ds.index
+
 
 sim_settings = ds.get_metadata()
 bs, gs, gw = DataStreamer.get_bs_gs_gw(sim_settings)
