@@ -47,12 +47,12 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                     match ext.to_str().unwrap() {
                         "cbor" => {
                             let p = serde_cbor::de::from_reader(f)
-                            .chain_err(|| "Cannot read given initial condition.")?;
+                            .chain_err(|| "CBOR, Cannot read given initial condition.")?;
                             simulation.init(p);
                         }
                         "bincode" => {
                             let p = bincode::deserialize_from(&mut f, Infinite)
-                            .chain_err(|| "Cannot read given initial condition.")?;
+                            .chain_err(|| "Bincode, Cannot read given initial condition.")?;
                             simulation.init(p);
                         }
                         _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),
