@@ -100,7 +100,11 @@ impl Distribution {
         // integral over/ the grid cell volume at a given grid coordinate and
         // not the approximate value of the distribution function.
         // Also normalise to one.
-        let GridWidth { x: gx, y: gy, a: ga } = self.grid_width;
+        let GridWidth {
+            x: gx,
+            y: gy,
+            a: ga,
+        } = self.grid_width;
         self.dist /= gx * gy * ga * n;
     }
 
@@ -122,7 +126,9 @@ impl Distribution {
             uninit.set_len(len);
         }
 
-        let mut res = Array::from_vec(uninit).into_shape((2, sx, sy, sa)).unwrap();
+        let mut res = Array::from_vec(uninit)
+            .into_shape((2, sx, sy, sa))
+            .unwrap();
 
 
         let h = &self.grid_width;
@@ -192,9 +198,10 @@ impl Index<[i32; 3]> for Distribution {
 
         let (sx, sy, sa) = self.shape();
         unsafe {
-            self.dist.uget((wrap(index[0], sx as i32),
-                            wrap(index[1], sy as i32),
-                            wrap(index[2], sa as i32)))
+            self.dist
+                .uget((wrap(index[0], sx as i32),
+                       wrap(index[1], sy as i32),
+                       wrap(index[2], sa as i32)))
         }
     }
 }
@@ -257,7 +264,11 @@ mod tests {
 
         // calculate approximate integral over the distribution function//
         // interpreted as a step function
-        let GridWidth { x: gx, y: gy, a: ga } = d.grid_width;
+        let GridWidth {
+            x: gx,
+            y: gy,
+            a: ga,
+        } = d.grid_width;
         let vol = gx * gy * ga;
         // Naive integration
         let sum = vol * d.dist.fold(0., |s, x| s + x);

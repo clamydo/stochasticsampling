@@ -63,9 +63,9 @@ impl Worker {
     }
 
     pub fn write_metadata(&self, settings: Settings) -> Result<()> {
-        self.tx.send(IOWorkerMsg::Settings(settings)).chain_err(||
-            "Cannot write metadata to output file."
-        )
+        self.tx
+            .send(IOWorkerMsg::Settings(settings))
+            .chain_err(|| "Cannot write metadata to output file.")
     }
 
     pub fn append(&self, output: OutputEntry) -> Result<()> {
@@ -162,7 +162,8 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
                 // write starting offset of blob into index file
                 let pos = file.seek(SeekFrom::Current(0)).unwrap();
                 let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
-                index_file.write_all(&pos_le).chain_err(|| "Failed to write into index file.")?;
+                index_file.write_all(&pos_le)
+                    .chain_err(|| "Failed to write into index file.")?;
 
                 // write all snapshots into one cbor file
                 match format {
@@ -186,8 +187,7 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
                 match format {
                     OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut file, &v, Infinite)
-                            .unwrap()
+                        bincode::serialize_into(&mut file, &v, Infinite).unwrap()
                     }
                 }
             }

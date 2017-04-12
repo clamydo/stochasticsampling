@@ -3,7 +3,8 @@ use std::fs::DirBuilder;
 use std::path::{Path, PathBuf};
 use time;
 
-/// ´OutputPath´ represents a common path, which all files written to disk share.
+/// ´OutputPath´ represents a common path, which all files written to disk
+/// share.
 ///
 /// The `.with_extension()` method allows for easy change of file extension, to
 /// differentiate between the outputs.
@@ -21,7 +22,9 @@ impl OutputPath {
 
     pub fn create(&self) -> Result<()> {
         // create directory containing all produced files
-        create_output_dir(&self.path.parent().ok_or("Cannot create output directory")?)
+        create_output_dir(&self.path
+                               .parent()
+                               .ok_or("Cannot create output directory")?)
     }
 
     // Returns path with given file extension.
@@ -38,13 +41,17 @@ fn create_output_id(prefix: &str) -> String {
     let v = ::VERSION.replace(".", "_");
     format!("{prefix}-{time}_v{version}",
             prefix = prefix,
-            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
+            time = &time::now()
+                        .strftime("%Y-%m-%d_%H%M%S")
+                        .unwrap()
+                        .to_string(),
             version = v)
 }
 
 
 /// Creates own ouput directory in output path using id.
 fn create_output_dir(path: &Path) -> Result<()> {
-    DirBuilder::new().create(&path)
+    DirBuilder::new()
+        .create(&path)
         .chain_err(|| format!("Unable to create output directory '{}'", &path.display()))
 }

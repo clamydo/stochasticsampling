@@ -113,7 +113,8 @@ fn read_from_file(filename: &str) -> Result<String> {
     let mut f = File::open(filename).chain_err(|| "Unable to open file.")?;
     let mut content = String::new();
 
-    f.read_to_string(&mut content).chain_err(|| "Unable to read file.")?;
+    f.read_to_string(&mut content)
+        .chain_err(|| "Unable to read file.")?;
 
     Ok(content)
 }

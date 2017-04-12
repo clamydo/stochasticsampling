@@ -395,11 +395,12 @@ impl Integrator {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity(self.grid_width, &flow_field);
 
-        particles.par_iter_mut()
+        particles
+            .par_iter_mut()
             .zip(random_samples.par_iter())
             .for_each(|(ref mut p, r)| {
-                self.evolve_particle_inplace(p, r, &flow_field, &vort.view())
-            });
+                          self.evolve_particle_inplace(p, r, &flow_field, &vort.view())
+                      });
     }
 }
 
@@ -660,7 +661,9 @@ mod tests {
         let gs = [50, 50, 1];
         let gw = GridWidth::new(gs, bs);
 
-        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50).into_shape((2, 5, 5)).unwrap();
+        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50)
+            .into_shape((2, 5, 5))
+            .unwrap();
         u[[0, 1, 4]] = 42.;
 
         let v = vorticity(gw, &u.view());
@@ -685,8 +688,9 @@ mod tests {
         let gs = [400, 400, 1];
         let gw = GridWidth::new(gs, bs);
 
-        let u: Array<f64, Ix3> =
-            Array::linspace(1., 80000., 80000).into_shape((2, 200, 200)).unwrap();
+        let u: Array<f64, Ix3> = Array::linspace(1., 80000., 80000)
+            .into_shape((2, 200, 200))
+            .unwrap();
 
         b.iter(|| vorticity(gw, &u.view()));
     }

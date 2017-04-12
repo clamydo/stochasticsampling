@@ -15,10 +15,10 @@
 //! assert_eq!(*(a * -22.0).as_ref(), 0.75);
 //! ```
 
-use std::fmt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::Visitor;
 use std::f64;
+use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// This structure represents a modulo type, with modulus m.
@@ -250,9 +250,9 @@ impl Deserialize for Mf64 {
             Err(e) => Err(e),
             Ok(v) => {
                 Ok(Mf64 {
-                    v: v,
-                    m: f64::default(),
-                })
+                       v: v,
+                       m: f64::default(),
+                   })
             }
         }
     }
@@ -261,9 +261,9 @@ impl Deserialize for Mf64 {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use quickcheck::TestResult;
     use std::f64;
-    use super::*;
     use test;
     use test::Bencher;
 
@@ -288,8 +288,8 @@ mod tests {
     fn bench_modulo(b: &mut Bencher) {
         let m = test::black_box(1.);
         b.iter(|| for i in 1..1000 {
-            modulo(i as f64, m);
-        });
+                   modulo(i as f64, m);
+               });
     }
 
     #[test]

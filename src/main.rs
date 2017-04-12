@@ -68,7 +68,9 @@ fn main() {
 fn run() -> Result<()> {
     // Parse command line
     let yaml = load_yaml!("cli.yml");
-    let cli_matches = App::from_yaml(yaml).version(crate_version!()).get_matches();
+    let cli_matches = App::from_yaml(yaml)
+        .version(crate_version!())
+        .get_matches();
 
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
@@ -97,7 +99,8 @@ fn run() -> Result<()> {
 
     let show_progress = cli_matches.is_present("progress_bar");
 
-    path.create().chain_err(|| "Cannot create output directory")?;
+    path.create()
+        .chain_err(|| "Cannot create output directory")?;
 
     let worker = Worker::new(
         settings.environment.io_queue_size,
@@ -105,7 +108,8 @@ fn run() -> Result<()> {
         settings.environment.output_format)
     .chain_err(|| "Unable to create output thread.")?;
 
-    worker.write_metadata(settings.clone()).chain_err(|| "Unable to write metadata to output.")?;
+    worker.write_metadata(settings.clone())
+        .chain_err(|| "Unable to write metadata to output.")?;
 
     Ok(run_simulation(&settings, &mut simulation, worker, show_progress)?)
 }
@@ -126,11 +130,13 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = OutputEntry::default();
         initial.distribution = Some(simulation.get_distribution());
-        initial.particles = if settings.simulation
+        initial.particles = if settings
+               .simulation
                .output
                .particle_every_timestep
                .is_some() {
-            settings.simulation
+            settings
+                .simulation
                 .output
                 .particle_head
                 .and_then(|n| Some(simulation.get_particles_head(n)))
@@ -139,7 +145,8 @@ fn run_simulation(settings: &Settings,
             None
         };
 
-        out.append(initial).chain_err(|| "Unable to append initial condition.")?;
+        out.append(initial)
+            .chain_err(|| "Unable to append initial condition.")?;
     }
 
     let mut pb = ProgressBar::new(n as u64);
@@ -162,7 +169,8 @@ fn run_simulation(settings: &Settings,
 
         // Build entry
         let entry = OutputEntry {
-            distribution: settings.simulation
+            distribution: settings
+                .simulation
                 .output
                 .distribution_every_timestep
                 .and_then(|x| if timestep % x == 0 {
@@ -170,7 +178,8 @@ fn run_simulation(settings: &Settings,
                           } else {
                               None
                           }),
-            flow_field: settings.simulation
+            flow_field: settings
+                .simulation
                 .output
                 .flowfield_every_timestep
                 .and_then(|x| if timestep % x == 0 {
@@ -178,11 +187,13 @@ fn run_simulation(settings: &Settings,
                           } else {
                               None
                           }),
-            particles: settings.simulation
+            particles: settings
+                .simulation
                 .output
                 .particle_every_timestep
                 .and_then(|x| if timestep % x == 0 {
-                              settings.simulation
+                              settings
+                                  .simulation
                                   .output
                                   .particle_head
                                   .and_then(|x| Some(simulation.get_particles_head(x)))
@@ -193,9 +204,9 @@ fn run_simulation(settings: &Settings,
             timestep: timestep,
         };
 
-        if entry.distribution.is_some() || entry.flow_field.is_some() ||
-           entry.particles.is_some() {
-            out.append(entry).chain_err(|| "Unable to append simulation entry.")?;
+        if entry.distribution.is_some() || entry.flow_field.is_some() || entry.particles.is_some() {
+            out.append(entry)
+                .chain_err(|| "Unable to append simulation entry.")?;
         }
     }
 
@@ -204,9 +215,14 @@ fn run_simulation(settings: &Settings,
     println!("");
 
     let snapshot = simulation.get_snapshot();
-    out.write_snapshot(snapshot).chain_err(|| "Error writing last snapshot.")?;
+    out.write_snapshot(snapshot)
+        .chain_err(|| "Error writing last snapshot.")?;
 
-    println!("Written '{}'.", out.get_output_filepath().display());
+    print!("Write buffer to disk… ");
+    let opath = out.get_output_filepath().to_str().unwrap().to_string();
 
-    out.quit()
+    out.quit()?;
+
+    println!("written '{}'.", opath);
+    Ok(())
 }

@@ -123,7 +123,9 @@ impl Simulation {
         self.state.particles = particles;
 
         // Do a first sampling, so that the initial condition can also be obtained
-        self.state.distribution.sample_from(&self.state.particles);
+        self.state
+            .distribution
+            .sample_from(&self.state.particles);
 
         self.state.distribution.dist *= self.settings.simulation.box_size[0] *
                                         self.settings.simulation.box_size[1];
@@ -181,13 +183,16 @@ impl Simulation {
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
-        self.state.distribution.sample_from(&self.state.particles);
+        self.state
+            .distribution
+            .sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
         self.state.distribution.dist *= self.settings.simulation.box_size[0] *
                                         self.settings.simulation.box_size[1];
 
         // Calculate flow field from distribution.
-        self.state.flow_field = self.integrator.calculate_flow_field(&self.state.distribution);
+        self.state.flow_field = self.integrator
+            .calculate_flow_field(&self.state.distribution);
 
         // Generate all needed random numbers here. Makes parallelization easier.
         for r in &mut self.state.random_samples {
@@ -197,9 +202,10 @@ impl Simulation {
         }
 
         // Update particle positions
-        self.integrator.evolve_particles_inplace(&mut self.state.particles,
-                                                 &self.state.random_samples,
-                                                 self.state.flow_field.view());
+        self.integrator
+            .evolve_particles_inplace(&mut self.state.particles,
+                                      &self.state.random_samples,
+                                      self.state.flow_field.view());
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
