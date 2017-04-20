@@ -14,7 +14,7 @@ class Streamer(object):
         if index is None:
             self.index = self.build_index()
         else:
-            self.index = index
+            self.set_index(index)
         self.__file = open(source_fn, 'rb')
 
     def __del__(self):
@@ -48,6 +48,9 @@ class Streamer(object):
 
     def get_index(self):
         return self.index
+
+    def set_index(self, index):
+        self.index = index
 
     def get_metadata(self):
         with open(self.source_fn, 'rb') as f:

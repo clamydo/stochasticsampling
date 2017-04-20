@@ -10,6 +10,8 @@ import DataStreamer
 import argparse
 import json
 from pathlib import Path
+from scipy.fftpack import fft2
+from scipy import special
 
 parser = argparse.ArgumentParser(description='Generate initial condition.')
 parser.add_argument('data',
@@ -29,21 +31,29 @@ else:
 
 
 sim_settings = ds.get_metadata()
+kappa = sim_settings['parameters']['magnetic_reorientation'] / \
+    sim_settings['parameters']['diffusion']['rotational']
 bs, gs, gw = DataStreamer.get_bs_gs_gw(sim_settings)
 
 print(json.dumps(sim_settings, indent=1))
 
-fig, axs = plt.subplots(1, 2)
+fig, axs = plt.subplots(2, 2)
 # plt.subplots_adjust(left=0.25, bottom=0.25)
 
-p = axs[0].imshow(np.zeros((gs[0], gs[1])), origin='lower')
+p = axs[1,0].imshow(np.zeros((gs[0], gs[1])), origin='lower')
 # fig.colorbar(p, ax=axs[1])
 
 v_x = np.linspace(gw[0] / 2., bs[0] - gw[0] / 2, gs[0])
 v_y = np.linspace(gw[1] / 2., bs[1] - gw[1] / 2, gs[1])
 v_X, v_Y = np.meshgrid(v_x, v_y)
 
-quiv = axs[1].quiver(v_X, v_Y, np.ones((gs[0], gs[1])), np.ones((gs[0], gs[1])), scale=None)
+ang_x = np.linspace(gw[2] / 2, 2*np.pi - gw[2] / 2, gs[2], endpoint=True)
+
+fft_plot = axs[0,1].imshow(np.zeros((gs[0], gs[1])), origin='lower')
+ang_dist_th_plot, = axs[0,0].plot([], [])
+ang_dist_plot, = axs[0,0].plot([], [], '.')
+
+quiv = axs[1,1].quiver(v_X, v_Y, np.ones((gs[0], gs[1])), np.ones((gs[0], gs[1])), scale=None)
 
 axslice = plt.axes([0.25, 0.1, 0.5, 0.03], facecolor='lightgoldenrodyellow')
 sslice = Slider(axslice, 'Slice',
@@ -51,40 +61,57 @@ sslice = Slider(axslice, 'Slice',
                 dragging=False)
 
 
-for ax in axs:
+for ax in axs.flatten():
     ax.set_aspect(1)
 
 
 def update_title(i, timestep):
-    axs[0].set_title('Slice: {}/{}, time: {}'.format(
+    axs[1,0].set_title('Slice: {}/{}, time: {}'.format(
         i, len(ds.index) - 1, timestep * sim_settings['simulation']['timestep']))
+
+
+def psi(x, kappa):
+        return np.exp(kappa * np.sin(x)) / np.abs(special.iv(0, kappa)) / 2 / np.pi
 
 
 def update(val):
     i = int(val * (len(ds.index) - 2)) + 1
-    try:
-        data = ds[i]
-        c = DataStreamer.dist_to_concentration(
-                DataStreamer.data_to_dist(data, gs),
-                gw
-            )
+    #try:
+    data = ds[i]
+    d = DataStreamer.data_to_dist(data, gs)
+    c = DataStreamer.dist_to_concentration(d, gw)
 
-        update_title(i, data['timestep'])
+    update_title(i, data['timestep'])
 
-        p.set_data(c.T)
-        p.autoscale()
+    dft = fft2(c)
+    mag = np.sqrt(dft.real**2 + dft.imag**2)
+    mag = mag / mag[0,0]
 
-        ff = data['flow_field']
-        if ff is None:
-            axs[1].set_title('no flowfield availabe')
-            quiv.set_UVC(np.ones((gs[0], gs[1])), np.ones((gs[0], gs[1])))
-        else:
-            axs[1].set_title('flowfield')
-            ff = np.array(ff['data']).reshape((2, gs[0], gs[1]))
-            quiv.set_UVC(ff[0].T, ff[1].T)
+    fft_plot.set_data(mag.T)
+    fft_plot.autoscale()
 
-    except:
-        axs[0].set_title('Failed to read timestep')
+    th = psi(ang_x, kappa)
+    ang_dist_th_plot.set_data(ang_x, th)
+    ang_dist = np.mean(d, axis=(0,1))
+    ang_dist_plot.set_data(ang_x, ang_dist)
+    axs[0,0].set_xlim([0,2 * np.pi])
+    axs[0,0].set_ylim([0,1])
+    axs[0,0].set_aspect('auto')
+
+    p.set_data(c.T)
+    p.autoscale()
+
+    ff = data['flow_field']
+    if ff is None:
+        axs[1, 1].set_title('no flowfield availabe')
+        quiv.set_UVC(np.ones((gs[0], gs[1])), np.ones((gs[0], gs[1])))
+    else:
+        axs[1, 1].set_title('flowfield')
+        ff = np.array(ff['data']).reshape((2, gs[0], gs[1]))
+        quiv.set_UVC(ff[0].T, ff[1].T)
+
+    #except:
+    #    axs[1, 0].set_title('Failed to read timestep')
 
     fig.canvas.draw_idle()
 
@@ -121,7 +148,8 @@ def press(event):
         sslice.set_val(1)
     if event.key == 'f5':
         if index_file.is_file():
-            index = np.fromfile(index_file, dtype=np.uint64)
+            index = np.fromfile(str(index_file), dtype=np.uint64)
+            ds.set_index(index)
         else:
             index = ds.rebuild_index()
 
