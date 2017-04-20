@@ -14,8 +14,6 @@ extern crate test;
 #[macro_use]
 extern crate quickcheck;
 #[cfg(test)]
-extern crate ieee754;
-#[cfg(test)]
 extern crate ndarray_rand;
 
 #[macro_use]

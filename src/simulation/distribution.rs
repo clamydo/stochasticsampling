@@ -210,7 +210,6 @@ impl Index<[i32; 3]> for Distribution {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ieee754::Ieee754;
     use modulo::modulofloat::Mf64;
     use modulo::vector::Mod64Vector2;
     use ndarray::{Array, Axis, arr3};
@@ -363,7 +362,8 @@ mod tests {
         let box_size = [10., 10.];
         let grid_size = [50, 50, 10];
 
-        let input = [[0., 0., (2. * ::std::f64::consts::PI).prev()]];
+        // next smaller float to 2 pi
+        let input = [[0., 0., 6.283185307179585]];
         let result = [[0, 0, 9]];
 
         for (i, o) in input.iter().zip(result.iter()) {
