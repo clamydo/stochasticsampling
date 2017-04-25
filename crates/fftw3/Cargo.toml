@@ -5,7 +5,7 @@ authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 
 [dependencies]
 ndarray = "0.9"
-num = "0.1"
+num = "0.1.37"
 
 [dev-dependencies]
 quickcheck = "*"

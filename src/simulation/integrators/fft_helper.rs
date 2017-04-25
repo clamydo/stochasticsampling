@@ -1,6 +1,6 @@
 use consts::TWOPI;
-use fftw3::complex::Complex;
-use ndarray::{Array, Axis, Ix1, Ix3};
+use num::Complex;
+use ndarray::{Array, ArrayView, Axis, Ix1, Ix2, Ix3};
 use simulation::settings::{BoxSize, GridSize};
 
 

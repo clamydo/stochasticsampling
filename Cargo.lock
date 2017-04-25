@@ -11,6 +11,7 @@ dependencies = [
  "log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndarray 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndarray-rand 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)",
  "pbr 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pcg_rand 0.7.0",
  "quickcheck 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
