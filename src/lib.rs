@@ -39,6 +39,7 @@ pub mod modulo;
 #[macro_use]
 pub mod serialization_helper;
 pub mod simulation;
+mod test_helper;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types

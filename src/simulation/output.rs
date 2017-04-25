@@ -1,5 +1,5 @@
 use super::distribution::Distribution;
-use super::integrators::oseen_conv::FlowField;
+use super::integrators::flowfield::FlowField;
 use super::particle::Particle;
 
 /// Captures values that can be outputed during simulation.
