@@ -1,6 +1,6 @@
 use consts::TWOPI;
 use fftw3::complex::Complex;
-use ndarray::{Array, Ix1, Ix3};
+use ndarray::{Array, Axis, Ix1, Ix3};
 use simulation::settings::{BoxSize, GridSize};
 
 
@@ -47,18 +47,25 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 
 /// Returns a meshgrid of k values for FFT.
 ///
-/// Every grid point contains values of a 2D k vector
-///     `res[i,j] -> [k1[i], k2[j]]`
+/// The first axis denote components of the k-vector:
+///     `res[c, i,j] -> k_c[i, j]`
 pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix3> {
     let ks = get_k_sampling(grid_size, box_size);
 
-    let mut res = Array::from_elem([grid_size[0], grid_size[1], 2], Complex::new(0., 0.));
+    let mut res = Array::from_elem([2, grid_size[0], grid_size[1]], Complex::new(0., 0.));
 
-    for (kx, mut ax0) in ks[0].iter().zip(res.outer_iter_mut()) {
-        for (ky, mut val) in ks[1].iter().zip(ax0.outer_iter_mut()) {
-            val[0] = *kx;
-            val[1] = *ky;
-        }
+    // first component is constant along second axis of field
+    for (kx, mut x) in ks[0]
+            .iter()
+            .zip(res.subview_mut(Axis(0), 0).axis_iter_mut(Axis(1))) {
+        x.fill(*kx);
+    }
+
+    // second component is constant along first axis of field
+    for (ky, mut y) in ks[1]
+            .iter()
+            .zip(res.subview_mut(Axis(0), 1).axis_iter_mut(Axis(0))) {
+        y.fill(*ky)
     }
 
     res
