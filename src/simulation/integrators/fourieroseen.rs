@@ -24,10 +24,11 @@
 use super::fft_helper::{get_inverse_norm_squared, get_k_mesh};
 use super::flowfield::FlowField;
 use super::flowfield::vorticity;
+use super::integrate::integrate;
 use consts::TWOPI;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
+use ndarray::{Array, ArrayView, Axis, Ix, Ix2, Ix3, Ix4};
 use num::Complex;
 use rayon::prelude::*;
 use simulation::grid_width::GridWidth;
@@ -129,11 +130,9 @@ impl Integrator {
                 .unwrap();
 
             let mut stress_field = (&stress * dist).map_axis(Axis(4), |v| {
-                Complex::from(periodic_simpson_integrate(v, h))
+                // Complex::from(periodic_simpson_integrate(v, h))
+                Complex::from(integrate(v, h))
             });
-
-            println!("{}", dist);
-            println!("{}", stress_field);
 
             // calculate FFT of stress tensor component wise
             for mut row in stress_field.outer_iter_mut() {
@@ -152,17 +151,15 @@ impl Integrator {
         let stress_field = fft_stress(&self.stress_kernel.view(), &dist, self.grid_width.a);
 
         let k_mesh_sh = self.k_mesh.shape();
-        // let sigmak = (&stress_field * self.k_mesh.broadcast((2, 2, k_mesh_sh[1],
-        // k_mesh_sh[2])).unwrap());
 
         let sigmak = ((stress_field * self.k_mesh.view()).sum(Axis(1)) * &self.k_inorm.view()) *
                      Complex::new(0., 1.);
+
 
         let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum(Axis(0)) * &self.k_inorm.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
         let mut u = sigmak - &kksigmak.view();
-
 
         for mut component in u.outer_iter_mut() {
             let plan = FFTPlan::new_c2c_inplace(&mut component,
@@ -247,43 +244,14 @@ impl Integrator {
 }
 
 
-
-
-/// Implements Simpon's Rule integration on an array, representing sampled
-/// points of a periodic function.
-fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
-    let len = samples.dim();
-
-    assert!(len % 2 == 0,
-            "Periodic Simpson's rule only works for even number of sample points, since the \
-             first point in the integration interval is also the last. Please specify an even \
-             number of grid cells.");
-
-    unsafe {
-        let mut s = samples.uget(0) + samples.uget(0);
-
-        for i in 1..(len / 2) {
-            s += 2. * samples.uget(2 * i);
-            s += 4. * samples.uget(2 * i - 1);
-        }
-
-        s += 4. * samples.uget(len - 1);
-        s * h / 3.
-    }
-}
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{Array, Axis, arr1, arr2};
-    use num::Complex;
+    use ndarray::{Array, Axis, arr2, arr3};
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
     use simulation::settings::StressPrefactors;
-    use std::f64::EPSILON;
-    use std::f64::consts::PI;
     use test::Bencher;
     use test_helper::equal_floats;
 
@@ -328,8 +296,8 @@ mod tests {
 
     #[test]
     fn test_calculate_flow_field() {
-        let bs = [10., 10.];
-        let gs = [10, 10, 6];
+        let bs = [3., 4.];
+        let gs = [3, 4, 6];
         let s = StressPrefactors {
             active: 1.,
             magnetic: 0.,
@@ -351,9 +319,34 @@ mod tests {
 
         let u = i.calculate_flow_field(d.dist.view());
 
-        println!("{}", u);
+        println!("u {}", u);
 
-        assert!(false);
+        let expect = arr3(&[[[0.,
+                              -0.000000000000000004183988419563217,
+                              0.,
+                              0.000000000000000004183988419563217],
+                             [0.046436899579834066,
+                              -0.01468035520353885,
+                              -0.01707618917275638,
+                              -0.014680355203538836],
+                             [-0.046436899579834066,
+                              0.014680355203538836,
+                              0.01707618917275638,
+                              0.01468035520353885]],
+                            [[0., -0.048892398517830254, 0., 0.048892398517830254],
+                             [-0.000000000000000003004629197474319,
+                              0.024446199258915124,
+                              -0.000000000000000003004629197474319,
+                              -0.02444619925891513],
+                             [0.000000000000000003004629197474319,
+                              0.02444619925891513,
+                              0.000000000000000003004629197474319,
+                              -0.024446199258915124]]]);
+
+
+        for (a, b) in u.iter().zip(expect.iter()) {
+            assert!(equal_floats(*a, *b), "{} != {}", *a, *b);
+        }
     }
 
     #[test]
@@ -394,19 +387,19 @@ mod tests {
                                    u.view());
 
         // TODO Check these values!
-        assert!(equal_floats(p[0].position.x.v, 0.7100000000000016),
-                "got {}",
-                p[0].position.x.v);
-        assert!(equal_floats(p[0].position.y.v, 0.3100000000000015),
-                "got {}",
-                p[0].position.y.v);
+        assert!(equal_floats(p[0].position.x.v, 0.71),
+                "got {}, expected {}",
+                p[0].position.x.v, 0.71);
+        assert!(equal_floats(p[0].position.y.v, 0.31),
+                "got {}, expected {}",
+                p[0].position.y.v, 0.31);
 
 
-        let orientations = [1.9880564727277061,
-                            3.5488527995226065,
-                            4.067451575120913,
-                            0.4072601459328098,
-                            1.7044728684146264];
+        let orientations = [0.3997098418658896,
+                            1.960506168660786,
+                            2.4791049442590847,
+                            5.102098822250579,
+                            0.11612623755280715];
 
         for (p, o) in p.iter().zip(&orientations) {
             assert!(equal_floats(p.orientation.v, *o),
@@ -446,67 +439,4 @@ mod tests {
 
         b.iter(|| i.evolve_particle_inplace(&mut p, &[0.1, 0.1, 0.1], &u.view(), &vort.view()));
     }
-
-
-    #[test]
-    fn test_simpson() {
-        let h = PI / 100.;
-        let f = Array::range(0., PI, h).map(|x| x.sin());
-        let integral = periodic_simpson_integrate(f.view(), h);
-
-        assert!(equal_floats(integral, 2.000000010824505),
-                "h: {}, result: {}",
-                h,
-                integral);
-
-
-        let h = PI / 100.;
-        let f = Array::range(0., TWOPI, h).map(|x| x.sin());
-        let integral = periodic_simpson_integrate(f.view(), h);
-
-        assert!(equal_floats(integral, 0.000000000000000034878684980086324),
-                "h: {}, result: {}",
-                h,
-                integral);
-
-
-        let h = 4. / 100.;
-        let f = Array::range(0., 4., h).map(|x| x * x);
-        let integral = periodic_simpson_integrate(f.view(), h);
-        assert!(equal_floats(integral, 21.120000000000001),
-                "h: {}, result: {}",
-                h,
-                integral);
-
-
-        let h = TWOPI / 102.;
-        let mut f = Array::zeros((102));
-        f[51] = 1. / h;
-        let integral = periodic_simpson_integrate(f.view(), h);
-        assert!(equal_floats(integral, 1.),
-                "h: {}, result: {}",
-                h,
-                integral);
-    }
-
-    #[test]
-    fn test_simpson_map_axis() {
-        let points = 100;
-        let h = PI / points as f64;
-        let f = Array::range(0., PI, h)
-            .map(|x| x.sin())
-            .into_shape((1, 1, points))
-            .unwrap()
-            .broadcast((10, 10, points))
-            .unwrap()
-            .to_owned();
-
-        let integral = f.map_axis(Axis(2), |v| super::periodic_simpson_integrate(v, h));
-
-        for e in integral.iter() {
-            assert!((e - 2.000000010824505).abs() < EPSILON);
-        }
-    }
-
-
 }

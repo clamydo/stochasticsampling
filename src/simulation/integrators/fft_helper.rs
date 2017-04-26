@@ -1,6 +1,6 @@
 use consts::TWOPI;
-use num::Complex;
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix2, Ix3};
+use num::Complex;
 use simulation::settings::{BoxSize, GridSize};
 
 
@@ -78,7 +78,7 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
 pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix3>) -> Array<Complex<f64>, Ix2> {
     let squared = &k_mesh * &k_mesh;
 
-    let mut inorm = squared.sum(Axis(0));
+    let mut inorm = squared.sum(Axis(0)).map(|v| 1. / v);
     inorm[[0, 0]] = Complex::new(0., 0.);
 
     inorm
@@ -151,7 +151,10 @@ mod tests {
 
         let inorm = get_inverse_norm_squared(mesh.view());
 
-        let expect = arr2(&[[0., 1., 1.], [1., 2., 2.], [4., 5., 5.], [1., 2., 2.]]);
+        let expect = arr2(&[[0., 1., 1.],
+                            [1., 0.5, 0.5],
+                            [0.25, 0.2, 0.2],
+                            [1., 0.5, 0.5]]);
 
         println!("{}", inorm);
 
