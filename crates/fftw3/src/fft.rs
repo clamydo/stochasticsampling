@@ -1,4 +1,4 @@
-use complex::Complex;
+use num::Complex;
 use ndarray::{ArrayViewMut, Ix2};
 use std;
 use std::sync::Arc;

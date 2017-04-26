@@ -10,11 +10,10 @@ extern crate ndarray;
 mod fftw3_ffi;
 pub mod fftw_ndarray;
 pub mod fft;
-pub mod complex;
 
 #[cfg(test)]
 mod tests {
-    use complex::Complex;
+    use num::Complex;
     use fft;
     use fft::FFTPlan;
     use fftw_ndarray::FFTData2D;

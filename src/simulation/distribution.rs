@@ -40,7 +40,7 @@ impl Distribution {
         self.grid_width
     }
 
-    pub fn shape(&self) -> (Ix, Ix, Ix) {
+    pub fn dim(&self) -> (Ix, Ix, Ix) {
         self.dist.dim()
     }
 
@@ -117,7 +117,7 @@ impl Distribution {
     /// The derivative is implemented as a symmetric finite differential
     /// quotient with wrap around coordinates.
     pub fn spatgrad(&self) -> Array<f64, Ix4> {
-        let (sx, sy, sa) = self.shape();
+        let (sx, sy, sa) = self.dim();
 
         // allocated unititalized memory
         let len = 2 * sx * sy * sa;
@@ -196,7 +196,7 @@ impl Index<[i32; 3]> for Distribution {
             (((i % b) + b) % b) as usize
         }
 
-        let (sx, sy, sa) = self.shape();
+        let (sx, sy, sa) = self.dim();
         unsafe {
             self.dist
                 .uget((wrap(index[0], sx as i32),
@@ -225,7 +225,7 @@ mod tests {
         let gs = [10, 10, 6];
         let bs = [1., 1.];
         let dist = Distribution::new(gs, GridWidth::new(gs, bs));
-        assert_eq!(dist.shape(), (10, 10, 6));
+        assert_eq!(dist.dim(), (10, 10, 6));
     }
 
     #[test]
