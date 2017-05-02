@@ -16,6 +16,7 @@
         flowfield_every_timestep = 42
         particle_every_timestep = 100
         particle_head = 10
+        snapshot_every_timestep = 666
 
 [parameters]
     magnetic_reorientation = 1.0

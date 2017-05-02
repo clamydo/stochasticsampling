@@ -63,6 +63,8 @@ pub struct Output {
     pub particle_head: Option<usize>,
     #[serde(default)]
     pub particle_every_timestep: Option<usize>,
+    #[serde(default)]
+    pub snapshot_every_timestep: Option<usize>,
 }
 
 /// Holds simulation specific settings.
@@ -174,5 +176,7 @@ mod tests {
         assert_eq!(settings_default.simulation.output.particle_every_timestep, None);
         assert_eq!(settings.simulation.output.particle_head, Some(10));
         assert_eq!(settings_default.simulation.output.particle_head, None);
+        assert_eq!(settings.simulation.output.snapshot_every_timestep, Some(666));
+        assert_eq!(settings_default.simulation.output.snapshot_every_timestep, None);
     }
 }

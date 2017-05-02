@@ -102,13 +102,13 @@ fn run() -> Result<()> {
     path.create()
         .chain_err(|| "Cannot create output directory")?;
 
-    let worker = Worker::new(
-        settings.environment.io_queue_size,
-        &path,
-        settings.environment.output_format)
-    .chain_err(|| "Unable to create output thread.")?;
+    let worker = Worker::new(settings.environment.io_queue_size,
+                             &path,
+                             settings.environment.output_format)
+            .chain_err(|| "Unable to create output thread.")?;
 
-    worker.write_metadata(settings.clone())
+    worker
+        .write_metadata(settings.clone())
         .chain_err(|| "Unable to write metadata to output.")?;
 
     Ok(run_simulation(&settings, &mut simulation, worker, show_progress)?)
@@ -208,6 +208,14 @@ fn run_simulation(settings: &Settings,
             out.append(entry)
                 .chain_err(|| "Unable to append simulation entry.")?;
         }
+
+        match settings.simulation.output.snapshot_every_timestep {
+            Some(x) if timestep % x == 0 => {
+                let snapshot = simulation.get_snapshot();
+                out.write_snapshot(snapshot)
+            }
+            _ => Ok(()),
+        }?;
     }
 
     pb.finish_print(&format!("✓ {} ", "DONE".green().bold()));
