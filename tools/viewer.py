@@ -31,8 +31,12 @@ else:
 
 
 sim_settings = ds.get_metadata()
-kappa = sim_settings['parameters']['magnetic_reorientation'] / \
-    sim_settings['parameters']['diffusion']['rotational']
+if sim_settings['parameters']['diffusion']['rotational'] != 0:
+    kappa = sim_settings['parameters']['magnetic_reorientation'] / \
+        sim_settings['parameters']['diffusion']['rotational']
+else:
+    kappa = 10000000
+
 bs, gs, gw = DataStreamer.get_bs_gs_gw(sim_settings)
 
 print(json.dumps(sim_settings, indent=1))
