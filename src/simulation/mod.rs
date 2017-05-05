@@ -10,7 +10,7 @@ pub mod settings;
 
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
-use self::integrators::fourieroseen::{IntegrationParameter, Integrator};
+use self::integrators::oseen_conv::{IntegrationParameter, Integrator};
 use self::integrators::flowfield::FlowField;
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
@@ -193,7 +193,7 @@ impl Simulation {
 
         // Calculate flow field from distribution.
         self.state.flow_field = self.integrator
-            .calculate_flow_field(self.state.distribution.dist.view());
+            .calculate_flow_field(&self.state.distribution);
 
         // Generate all needed random numbers here. Makes parallelization easier.
         for r in &mut self.state.random_samples {

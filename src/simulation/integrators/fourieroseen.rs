@@ -34,6 +34,7 @@ use rayon::prelude::*;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
+use simulation::distribution::Distribution;
 
 
 /// Holds parameter needed for time step
@@ -50,6 +51,7 @@ pub struct IntegrationParameter {
 #[derive(Debug)]
 pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
+    box_size: BoxSize,
     grid_width: GridWidth,
     k_inorm: Array<Complex<f64>, Ix2>,
     k_mesh: Array<Complex<f64>, Ix3>,
@@ -74,6 +76,7 @@ impl Integrator {
         let mesh = get_k_mesh(grid_size, box_size);
 
         Integrator {
+            box_size: box_size,
             grid_width: grid_width,
             k_inorm: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
@@ -110,7 +113,7 @@ impl Integrator {
 
     /// Calculate flow field by convolving the Green's function of the stokes
     /// equation (Oseen tensor) with the stress field divergence (force density)
-    pub fn calculate_flow_field(&self, dist: ArrayView<f64, Ix3>) -> FlowField {
+    pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField {
 
         fn fft_stress(kernel: &ArrayView<f64, Ix3>,
                       dist: &ArrayView<f64, Ix3>,
@@ -148,7 +151,9 @@ impl Integrator {
             stress_field
         }
 
-        let stress_field = fft_stress(&self.stress_kernel.view(), &dist, self.grid_width.a);
+        let d = dist.dist.view();
+
+        let stress_field = fft_stress(&self.stress_kernel.view(), &d, self.grid_width.a);
 
         let k_mesh_sh = self.k_mesh.shape();
 
@@ -170,7 +175,10 @@ impl Integrator {
 
         }
 
-        u.map(|v| v.re / (k_mesh_sh[1] * k_mesh_sh[2]) as f64)
+        u.map(|v| {
+                  v.re / (k_mesh_sh[1] * k_mesh_sh[2]) as f64 * TWOPI / self.box_size[0] /
+                  self.box_size[1]
+              })
     }
 
 
@@ -317,7 +325,7 @@ mod tests {
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
 
-        let u = i.calculate_flow_field(d.dist.view());
+        let u = i.calculate_flow_field(&d);
 
         println!("u {}", u);
 
@@ -376,7 +384,7 @@ mod tests {
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
 
-        let u = i.calculate_flow_field(d.dist.view());
+        let u = i.calculate_flow_field(&d);
 
         i.evolve_particles_inplace(&mut p,
                                    &vec![[0.1, 0.1, 0.1],
@@ -389,10 +397,12 @@ mod tests {
         // TODO Check these values!
         assert!(equal_floats(p[0].position.x.v, 0.71),
                 "got {}, expected {}",
-                p[0].position.x.v, 0.71);
+                p[0].position.x.v,
+                0.71);
         assert!(equal_floats(p[0].position.y.v, 0.31),
                 "got {}, expected {}",
-                p[0].position.y.v, 0.31);
+                p[0].position.y.v,
+                0.31);
 
 
         let orientations = [0.3997098418658896,
@@ -433,7 +443,7 @@ mod tests {
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&vec![p]);
 
-        let u = i.calculate_flow_field(d.dist.view());
+        let u = i.calculate_flow_field(&d);
 
         let vort = vorticity(gw, u.view());
 
