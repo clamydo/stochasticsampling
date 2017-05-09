@@ -10,7 +10,7 @@ pub mod settings;
 
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
-use self::integrators::oseen_conv::{IntegrationParameter, Integrator};
+use self::integrators::fourieroseen::{IntegrationParameter, Integrator};
 use self::integrators::flowfield::FlowField;
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};

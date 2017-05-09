@@ -31,10 +31,10 @@ use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix, Ix2, Ix3, Ix4};
 use num::Complex;
 use rayon::prelude::*;
+use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
-use simulation::distribution::Distribution;
 
 
 /// Holds parameter needed for time step
@@ -111,8 +111,24 @@ impl Integrator {
     }
 
 
+
     /// Calculate flow field by convolving the Green's function of the stokes
-    /// equation (Oseen tensor) with the stress field divergence (force density)
+    /// equation (Oseen tensor) with the stress field divergence (force
+    /// density).
+    ///
+    /// Given the continuous Fourier coefficient `F[f][k]`` of a function `f`,
+    /// a periodicity `T` and a sampling `f_n = f(dx n)` with step width `dx`,
+    /// the DFT of `f_n` is given by
+    ///
+    ///     DFT[f_n] = N 2 pi / T F[f][2 pi / T k]
+    ///
+    /// Which means,
+    ///
+    ///     f_n = IDFT[DFT[f_n]]
+    ///         = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
+    ///
+    /// The normalisation `1/N` cancels. Because FFTW does not use normalisation,
+    /// we do not need to provide it in this case.
     pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField {
 
         fn fft_stress(kernel: &ArrayView<f64, Ix3>,
@@ -155,8 +171,6 @@ impl Integrator {
 
         let stress_field = fft_stress(&self.stress_kernel.view(), &d, self.grid_width.a);
 
-        let k_mesh_sh = self.k_mesh.shape();
-
         let sigmak = ((stress_field * self.k_mesh.view()).sum(Axis(1)) * &self.k_inorm.view()) *
                      Complex::new(0., 1.);
 
@@ -175,10 +189,8 @@ impl Integrator {
 
         }
 
-        u.map(|v| {
-                  v.re / (k_mesh_sh[1] * k_mesh_sh[2]) as f64 * TWOPI / self.box_size[0] /
-                  self.box_size[1]
-              })
+        // standard normalisation `1/N` cancels
+        u.map(|v| v.re / self.box_size[0] / self.box_size[1])
     }
 
 
