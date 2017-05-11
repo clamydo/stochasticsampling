@@ -112,7 +112,11 @@ def update(val):
     else:
         axs[1, 1].set_title('flowfield')
         ff = np.array(ff['data']).reshape((2, gs[0], gs[1]))
-        quiv.set_UVC(ff[0].T, ff[1].T)
+        # quiv.set_UVC(ff[0].T, ff[1].T)
+        axs[1, 1].cla()
+        x = np.arange(gs[0])
+        y = np.arange(gs[0])
+        axs[1, 1].streamplot(x, y, ff[0].T, ff[1].T)
 
     #except:
     #    axs[1, 0].set_title('Failed to read timestep')
