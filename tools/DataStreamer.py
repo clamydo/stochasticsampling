@@ -9,10 +9,13 @@ class Streamer(object):
     streaming directly from the disk.
     """
 
-    def __init__(self, source_fn, index=None):
+    def __init__(self, source_fn, index_fn=None, index=None):
         self.source_fn = source_fn
         if index is None:
-            self.index = self.build_index()
+            if index_fn is None:
+                self.index = self.build_index()
+            else:
+                self.set_index_from_file(index_fn)
         else:
             self.set_index(index)
         self.__file = open(source_fn, 'rb')
@@ -51,6 +54,9 @@ class Streamer(object):
 
     def set_index(self, index):
         self.index = index
+
+    def set_index_from_file(self, file):
+        self.index = np.fromfile(file, dtype=np.uint64)
 
     def get_metadata(self):
         with open(self.source_fn, 'rb') as f:
