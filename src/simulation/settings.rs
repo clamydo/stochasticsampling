@@ -125,7 +125,7 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Reads content of a file `param_file`, that should point to a valid TOML
 /// file, and Parsers it.
 /// Then returns the deserialized data in form of a Settings struct.
-pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
+pub fn read_parameter_file(param_file: &str, version: String) -> Result<Settings> {
     // read .toml file into string
     let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
 
@@ -133,7 +133,7 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
         toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")?;
 
     // save version to metadata
-    settings.environment.version = ::VERSION.to_string();
+    settings.environment.version = version;
 
     Ok(settings)
 }

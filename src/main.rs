@@ -37,7 +37,11 @@ use stochasticsampling::simulation::settings::{self, Settings};
 
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
+fn version() -> String {
+    format!("{}-{}", VERSION, short_sha())
+}
 
 fn main() {
     // initialize the env_logger implementation
@@ -69,12 +73,12 @@ fn run() -> Result<()> {
     // Parse command line
     let yaml = load_yaml!("cli.yml");
     let cli_matches = App::from_yaml(yaml)
-        .version(crate_version!())
+        .version(version().as_str())
         .get_matches();
 
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
-    let settings = settings::read_parameter_file(settings_file_name)
+    let settings = settings::read_parameter_file(settings_file_name, version())
         .chain_err(|| "Error reading parameter file.")?;
 
     let init_type = if cli_matches.is_present("initial_condition") {
