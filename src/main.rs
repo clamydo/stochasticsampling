@@ -39,7 +39,7 @@ use stochasticsampling::simulation::settings::{self, Settings};
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
-fn version() -> String {
+pub fn version() -> String {
     format!("{}-{}", VERSION, short_sha())
 }
 

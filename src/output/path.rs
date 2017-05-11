@@ -38,7 +38,7 @@ impl OutputPath {
 fn create_output_id(prefix: &str) -> String {
     // Need to introduce placeholder `.cbor`, since otherwise the patch version
     // number is chopped of later, when using `.with_extension()` method later.
-    let v = ::VERSION.replace(".", "_");
+    let v = ::version().replace(".", "_");
     format!("{prefix}-{time}_v{version}",
             prefix = prefix,
             time = &time::now()
