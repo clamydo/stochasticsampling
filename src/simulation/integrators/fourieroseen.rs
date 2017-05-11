@@ -35,6 +35,7 @@ use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
+use std::f64::consts::PI;
 
 
 /// Holds parameter needed for time step
@@ -55,6 +56,7 @@ pub struct Integrator {
     grid_width: GridWidth,
     k_inorm: Array<Complex<f64>, Ix2>,
     k_mesh: Array<Complex<f64>, Ix3>,
+    pre_phase: Array<Complex<f64>, Ix2>,
     stress_kernel: Array<f64, Ix3>,
     parameter: IntegrationParameter,
 }
@@ -75,11 +77,23 @@ impl Integrator {
 
         let mesh = get_k_mesh(grid_size, box_size);
 
+        let gs = Array::from_vec(grid_size[..2]
+                                     .iter()
+                                     .map(|x| Complex::new(*x as f64, 0.))
+                                     .collect())
+                .into_shape([2, 1, 1])
+                .unwrap();
+
+        let phase = (&mesh / &gs)
+            .sum(Axis(0))
+            .map(|k| Complex::new(0., PI * k.re).exp());
+
         Integrator {
             box_size: box_size,
             grid_width: grid_width,
             k_inorm: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
+            pre_phase: phase,
             parameter: parameter,
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
         }
@@ -125,9 +139,11 @@ impl Integrator {
     /// Which means,
     ///
     ///     f_n = IDFT[DFT[f_n]]
-    ///         = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
+    /// = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n /
+    /// N)
     ///
-    /// The normalisation `1/N` cancels. Because FFTW does not use normalisation,
+    /// The normalisation `1/N` cancels. Because FFTW does not use
+    /// normalisation,
     /// we do not need to provide it in this case.
     pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField {
 
@@ -178,7 +194,7 @@ impl Integrator {
         let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum(Axis(0)) * &self.k_inorm.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
-        let mut u = sigmak - &kksigmak.view();
+        let mut u = (sigmak - &kksigmak.view()) * &self.pre_phase.view();
 
         for mut component in u.outer_iter_mut() {
             let plan = FFTPlan::new_c2c_inplace(&mut component,

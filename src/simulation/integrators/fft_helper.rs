@@ -47,7 +47,7 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 
 /// Returns a meshgrid of k values for FFT.
 ///
-/// The first axis denote components of the k-vector:
+/// The first axis denotes the components of the k-vector:
 ///     `res[c, i,j] -> k_c[i, j]`
 pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix3> {
     let ks = get_k_sampling(grid_size, box_size);
