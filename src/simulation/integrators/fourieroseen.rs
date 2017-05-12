@@ -194,7 +194,8 @@ impl Integrator {
         let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum(Axis(0)) * &self.k_inorm.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
-        let mut u = (sigmak - &kksigmak.view()) * &self.pre_phase.view();
+        // let mut u = (sigmak - &kksigmak.view()) * &self.pre_phase.view();
+        let mut u = sigmak - &kksigmak.view();
 
         for mut component in u.outer_iter_mut() {
             let plan = FFTPlan::new_c2c_inplace(&mut component,
