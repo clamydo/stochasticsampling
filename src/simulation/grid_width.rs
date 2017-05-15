@@ -14,9 +14,9 @@ impl GridWidth {
     /// Calculates width of a grid cell given the number of cells and box size.
     pub fn new(grid_size: GridSize, box_size: BoxSize) -> GridWidth {
         GridWidth {
-            x: box_size[0] as f64 / grid_size[0] as f64,
-            y: box_size[1] as f64 / grid_size[1] as f64,
-            a: TWOPI / grid_size[2] as f64,
+            x: box_size.x as f64 / grid_size.x as f64,
+            y: box_size.y as f64 / grid_size.y as f64,
+            a: TWOPI / grid_size.phi as f64,
         }
     }
 }

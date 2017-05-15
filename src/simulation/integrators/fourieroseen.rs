@@ -35,7 +35,7 @@ use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
-use std::f64::consts::PI;
+// use std::f64::consts::PI;
 
 
 /// Holds parameter needed for time step
@@ -54,9 +54,8 @@ pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
     box_size: BoxSize,
     grid_width: GridWidth,
-    k_inorm: Array<Complex<f64>, Ix2>,
-    k_mesh: Array<Complex<f64>, Ix3>,
-    pre_phase: Array<Complex<f64>, Ix2>,
+    k_inorm: Array<Complex<f64>, Ix3>,
+    k_mesh: Array<Complex<f64>, Ix4>,
     stress_kernel: Array<f64, Ix3>,
     parameter: IntegrationParameter,
 }
@@ -68,7 +67,7 @@ impl Integrator {
                parameter: IntegrationParameter)
                -> Integrator {
 
-        if (grid_size[2] - 2) % 4 != 0 {
+        if (grid_size.phi - 2) % 4 != 0 {
             warn!("To have an orientation grid point in the direction of magnetic field, use a \
                    grid size of 2 + 4 * n, with n an integer.");
         }
@@ -77,23 +76,22 @@ impl Integrator {
 
         let mesh = get_k_mesh(grid_size, box_size);
 
-        let gs = Array::from_vec(grid_size[..2]
-                                     .iter()
-                                     .map(|x| Complex::new(*x as f64, 0.))
-                                     .collect())
-                .into_shape([2, 1, 1])
-                .unwrap();
-
-        let phase = (&mesh / &gs)
-            .sum(Axis(0))
-            .map(|k| Complex::new(0., PI * k.re).exp());
+        // let gs = Array::from_vec(grid_size[..2]
+        //                              .iter()
+        //                              .map(|x| Complex::new(*x as f64, 0.))
+        //                              .collect())
+        //         .into_shape([2, 1, 1])
+        //         .unwrap();
+        //
+        // let phase = (&mesh / &gs)
+        //     .sum(Axis(0))
+        //     .map(|k| Complex::new(0., PI * k.re).exp());
 
         Integrator {
             box_size: box_size,
             grid_width: grid_width,
             k_inorm: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
-            pre_phase: phase,
             parameter: parameter,
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
         }
@@ -108,11 +106,11 @@ impl Integrator {
                           stress: StressPrefactors)
                           -> Array<f64, Ix3> {
 
-        let mut s = Array::<f64, _>::zeros((2, 2, grid_size[2]));
+        let mut s = Array::<f64, _>::zeros((2, 2, grid_size.phi));
         // Calculate discrete angles, considering the cell centered sample points of
         // the distribution
         let gw_half = grid_width.a / 2.;
-        let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size[2]);
+        let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size.phi);
 
         for (mut e, a) in s.axis_iter_mut(Axis(2)).zip(&angles) {
             e[[0, 0]] = stress.active * (a.cos() * a.cos() - 1. / 3.);
@@ -139,12 +137,7 @@ impl Integrator {
     /// Which means,
     ///
     ///     f_n = IDFT[DFT[f_n]]
-    /// = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n /
-    /// N)
-    ///
-    /// The normalisation `1/N` cancels. Because FFTW does not use
-    /// normalisation,
-    /// we do not need to provide it in this case.
+    ///         = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
     pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField {
 
         fn fft_stress(kernel: &ArrayView<f64, Ix3>,
@@ -180,7 +173,7 @@ impl Integrator {
                 }
             }
 
-            stress_field
+            stress_field / Complex::new(dist_sh.0 as f64 * dist_sh.1 as f64, 0.)
         }
 
         let d = dist.dist.view();
@@ -206,8 +199,7 @@ impl Integrator {
 
         }
 
-        // standard normalisation `1/N` cancels
-        u.map(|v| v.re / self.box_size[0] / self.box_size[1])
+        u.map(|v| v.re)
     }
 
 
@@ -296,8 +288,8 @@ mod tests {
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
-        let bs = [1., 1.];
-        let gs = [10, 10, 3];
+        let bs = BoxSize{x: 1., y: 1., z: 0.};
+        let gs = GridSize{x: 10, y: 10, z: 0, phi: 3};
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -333,8 +325,8 @@ mod tests {
 
     #[test]
     fn test_calculate_flow_field() {
-        let bs = [3., 4.];
-        let gs = [3, 4, 6];
+        let bs = BoxSize{x: 3., y: 4., z: 0.};
+        let gs = GridSize{x: 3, y: 4, z: 0, phi: 6};
         let s = StressPrefactors {
             active: 1.,
             magnetic: 0.,
@@ -388,8 +380,8 @@ mod tests {
 
     #[test]
     fn test_evolve_particles_inplace() {
-        let bs = [1., 1.];
-        let gs = [10, 10, 6];
+        let bs = BoxSize{x: 1., y: 1., z: 0.};
+        let gs = GridSize{x: 10, y: 10, z: 0, phi: 6};
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -450,8 +442,8 @@ mod tests {
 
     #[bench]
     fn bench_evolve_particle_inplace(b: &mut Bencher) {
-        let bs = [1., 1.];
-        let gs = [6, 6, 6];
+        let bs = BoxSize{x: 1., y: 1., z: 0.};
+        let gs = GridSize{x: 6, y: 6, z: 0, phi: 6};
         let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,

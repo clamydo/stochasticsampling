@@ -23,9 +23,20 @@ pub struct Settings {
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
-pub type BoxSize = [f64; 2];
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct BoxSize {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
 /// Size of the discrete grid.
-pub type GridSize = [usize; 3];
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct GridSize {
+    pub x: usize,
+    pub y: usize,
+    pub z: usize,
+    pub phi: usize,
+}
 
 
 /// Holds rotational and translational diffusion constants
@@ -146,8 +157,9 @@ mod tests {
     #[test]
     fn read_settings() {
 
-        let settings = read_parameter_file("./test/parameter.toml").unwrap();
-        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
+        let settings = read_parameter_file("./test/parameter.toml", "version".to_string()).unwrap();
+        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml", "version".to_string()).unwrap();
+        // TODO test for version
 
         assert_eq!(settings_default.environment.init_file, None);
         assert_eq!(settings.environment.init_file, Some("foo/bar.cbor".to_string()));
@@ -161,8 +173,8 @@ mod tests {
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
-        assert_eq!(settings.simulation.box_size, [1., 1.]);
-        assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
+        assert_eq!(settings.simulation.box_size, BoxSize{ x: 1., y: 2., z: 3. });
+        assert_eq!(settings.simulation.grid_size, GridSize{x: 11, y: 12, z: 13, phi: 6});
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);

@@ -85,12 +85,13 @@ mod tests {
     use simulation::grid_width::GridWidth;
     use test::Bencher;
     use test_helper::equal_floats;
+    use simulation::settings::{BoxSize, GridSize};
 
 
     #[test]
     fn test_vorticity() {
-        let bs = [50., 50.];
-        let gs = [50, 50, 1];
+        let bs = BoxSize{x: 50., y: 50., z: 0.};
+        let gs = GridSize{x: 50, y: 50, z: 0, phi: 1};
         let gw = GridWidth::new(gs, bs);
 
         let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50)
@@ -116,8 +117,8 @@ mod tests {
 
     #[bench]
     fn bench_vorticity(b: &mut Bencher) {
-        let bs = [400., 400.];
-        let gs = [400, 400, 1];
+        let bs = BoxSize{x: 400., y: 400., z: 0.};
+        let gs = GridSize{x: 400, y: 400, z: 0, phi: 1};
         let gw = GridWidth::new(gs, bs);
 
         let u: Array<f64, Ix3> = Array::linspace(1., 80000., 80000)

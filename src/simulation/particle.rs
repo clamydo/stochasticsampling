@@ -21,7 +21,7 @@ impl Particle {
     /// Returns a `Particle` with given coordinates.
     pub fn new(x: f64, y: f64, a: f64, box_size: BoxSize) -> Particle {
         Particle {
-            position: Mod64Vector2::new(x, y, box_size),
+            position: Mod64Vector2::new(x, y, [box_size.x, box_size.y]),
             orientation: Mf64::new(a, TWOPI),
         }
     }
@@ -36,11 +36,11 @@ impl Particle {
 
         for _ in 0..n {
             particles.push(Particle {
-                               position: Mod64Vector2::new(boxdim[0] *
+                               position: Mod64Vector2::new(boxdim.x *
                                                            between.ind_sample(&mut rng),
-                                                           boxdim[1] *
+                                                           boxdim.y *
                                                            between.ind_sample(&mut rng),
-                                                           boxdim),
+                                                           [boxdim.x, boxdim.y]),
                                orientation: Mf64::new(TWOPI * between.ind_sample(&mut rng), TWOPI),
                            })
         }

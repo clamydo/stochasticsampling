@@ -89,7 +89,7 @@ impl Simulation {
         let state = SimulationState {
             distribution: Distribution::new(sim.grid_size,
                                             GridWidth::new(sim.grid_size, sim.box_size)),
-            flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
+            flow_field: Array::zeros((2, sim.grid_size.x, sim.grid_size.y)),
             particles: Vec::with_capacity(sim.number_of_particles),
             random_samples: vec![[0f64; 3]; sim.number_of_particles],
             rng: SeedableRng::from_seed(seed),
@@ -128,8 +128,8 @@ impl Simulation {
             .distribution
             .sample_from(&self.state.particles);
 
-        self.state.distribution.dist *= self.settings.simulation.box_size[0] *
-                                        self.settings.simulation.box_size[1];
+        self.state.distribution.dist *= self.settings.simulation.box_size.x *
+                                        self.settings.simulation.box_size.y;
     }
 
 
@@ -188,8 +188,8 @@ impl Simulation {
             .distribution
             .sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
-        self.state.distribution.dist *= self.settings.simulation.box_size[0] *
-                                        self.settings.simulation.box_size[1];
+        self.state.distribution.dist *= self.settings.simulation.box_size.x *
+                                        self.settings.simulation.box_size.y;
 
         // Calculate flow field from distribution.
         self.state.flow_field = self.integrator

@@ -1,5 +1,5 @@
 use consts::TWOPI;
-use ndarray::{Array, ArrayView, Axis, Ix1, Ix2, Ix3};
+use ndarray::{Array, ArrayView, Axis, Ix1, Ix2, Ix3, Ix4};
 use num::Complex;
 use simulation::settings::{BoxSize, GridSize};
 
@@ -18,9 +18,9 @@ use simulation::settings::{BoxSize, GridSize};
 ///     n = 11 => k = [0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1]
 ///
 fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f64>, Ix1>> {
-    let ks: Vec<Array<Complex<f64>, Ix1>> = grid_size[..2]
+    let ks: Vec<Array<Complex<f64>, Ix1>> = [grid_size.x, grid_size.y, grid_size.z]
         .iter()
-        .zip(box_size[..2].iter())
+        .zip([box_size.x, box_size.y, box_size.z].iter())
         .map(|(gs, bs)| {
             let a = (gs / 2) as isize;
             let b = if gs % 2 == 0 { gs / 2 } else { gs / 2 + 1 } as isize;
@@ -49,10 +49,10 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 ///
 /// The first axis denotes the components of the k-vector:
 ///     `res[c, i,j] -> k_c[i, j]`
-pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix3> {
+pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix4> {
     let ks = get_k_sampling(grid_size, box_size);
 
-    let mut res = Array::from_elem([2, grid_size[0], grid_size[1]], Complex::new(0., 0.));
+    let mut res = Array::from_elem([2, grid_size.x, grid_size.y, grid_size.z], Complex::new(0., 0.));
 
     // first component is constant along second axis of field
     for (kx, mut x) in ks[0]
@@ -68,6 +68,15 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
         y.fill(*ky)
     }
 
+    // third component is constant along first axis of field
+    for (ky, mut y) in ks[1]
+            .iter()
+            .zip(res.subview_mut(Axis(0), 1).axis_iter_mut(Axis(1))) {
+        y.fill(*ky)
+    }
+
+    unimplemented!();
+
     res
 }
 
@@ -75,11 +84,11 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
 /// Returns scalar field of inversed norm squared of k-vector-values.
 ///
 /// The inverse norm of k=0 is set to zero, i.e. 1/(k=0)^2 == 0
-pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix3>) -> Array<Complex<f64>, Ix2> {
+pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<Complex<f64>, Ix3> {
     let squared = &k_mesh * &k_mesh;
 
     let mut inorm = squared.sum(Axis(0)).map(|v| 1. / v);
-    inorm[[0, 0]] = Complex::new(0., 0.);
+    inorm[[0, 0, 0]] = Complex::new(0., 0.);
 
     inorm
 }
@@ -95,8 +104,8 @@ mod tests {
 
     #[test]
     fn test_get_k_sampling() {
-        let bs = [6., 7.];
-        let gs = [6, 7, 1];
+        let bs = BoxSize{x: 6., y: 7., z: 0.};
+        let gs = GridSize{x: 6, y: 7, z: 0, phi: 1};
 
         let k = get_k_sampling(gs, bs);
 
@@ -126,8 +135,8 @@ mod tests {
 
     #[test]
     fn test_get_k_mesh() {
-        let bs = [TWOPI, TWOPI];
-        let gs = [4, 3, 1];
+        let bs = BoxSize{x: TWOPI, y: TWOPI, z: 0.};
+        let gs = GridSize{x: 4, y: 3, z: 0, phi: 1};
 
         let mesh = get_k_mesh(gs, bs);
 
@@ -144,8 +153,8 @@ mod tests {
 
     #[test]
     fn test_get_inverse_norm_squared() {
-        let bs = [TWOPI, TWOPI];
-        let gs = [4, 3, 1];
+        let bs = BoxSize{x: TWOPI, y: TWOPI, z: 0.};
+        let gs = GridSize{x: 4, y: 3, z: 0, phi: 1};
 
         let mesh = get_k_mesh(gs, bs);
 
