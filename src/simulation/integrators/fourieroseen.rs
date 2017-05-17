@@ -28,7 +28,7 @@ use super::integrate::integrate;
 use consts::TWOPI;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use ndarray::{Array, ArrayView, Axis, Ix, Ix2, Ix3, Ix4};
+use ndarray::{Array, ArrayView, Axis, Ix, Ix2, Ix3, Ix4, Ix5};
 use num::Complex;
 use rayon::prelude::*;
 use simulation::distribution::Distribution;
@@ -53,6 +53,7 @@ pub struct IntegrationParameter {
 pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
     box_size: BoxSize,
+    grid_size: GridSize,
     grid_width: GridWidth,
     k_inorm: Array<Complex<f64>, Ix3>,
     k_mesh: Array<Complex<f64>, Ix4>,
@@ -89,6 +90,7 @@ impl Integrator {
 
         Integrator {
             box_size: box_size,
+            grid_size: grid_size,
             grid_width: grid_width,
             k_inorm: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
@@ -106,10 +108,10 @@ impl Integrator {
                           stress: StressPrefactors)
                           -> Array<f64, Ix3> {
 
-        let mut s = Array::<f64, _>::zeros((2, 2, grid_size.phi));
+        let mut s = Array::<f64, _>::zeros((3, 3, grid_size.phi));
         // Calculate discrete angles, considering the cell centered sample points of
         // the distribution
-        let gw_half = grid_width.a / 2.;
+        let gw_half = grid_width.phi / 2.;
         let angles = Array::linspace(0. + gw_half, TWOPI - gw_half, grid_size.phi);
 
         for (mut e, a) in s.axis_iter_mut(Axis(2)).zip(&angles) {
@@ -117,10 +119,12 @@ impl Integrator {
             e[[0, 1]] = stress.active * a.sin() * a.cos() + stress.magnetic * a.cos();
             e[[1, 0]] = stress.active * a.sin() * a.cos() - stress.magnetic * a.cos();
             e[[1, 1]] = stress.active * (a.sin() * a.sin() - 1. / 3.);
+            e[[2, 2]] = -stress.active / 3.;
         }
 
         s
     }
+
 
 
 
@@ -131,30 +135,31 @@ impl Integrator {
     /// Given the continuous Fourier coefficient `F[f][k]`` of a function `f`,
     /// a periodicity `T` and a sampling `f_n = f(dx n)` with step width `dx`,
     /// the DFT of `f_n` is given by
-    ///
+    /// ```latex
     ///     DFT[f_n] = N 2 pi / T F[f][2 pi / T k]
-    ///
+    /// ```
     /// Which means,
-    ///
+    /// ```latex
     ///     f_n = IDFT[DFT[f_n]]
-    ///         = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
+    ///     = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
+    /// ```
     pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField {
-
         fn fft_stress(kernel: &ArrayView<f64, Ix3>,
                       dist: &ArrayView<f64, Ix3>,
+                      gs: &GridSize,
                       h: f64)
-                      -> Array<Complex<f64>, Ix4> {
+                      -> Array<Complex<f64>, Ix5> {
 
             let dist_sh = dist.dim();
-            let stress_sh = kernel.shape();
+            let stress_sh = kernel.dim();
 
             // Put axis in order, so that components fields are continuous in memory,
             // so it can be passed to FFTW easily
-            let stress_tmp = kernel
-                .into_shape((stress_sh[0], stress_sh[1], 1, 1, dist_sh.2))
+            let stress = kernel
+                .into_shape((stress_sh.0, stress_sh.1, 1, 1, dist_sh.2))
                 .unwrap();
-            let stress = stress_tmp
-                .broadcast((stress_sh[0], stress_sh[1], dist_sh.0, dist_sh.1, dist_sh.2))
+            let stress = stress
+                .broadcast((stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2))
                 .unwrap();
 
             let mut stress_field = (&stress * dist).map_axis(Axis(4), |v| {
@@ -165,22 +170,30 @@ impl Integrator {
             // calculate FFT of stress tensor component wise
             for mut row in stress_field.outer_iter_mut() {
                 for mut elem in row.outer_iter_mut() {
-                    let plan = FFTPlan::new_c2c_inplace(&mut elem,
-                                                        fft::FFTDirection::Forward,
-                                                        fft::FFTFlags::Estimate)
+                    let plan = FFTPlan::new_c2c_inplace_2d(&mut elem,
+                                                           fft::FFTDirection::Forward,
+                                                           fft::FFTFlags::Estimate)
                             .unwrap();
                     plan.execute()
                 }
             }
-
-            stress_field / Complex::new(dist_sh.0 as f64 * dist_sh.1 as f64, 0.)
+            (stress_field / Complex::new(gs.x as f64 * gs.y as f64 * gs.z as f64, 0.))
+                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, 1])
+                .unwrap()
         }
 
         let d = dist.dist.view();
 
-        let stress_field = fft_stress(&self.stress_kernel.view(), &d, self.grid_width.a);
+        let stress_field = fft_stress(&self.stress_kernel.view(),
+                                      &d,
+                                      &self.grid_size,
+                                      self.grid_width.phi);
+        let stress_field = stress_field
+            .broadcast([3, 3, self.grid_size.x, self.grid_size.y, self.grid_size.z])
+            .unwrap();
 
-        let sigmak = ((stress_field * self.k_mesh.view()).sum(Axis(1)) * &self.k_inorm.view()) *
+
+        let sigmak = ((&stress_field * &self.k_mesh.view()).sum(Axis(1)) * &self.k_inorm.view()) *
                      Complex::new(0., 1.);
 
 
@@ -191,15 +204,20 @@ impl Integrator {
         let mut u = sigmak - &kksigmak.view();
 
         for mut component in u.outer_iter_mut() {
-            let plan = FFTPlan::new_c2c_inplace(&mut component,
-                                                fft::FFTDirection::Backward,
-                                                fft::FFTFlags::Estimate)
+            let plan = FFTPlan::new_c2c_inplace_3d(&mut component,
+                                                   fft::FFTDirection::Backward,
+                                                   fft::FFTFlags::Estimate)
                     .unwrap();
             plan.execute()
 
         }
 
-        u.map(|v| v.re)
+        let sh = u.shape();
+
+        u.slice(s![..2, .., .., ..1])
+            .map(|v| v.re)
+            .into_shape([2, sh[1], sh[2]])
+            .unwrap()
     }
 
 
@@ -276,20 +294,31 @@ impl Integrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{Array, Axis, arr2, arr3};
+    use ndarray::{Array, Axis, arr2};
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
     use simulation::settings::StressPrefactors;
     use test::Bencher;
     use test_helper::equal_floats;
+    use super::super::fft_helper::get_k_mesh;
+    use std::f64::consts::PI;
 
     /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
     #[test]
     fn new() {
-        let bs = BoxSize{x: 1., y: 1., z: 0.};
-        let gs = GridSize{x: 10, y: 10, z: 0, phi: 3};
+        let bs = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 1.,
+        };
+        let gs = GridSize {
+            x: 10,
+            y: 10,
+            z: 10,
+            phi: 3,
+        };
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -305,11 +334,15 @@ mod tests {
 
         let i = Integrator::new(gs, bs, int_param);
 
-        let should0 = arr2(&[[-0.0833333333333332, 0.9330127018922195],
-                             [-0.0669872981077807, 0.4166666666666666]]);
-        let should1 = arr2(&[[0.6666666666666666, -1.0], [1.0, -0.3333333333333333]]);
-        let should2 = arr2(&[[-0.0833333333333332, 0.0669872981077807],
-                             [-0.9330127018922195, 0.4166666666666666]]);
+        let should0 = arr2(&[[-0.0833333333333332, 0.9330127018922195, 0.],
+                             [-0.0669872981077807, 0.4166666666666666, 0.],
+                             [0., 0., -0.3333333333333333]]);
+        let should1 = arr2(&[[0.6666666666666666, -1.0, 0.],
+                             [1.0, -0.3333333333333333, 0.],
+                             [0., 0., -0.3333333333333333]]);
+        let should2 = arr2(&[[-0.0833333333333332, 0.0669872981077807, 0.],
+                             [-0.9330127018922195, 0.4166666666666666, 0.],
+                             [0., 0., -0.3333333333333333]]);
 
         let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
             should.iter().zip(stress.iter()) {
@@ -320,24 +353,102 @@ mod tests {
         check(should1, i.stress_kernel.subview(Axis(2), 1));
         check(should2, i.stress_kernel.subview(Axis(2), 2));
 
-        assert_eq!(i.stress_kernel.dim(), (2, 2, 3));
+        assert_eq!(i.stress_kernel.dim(), (3, 3, 3));
     }
 
     #[test]
-    fn test_calculate_flow_field() {
-        let bs = BoxSize{x: 3., y: 4., z: 0.};
-        let gs = GridSize{x: 3, y: 4, z: 0, phi: 6};
+    fn test_stress_expectation_value() {
+
+        let bs = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 1.,
+        };
+        let gs = GridSize {
+            x: 1,
+            y: 1,
+            z: 1,
+            phi: 6,
+        };
+
+        let gw = GridWidth::new(gs, bs);
+
         let s = StressPrefactors {
             active: 1.,
             magnetic: 0.,
         };
 
         let int_param = IntegrationParameter {
-            timestep: 0.1,
-            trans_diffusion: 0.1,
-            rot_diffusion: 0.1,
+            timestep: 0.0,
+            trans_diffusion: 0.0,
+            rot_diffusion: 0.0,
             stress: s,
-            magnetic_reorientation: 0.1,
+            magnetic_reorientation: 0.0,
+        };
+
+        let i = Integrator::new(gs, bs, int_param);
+
+        let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
+        let mut d = Distribution::new(gs, gw);
+        d.sample_from(&p);
+
+        println!("Distribution {}", d.dist);
+
+        let dist_sh = d.dim();
+        let stress_sh = i.stress_kernel.dim();
+
+        // Put axis in order, so that components fields are continuous in memory,
+        // so it can be passed to FFTW easily
+        let stress = &i.stress_kernel
+                          .view()
+                          .into_shape((stress_sh.0, stress_sh.1, 1, 1, dist_sh.2))
+                          .unwrap();
+        let stress = stress
+            .broadcast((stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2))
+            .unwrap();
+
+        let stress_field = (&stress * &d.dist.view()).map_axis(Axis(4), |v| {
+            // Complex::from(periodic_simpson_integrate(v, h))
+            Complex::from(integrate(v, gw.phi))
+        });
+
+        println!("{}", stress_field);
+
+        let expect = arr2(&[[-0.333333333333333333, 0., 0.],
+                            [0., 0.6666666666666666666666, 0.],
+                            [0., 0., -0.333333333333333333333]]);
+
+        let is = stress_field.slice(s![.., .., ..1, ..1]);
+
+        for (i, e) in is.iter().zip(expect.iter()) {
+            assert!(equal_floats(i.re, *e), "{} != {}", i.re, *e);
+        }
+    }
+
+    #[test]
+    fn test_calculate_flow_field() {
+        let bs = BoxSize {
+            x: 21.,
+            y: 21.,
+            z: 21.,
+        };
+        let gs = GridSize {
+            x: 21,
+            y: 21,
+            z: 21,
+            phi: 50,
+        };
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 0.,
+        };
+
+        let int_param = IntegrationParameter {
+            timestep: 0.0,
+            trans_diffusion: 0.0,
+            rot_diffusion: 0.0,
+            stress: s,
+            magnetic_reorientation: 0.0,
         };
 
         let i = Integrator::new(gs, bs, int_param);
@@ -348,40 +459,61 @@ mod tests {
 
         let u = i.calculate_flow_field(&d);
 
-        println!("u {}", u);
+        let theory = |x1: f64, x2: f64| {
+            [(x1 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.)),
+             (x2 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.))]
+        };
 
-        let expect = arr3(&[[[0.,
-                              -0.000000000000000004183988419563217,
-                              0.,
-                              0.000000000000000004183988419563217],
-                             [0.046436899579834066,
-                              -0.01468035520353885,
-                              -0.01707618917275638,
-                              -0.014680355203538836],
-                             [-0.046436899579834066,
-                              0.014680355203538836,
-                              0.01707618917275638,
-                              0.01468035520353885]],
-                            [[0., -0.048892398517830254, 0., 0.048892398517830254],
-                             [-0.000000000000000003004629197474319,
-                              0.024446199258915124,
-                              -0.000000000000000003004629197474319,
-                              -0.02444619925891513],
-                             [0.000000000000000003004629197474319,
-                              0.02444619925891513,
-                              0.000000000000000003004629197474319,
-                              -0.024446199258915124]]]);
+        let mut grid = get_k_mesh(gs, BoxSize { x: TWOPI, y: TWOPI, z: 1.})
+            .remove_axis(Axis(3));
 
 
-        for (a, b) in u.iter().zip(expect.iter()) {
-            assert!(equal_floats(*a, *b), "{} != {}", *a, *b);
-        }
+        // bring components to the back
+        grid.swap_axes(0, 1);
+        grid.swap_axes(1, 2);
+
+        let mut th_u_x = grid.map_axis(Axis(2), |v| {
+            theory(v[0].re, v[1].re)[0]
+        });
+
+        let mut th_u_y = grid.map_axis(Axis(2), |v| {
+            theory(v[0].re, v[1].re)[1]
+        });
+
+        th_u_x[[0, 0]] = 0.;
+        th_u_y[[0, 0]] = 0.;
+
+        println!("th_u_x: {}", th_u_x);
+        println!("sim_u_x: {}", u.subview(Axis(0), 0));
+
+        let diff = (th_u_x - u.subview(Axis(0), 0))
+            .map(|v| v.abs())
+            .scalar_sum();
+
+        assert!(diff <= 0.14, "diff: {}", diff);
+
+        let diff = (th_u_y - u.subview(Axis(0), 1))
+            .map(|v| v.abs())
+            .scalar_sum();
+
+        assert!(diff <= 0.22, "diff: {}", diff);
+
+        assert!(equal_floats(u.scalar_sum(), 0.), "{} != 0", u.scalar_sum());
     }
 
     #[test]
     fn test_evolve_particles_inplace() {
-        let bs = BoxSize{x: 1., y: 1., z: 0.};
-        let gs = GridSize{x: 10, y: 10, z: 0, phi: 6};
+        let bs = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 1.,
+        };
+        let gs = GridSize {
+            x: 10,
+            y: 10,
+            z: 10,
+            phi: 6,
+        };
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -426,15 +558,15 @@ mod tests {
                 0.31);
 
 
-        let orientations = [0.3997098418658896,
-                            1.960506168660786,
-                            2.4791049442590847,
-                            5.102098822250579,
-                            0.11612623755280715];
+        let orientations = [0.24447719561927586,
+                            1.8052735224141725,
+                            2.3238722980124713,
+                            4.946866176003965,
+                            6.244078898485779];
 
         for (p, o) in p.iter().zip(&orientations) {
             assert!(equal_floats(p.orientation.v, *o),
-                    "got {}={}",
+                    "got {} = {}",
                     p.orientation.v,
                     *o);
         }
@@ -442,8 +574,17 @@ mod tests {
 
     #[bench]
     fn bench_evolve_particle_inplace(b: &mut Bencher) {
-        let bs = BoxSize{x: 1., y: 1., z: 0.};
-        let gs = GridSize{x: 6, y: 6, z: 0, phi: 6};
+        let bs = BoxSize {
+            x: 10.,
+            y: 10.,
+            z: 10.,
+        };
+        let gs = GridSize {
+            x: 10,
+            y: 10,
+            z: 10,
+            phi: 6,
+        };
         let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,

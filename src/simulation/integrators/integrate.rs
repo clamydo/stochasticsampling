@@ -73,7 +73,8 @@ mod test {
         // let mut f = Array::zeros((102));
         // f[51] = 1. / h;
         // let integral = periodic_simpson_integrate(f.view(), h);
-        // assert!(equal_floats(integral, 1.), "expected: {}, result: {}", 1., integral);
+        // assert!(equal_floats(integral, 1.), "expected: {}, result: {}", 1.,
+        // integral);
     }
 
     #[test]

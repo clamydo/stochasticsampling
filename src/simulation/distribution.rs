@@ -60,7 +60,7 @@ impl Distribution {
 
         let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as Ix;
         let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
-        let ga = (p.orientation.as_ref() / self.grid_width.a).floor() as Ix;
+        let ga = (p.orientation.as_ref() / self.grid_width.phi).floor() as Ix;
 
         // make sure to produce valid indeces (necessary, because in some cases
         // Mf64 containes values that lie on the box border.
@@ -105,9 +105,9 @@ impl Distribution {
         let GridWidth {
             x: gx,
             y: gy,
-            a: ga,
+            phi: gphi,
         } = self.grid_width;
-        self.dist /= gx * gy * ga * n;
+        self.dist /= gx * gy * gphi * n;
     }
 
     /// Returns spatial gradient as an array.
@@ -128,9 +128,7 @@ impl Distribution {
             uninit.set_len(len);
         }
 
-        let mut res = Array::from_vec(uninit)
-            .into_shape((2, sx, sy, sa))
-            .unwrap();
+        let mut res = Array::from_vec(uninit).into_shape((2, sx, sy, sa)).unwrap();
 
 
         let h = &self.grid_width;
@@ -225,16 +223,34 @@ mod tests {
 
     #[test]
     fn new() {
-        let gs = GridSize{x: 10, y: 10, z: 1, phi: 6};
-        let bs = BoxSize{x: 1., y: 1., z: 1.};
+        let gs = GridSize {
+            x: 10,
+            y: 10,
+            z: 1,
+            phi: 6,
+        };
+        let bs = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 1.,
+        };
         let dist = Distribution::new(gs, GridWidth::new(gs, bs));
         assert_eq!(dist.dim(), (10, 10, 6));
     }
 
     #[test]
     fn histogram() {
-        let grid_size = GridSize{x: 5, y: 5, z: 1, phi: 2};
-        let box_size = BoxSize{x: 1., y: 1., z: 1.};
+        let grid_size = GridSize {
+            x: 5,
+            y: 5,
+            z: 1,
+            phi: 2,
+        };
+        let box_size = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 1.,
+        };
         let gw = GridWidth::new(grid_size, box_size);
         let n = 1000;
         let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
@@ -256,8 +272,17 @@ mod tests {
 
     #[test]
     fn sample_from() {
-        let box_size = BoxSize{x: 1., y: 1., z: 0.};
-        let grid_size = GridSize{x: 5, y: 5, z: 0, phi: 2};
+        let box_size = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 0.,
+        };
+        let grid_size = GridSize {
+            x: 5,
+            y: 5,
+            z: 0,
+            phi: 2,
+        };
         let n = 1000;
         let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
@@ -269,9 +294,9 @@ mod tests {
         let GridWidth {
             x: gx,
             y: gy,
-            a: ga,
+            phi: gphi,
         } = d.grid_width;
-        let vol = gx * gy * ga;
+        let vol = gx * gy * gphi;
         // Naive integration
         let sum = vol * d.dist.fold(0., |s, x| s + x);
         assert!((sum - 1.).abs() <= EPSILON * n as f64,
@@ -293,15 +318,19 @@ mod tests {
 
     #[test]
     fn coord_to_grid() {
-        let box_size = BoxSize{x: 1., y: 1., z: 0.};
-        let grid_size = GridSize{x: 50, y: 50, z: 0, phi: 10};
+        let box_size = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 0.,
+        };
+        let grid_size = GridSize {
+            x: 50,
+            y: 50,
+            z: 0,
+            phi: 10,
+        };
 
-        fn check(i: &[f64; 3],
-                 o: &[usize; 3],
-                 p: Particle,
-                 s: &str,
-                 gs: GridSize,
-                 bs: BoxSize) {
+        fn check(i: &[f64; 3], o: &[usize; 3], p: Particle, s: &str, gs: GridSize, bs: BoxSize) {
             let dist = Distribution::new(gs, GridWidth::new(gs, bs));
 
             let g = dist.coord_to_grid(&p);
@@ -362,8 +391,17 @@ mod tests {
 
 
         // check without modulo floats in between
-        let box_size = BoxSize{ x: 10., y: 10., z: 0.};
-        let grid_size = GridSize{x: 50, y: 50, z: 0, phi: 10};
+        let box_size = BoxSize {
+            x: 10.,
+            y: 10.,
+            z: 0.,
+        };
+        let grid_size = GridSize {
+            x: 50,
+            y: 50,
+            z: 0,
+            phi: 10,
+        };
 
         // next smaller float to 2 pi
         let input = [[0., 0., 6.283185307179585]];
@@ -385,8 +423,17 @@ mod tests {
 
     #[test]
     fn spatgrad() {
-        let box_size = BoxSize{x: 1., y: 1., z: 0.};
-        let grid_size = GridSize{x: 5, y: 5, z: 0, phi: 1};
+        let box_size = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 0.,
+        };
+        let grid_size = GridSize {
+            x: 5,
+            y: 5,
+            z: 0,
+            phi: 1,
+        };
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.dist = arr3(&[[[1.], [2.], [3.], [4.], [5.]],
@@ -424,21 +471,41 @@ mod tests {
 
     #[bench]
     fn bench_spatgrad(b: &mut Bencher) {
-        let box_size = BoxSize{x: 1., y: 1., z: 0.};
-        let grid_size = GridSize{x: 200, y: 200, z: 0, phi: 20};
+        let box_size = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 0.,
+        };
+        let grid_size = GridSize {
+            x: 200,
+            y: 200,
+            z: 0,
+            phi: 20,
+        };
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
         // TODO provide seed for reproducibility
-        d.dist = Array::random([grid_size.x, grid_size.y, grid_size.phi], Range::new(-1.0, 1.0));
+        d.dist = Array::random([grid_size.x, grid_size.y, grid_size.phi],
+                               Range::new(-1.0, 1.0));
         b.iter(|| d.spatgrad());
     }
 
     #[test]
     fn index() {
-        let box_size = BoxSize{x: 1., y: 1., z: 0.};
-        let grid_size = GridSize{x: 2, y: 3, z: 0, phi: 2};
+        let box_size = BoxSize {
+            x: 1.,
+            y: 1.,
+            z: 0.,
+        };
+        let grid_size = GridSize {
+            x: 2,
+            y: 3,
+            z: 0,
+            phi: 2,
+        };
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
-        d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]], [[4., 4.5], [5., 5.5], [6., 6.5]]]);
+        d.dist = arr3(&[[[1., 1.5], [2., 2.5], [3., 3.5]],
+                        [[4., 4.5], [5., 5.5], [6., 6.5]]]);
 
         assert_eq!(d[[0, 0, 0]], 1.0);
         assert_eq!(d[[2, 3, 2]], 1.0);

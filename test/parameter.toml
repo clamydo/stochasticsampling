@@ -3,6 +3,7 @@
     io_queue_size = 50
     output_format = "bincode"
     prefix = "foo"
+    version = "version"
 
 [simulation]
     number_of_particles = 100

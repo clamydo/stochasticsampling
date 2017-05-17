@@ -36,10 +36,8 @@ impl Particle {
 
         for _ in 0..n {
             particles.push(Particle {
-                               position: Mod64Vector2::new(boxdim.x *
-                                                           between.ind_sample(&mut rng),
-                                                           boxdim.y *
-                                                           between.ind_sample(&mut rng),
+                               position: Mod64Vector2::new(boxdim.x * between.ind_sample(&mut rng),
+                                                           boxdim.y * between.ind_sample(&mut rng),
                                                            [boxdim.x, boxdim.y]),
                                orientation: Mf64::new(TWOPI * between.ind_sample(&mut rng), TWOPI),
                            })

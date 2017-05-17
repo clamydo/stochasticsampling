@@ -138,10 +138,11 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str, version: String) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
+    let toml_string = read_from_file(param_file)
+        .chain_err(|| "Unable to read parameter file.")?;
 
-    let mut settings: Settings =
-        toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")?;
+    let mut settings: Settings = toml::from_str(&toml_string)
+        .chain_err(|| "Unable to parse parameter file.")?;
 
     // save version to metadata
     settings.environment.version = version;
@@ -158,7 +159,9 @@ mod tests {
     fn read_settings() {
 
         let settings = read_parameter_file("./test/parameter.toml", "version".to_string()).unwrap();
-        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml", "version".to_string()).unwrap();
+        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml",
+                                                   "version".to_string())
+                .unwrap();
         // TODO test for version
 
         assert_eq!(settings_default.environment.init_file, None);
@@ -168,6 +171,7 @@ mod tests {
         assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
         assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");
+        assert_eq!(settings.environment.version, "version");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);

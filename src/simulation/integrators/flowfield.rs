@@ -83,20 +83,27 @@ mod tests {
     use super::*;
     use ndarray::{Array, arr2};
     use simulation::grid_width::GridWidth;
+    use simulation::settings::{BoxSize, GridSize};
     use test::Bencher;
     use test_helper::equal_floats;
-    use simulation::settings::{BoxSize, GridSize};
 
 
     #[test]
     fn test_vorticity() {
-        let bs = BoxSize{x: 50., y: 50., z: 0.};
-        let gs = GridSize{x: 50, y: 50, z: 0, phi: 1};
+        let bs = BoxSize {
+            x: 50.,
+            y: 50.,
+            z: 0.,
+        };
+        let gs = GridSize {
+            x: 50,
+            y: 50,
+            z: 0,
+            phi: 1,
+        };
         let gw = GridWidth::new(gs, bs);
 
-        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50)
-            .into_shape((2, 5, 5))
-            .unwrap();
+        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50).into_shape((2, 5, 5)).unwrap();
         u[[0, 1, 4]] = 42.;
 
         let v = vorticity(gw, u.view());
@@ -117,8 +124,17 @@ mod tests {
 
     #[bench]
     fn bench_vorticity(b: &mut Bencher) {
-        let bs = BoxSize{x: 400., y: 400., z: 0.};
-        let gs = GridSize{x: 400, y: 400, z: 0, phi: 1};
+        let bs = BoxSize {
+            x: 400.,
+            y: 400.,
+            z: 0.,
+        };
+        let gs = GridSize {
+            x: 400,
+            y: 400,
+            z: 0,
+            phi: 1,
+        };
         let gw = GridWidth::new(gs, bs);
 
         let u: Array<f64, Ix3> = Array::linspace(1., 80000., 80000)

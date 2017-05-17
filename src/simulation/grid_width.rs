@@ -7,7 +7,7 @@ use simulation::settings::{BoxSize, GridSize};
 pub struct GridWidth {
     pub x: f64,
     pub y: f64,
-    pub a: f64,
+    pub phi: f64,
 }
 
 impl GridWidth {
@@ -16,7 +16,7 @@ impl GridWidth {
         GridWidth {
             x: box_size.x as f64 / grid_size.x as f64,
             y: box_size.y as f64 / grid_size.y as f64,
-            a: TWOPI / grid_size.phi as f64,
+            phi: TWOPI / grid_size.phi as f64,
         }
     }
 }

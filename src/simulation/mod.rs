@@ -10,8 +10,8 @@ pub mod settings;
 
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
-use self::integrators::fourieroseen::{IntegrationParameter, Integrator};
 use self::integrators::flowfield::FlowField;
+use self::integrators::fourieroseen::{IntegrationParameter, Integrator};
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use ndarray::Array;
@@ -77,9 +77,7 @@ impl Simulation {
             magnetic_reorientation: param.magnetic_reorientation,
         };
 
-        let integrator = Integrator::new(sim.grid_size,
-                                         sim.box_size,
-                                         int_param);
+        let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
 
 
         // normal distribution with variance timestep
@@ -124,9 +122,7 @@ impl Simulation {
         self.state.particles = particles;
 
         // Do a first sampling, so that the initial condition can also be obtained
-        self.state
-            .distribution
-            .sample_from(&self.state.particles);
+        self.state.distribution.sample_from(&self.state.particles);
 
         self.state.distribution.dist *= self.settings.simulation.box_size.x *
                                         self.settings.simulation.box_size.y;
@@ -184,9 +180,7 @@ impl Simulation {
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
-        self.state
-            .distribution
-            .sample_from(&self.state.particles);
+        self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
         self.state.distribution.dist *= self.settings.simulation.box_size.x *
                                         self.settings.simulation.box_size.y;
