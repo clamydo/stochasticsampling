@@ -1,5 +1,5 @@
 use num::Complex;
-use ndarray::{ArrayViewMut, Ix2};
+use ndarray::{ArrayViewMut, Ix2, Ix3};
 use std;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ impl FFTPlan {
     /// WARNING: This is an unormalized transformation. A forwards and
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
-    pub fn new_c2c(ina: &mut ArrayViewMut<Complex<f64>, Ix2>,
+    pub fn new_c2c_2d(ina: &mut ArrayViewMut<Complex<f64>, Ix2>,
                    outa: &mut ArrayViewMut<Complex<f64>, Ix2>,
                    direction: FFTDirection,
                    flags: FFTFlags)
@@ -62,7 +62,7 @@ impl FFTPlan {
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
     /// TODO: Write test. Return Result, not Option.
-    pub fn new_c2c_inplace(arr: &mut ArrayViewMut<Complex<f64>, Ix2>,
+    pub fn new_c2c_inplace_2d(arr: &mut ArrayViewMut<Complex<f64>, Ix2>,
                            direction: FFTDirection,
                            flags: FFTFlags)
                            -> Option<FFTPlan> {
@@ -74,6 +74,72 @@ impl FFTPlan {
         unsafe {
             plan = ::fftw3_ffi::fftw_plan_dft_2d(n0 as std::os::raw::c_int,
                                                  n1 as std::os::raw::c_int,
+                                                 p,
+                                                 p,
+                                                 direction as std::os::raw::c_int,
+                                                 flags as std::os::raw::c_uint);
+        }
+
+        if plan.is_null() {
+            None
+        } else {
+            Some(FFTPlan { plan: Arc::new(plan) })
+        }
+    }
+
+    /// Create a new FFTW3 complex to complex plan.
+    /// INFO: According to FFTW3 documentation r2c/c2r can be more efficient.
+    /// WARNING: This is an unormalized transformation. A forwards and
+    /// backwards transformation will lead to input data scaled by the number
+    /// of elements.
+    pub fn new_c2c_3d(ina: &mut ArrayViewMut<Complex<f64>, Ix3>,
+                   outa: &mut ArrayViewMut<Complex<f64>, Ix3>,
+                   direction: FFTDirection,
+                   flags: FFTFlags)
+                   -> Option<FFTPlan> {
+
+        let (n0, n1, n2) = ina.dim();
+        let inp = ina.as_ptr() as *mut FFTWComplex;
+        let outp = outa.as_ptr() as *mut FFTWComplex;
+
+        let plan;
+        // WARNING: Not thread safe!
+        unsafe {
+            plan = ::fftw3_ffi::fftw_plan_dft_3d(n0 as std::os::raw::c_int,
+                                                 n1 as std::os::raw::c_int,
+                                                 n2 as std::os::raw::c_int,
+                                                 inp,
+                                                 outp,
+                                                 direction as std::os::raw::c_int,
+                                                 flags as std::os::raw::c_uint);
+        }
+
+        if plan.is_null() {
+            None
+        } else {
+            Some(FFTPlan { plan: Arc::new(plan) })
+        }
+    }
+
+    /// Create a new FFTW3 complex to complex plan for an inplace
+    /// transformation.
+    /// WARNING: This is an unormalized transformation. A forwards and
+    /// backwards transformation will lead to input data scaled by the number
+    /// of elements.
+    /// TODO: Write test. Return Result, not Option.
+    pub fn new_c2c_inplace_3d(arr: &mut ArrayViewMut<Complex<f64>, Ix3>,
+                           direction: FFTDirection,
+                           flags: FFTFlags)
+                           -> Option<FFTPlan> {
+
+        let (n0, n1, n2) = arr.dim();
+        let p = arr.as_ptr() as *mut FFTWComplex;
+
+        let plan;
+        unsafe {
+            plan = ::fftw3_ffi::fftw_plan_dft_3d(n0 as std::os::raw::c_int,
+                                                 n1 as std::os::raw::c_int,
+                                                 n2 as std::os::raw::c_int,
                                                  p,
                                                  p,
                                                  direction as std::os::raw::c_int,
