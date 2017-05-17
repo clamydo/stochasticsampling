@@ -294,15 +294,15 @@ impl Integrator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::fft_helper::get_k_mesh;
     use ndarray::{Array, Axis, arr2};
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
     use simulation::settings::StressPrefactors;
+    use std::f64::consts::PI;
     use test::Bencher;
     use test_helper::equal_floats;
-    use super::super::fft_helper::get_k_mesh;
-    use std::f64::consts::PI;
 
     /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
     /// function in parallel. Instead test with RUST_TEST_THREADS=1.
@@ -464,21 +464,22 @@ mod tests {
              (x2 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.))]
         };
 
-        let mut grid = get_k_mesh(gs, BoxSize { x: TWOPI, y: TWOPI, z: 1.})
-            .remove_axis(Axis(3));
+        let mut grid = get_k_mesh(gs,
+                                  BoxSize {
+                                      x: TWOPI,
+                                      y: TWOPI,
+                                      z: 1.,
+                                  })
+                .remove_axis(Axis(3));
 
 
         // bring components to the back
         grid.swap_axes(0, 1);
         grid.swap_axes(1, 2);
 
-        let mut th_u_x = grid.map_axis(Axis(2), |v| {
-            theory(v[0].re, v[1].re)[0]
-        });
+        let mut th_u_x = grid.map_axis(Axis(2), |v| theory(v[0].re, v[1].re)[0]);
 
-        let mut th_u_y = grid.map_axis(Axis(2), |v| {
-            theory(v[0].re, v[1].re)[1]
-        });
+        let mut th_u_y = grid.map_axis(Axis(2), |v| theory(v[0].re, v[1].re)[1]);
 
         th_u_x[[0, 0]] = 0.;
         th_u_y[[0, 0]] = 0.;

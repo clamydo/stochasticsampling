@@ -130,10 +130,8 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
 
     let index_file_path = path.with_extension("index");
     let mut index_file =
-        File::create(&index_file_path).chain_err(|| {
-                           format!("Cannot create index file '{}'",
-                                   index_file_path.display())
-                       })?;
+        File::create(&index_file_path)
+            .chain_err(|| format!("Cannot create index file '{}'", index_file_path.display()))?;
 
 
     loop {
@@ -145,7 +143,8 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
                 let filepath = path.with_extension(&format!("bincode.{}", snapshot_counter));
 
                 let mut snapshot_file =
-                    File::create(&filepath).chain_err(|| {
+                    File::create(&filepath)
+                        .chain_err(|| {
                                        format!("Cannot create snapshot file '{}'.",
                                                filepath.display())
                                    })?;
@@ -162,22 +161,19 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
                 // write starting offset of blob into index file
                 let pos = file.seek(SeekFrom::Current(0)).unwrap();
                 let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
-                index_file.write_all(&pos_le)
+                index_file
+                    .write_all(&pos_le)
                     .chain_err(|| "Failed to write into index file.")?;
 
                 // write all snapshots into one cbor file
                 match format {
                     OutputFormat::CBOR => {
                         serde_cbor::ser::to_writer_sd(&mut file, &v)
-                        .chain_err(||
-                            "Cannot write simulation output (format: CBOR).")?
+                            .chain_err(|| "Cannot write simulation output (format: CBOR).")?
                     }
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(
-                            &mut file, &v,
-                            Infinite)
-                        .chain_err(||
-                            "Cannot write simulation output (format: bincode).")?
+                        bincode::serialize_into(&mut file, &v, Infinite)
+                            .chain_err(|| "Cannot write simulation output (format: bincode).")?
                     }
                 }
             }

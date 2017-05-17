@@ -1,7 +1,7 @@
 //! 2D and 3D modulo vector types.
 
-use std::ops::{Add, AddAssign, Mul, Sub};
 use super::modulofloat::Mf64;
+use std::ops::{Add, AddAssign, Mul, Sub};
 
 /// 3D modulo vector type
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

@@ -22,9 +22,7 @@ impl OutputPath {
 
     pub fn create(&self) -> Result<()> {
         // create directory containing all produced files
-        create_output_dir(&self.path
-                               .parent()
-                               .ok_or("Cannot create output directory")?)
+        create_output_dir(&self.path.parent().ok_or("Cannot create output directory")?)
     }
 
     // Returns path with given file extension.
@@ -41,10 +39,7 @@ fn create_output_id(prefix: &str) -> String {
     let v = ::version().replace(".", "_");
     format!("{prefix}-{time}_v{version}",
             prefix = prefix,
-            time = &time::now()
-                        .strftime("%Y-%m-%d_%H%M%S")
-                        .unwrap()
-                        .to_string(),
+            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
             version = v)
 }
 

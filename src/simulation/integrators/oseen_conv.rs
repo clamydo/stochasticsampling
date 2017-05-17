@@ -413,8 +413,8 @@ impl Integrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num::Complex;
     use ndarray::{Array, Axis, arr2};
+    use num::Complex;
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
