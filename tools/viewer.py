@@ -47,7 +47,7 @@ print(json.dumps(sim_settings, indent=1))
 fig, axs = plt.subplots(2, 2)
 # plt.subplots_adjust(left=0.25, bottom=0.25)
 
-p = axs[1, 0].imshow(np.zeros((gs[0], gs[1])), origin='lower')
+p = axs[1, 0].imshow(np.zeros((gs[0], gs[1])).T, origin='lower')
 # fig.colorbar(p, ax=axs[1])
 
 v_x = np.linspace(gw[0] / 2., bs[0] - gw[0] / 2, gs[0])
@@ -56,7 +56,7 @@ v_X, v_Y = np.meshgrid(v_x, v_y)
 
 ang_x = np.linspace(gw[2] / 2, 2 * np.pi - gw[2] / 2, gs[2], endpoint=True)
 
-fft_plot = axs[0, 1].imshow(np.zeros((gs[0], gs[1])), origin='lower')
+fft_plot = axs[0, 1].imshow(np.zeros((gs[0], gs[1])).T, origin='lower')
 axs[0, 1].set_title('DFT')
 
 ang_dist_th_plot, = axs[0, 0].plot([], [])
@@ -125,7 +125,7 @@ def update(val):
         # quiv.set_UVC(ff[0].T, ff[1].T)
         axs[1, 1].cla()
         x = np.arange(gs[0])
-        y = np.arange(gs[0])
+        y = np.arange(gs[1])
         axs[1, 1].streamplot(x, y, ff[0].T, ff[1].T)
 
     fig.canvas.draw_idle()
