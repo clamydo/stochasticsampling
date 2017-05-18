@@ -91,25 +91,27 @@ def data_to_dist(data, gs):
     """Takes data dictonary and returns numpy array of sampled
     distribution in the correct shape, with (x, y, angle).
     """
-    return np.array(data['distribution']['dist']['data']).reshape(*gs)
+    return np.array(data['distribution']['dist']['data']).reshape(
+        gs['x'], gs['y'], gs['phi'])
 
 
 def dist_to_concentration(dist, gw):
     """Takes an distribution array and returns a concentration
     field by naive integraton of orientation.
     """
-    return np.sum(dist, axis=2) * gw[2]
+    return np.sum(dist, axis=2) * gw['phi']
 
 
 def get_bs_gs_gw(sim_settings):
     bs = sim_settings['simulation']['box_size']
     gs = sim_settings['simulation']['grid_size']
 
-    gw = [
-        sim_settings['simulation']['box_size'][0] / gs[0],
-        sim_settings['simulation']['box_size'][1] / gs[1],
-        2 * np.pi / gs[2]
-    ]
+    gw = {
+        'x': bs['x'] / gs['x'],
+        'y': bs['y'] / gs['y'],
+        'z': bs['z'] / gs['z'],
+        'phi': 2 * np.pi / gs['phi']
+    }
 
     return bs, gs, gw
 

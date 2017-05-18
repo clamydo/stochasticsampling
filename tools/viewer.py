@@ -47,16 +47,16 @@ print(json.dumps(sim_settings, indent=1))
 fig, axs = plt.subplots(2, 2)
 # plt.subplots_adjust(left=0.25, bottom=0.25)
 
-p = axs[1, 0].imshow(np.zeros((gs[0], gs[1])).T, origin='lower')
+p = axs[1, 0].imshow(np.zeros((gs['x'], gs['y'])).T, origin='lower')
 # fig.colorbar(p, ax=axs[1])
 
-v_x = np.linspace(gw[0] / 2., bs[0] - gw[0] / 2, gs[0])
-v_y = np.linspace(gw[1] / 2., bs[1] - gw[1] / 2, gs[1])
+v_x = np.linspace(gw['x'] / 2., bs['x'] - gw['x'] / 2, gs['x'])
+v_y = np.linspace(gw['y'] / 2., bs['y'] - gw['y'] / 2, gs['y'])
 v_X, v_Y = np.meshgrid(v_x, v_y)
 
-ang_x = np.linspace(gw[2] / 2, 2 * np.pi - gw[2] / 2, gs[2], endpoint=True)
+ang_x = np.linspace(gw['phi'] / 2, 2 * np.pi - gw['phi'] / 2, gs['phi'], endpoint=True)
 
-fft_plot = axs[0, 1].imshow(np.zeros((gs[0], gs[1])).T, origin='lower')
+fft_plot = axs[0, 1].imshow(np.zeros((gs['x'], gs['y'])).T, origin='lower')
 axs[0, 1].set_title('DFT')
 
 ang_dist_th_plot, = axs[0, 0].plot([], [])
@@ -64,7 +64,7 @@ ang_dist_plot, = axs[0, 0].plot([], [], '.')
 axs[0, 0].set_title('angular distribution')
 
 quiv = axs[1, 1].quiver(v_X, v_Y,
-                        np.ones((gs[0], gs[1])), np.ones((gs[0], gs[1])),
+                        np.ones((gs['x'], gs['y'])), np.ones((gs['x'], gs['y'])),
                         scale=None)
 
 axslice = plt.axes([0.25, 0.1, 0.5, 0.03], facecolor='lightgoldenrodyellow')
@@ -118,14 +118,14 @@ def update(val):
     ff = data['flow_field']
     if ff is None:
         axs[1, 1].set_title('no flowfield availabe')
-        quiv.set_UVC(np.ones((gs[0], gs[1])), np.ones((gs[0], gs[1])))
+        quiv.set_UVC(np.ones((gs['x'], gs['y'])), np.ones((gs['x'], gs['y'])))
     else:
         axs[1, 1].set_title('flowfield')
-        ff = np.array(ff['data']).reshape((2, gs[0], gs[1]))
+        ff = np.array(ff['data']).reshape((2, gs['x'], gs['y']))
         # quiv.set_UVC(ff[0].T, ff[1].T)
         axs[1, 1].cla()
-        x = np.arange(gs[0])
-        y = np.arange(gs[1])
+        x = np.arange(gs['x'])
+        y = np.arange(gs['y'])
         axs[1, 1].streamplot(x, y, ff[0].T, ff[1].T)
 
     fig.canvas.draw_idle()
