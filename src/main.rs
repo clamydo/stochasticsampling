@@ -78,8 +78,12 @@ fn run() -> Result<()> {
 
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
-    let settings = settings::read_parameter_file(settings_file_name, version())
+    let mut settings = settings::read_parameter_file(settings_file_name)
         .chain_err(|| "Error reading parameter file.")?;
+
+    settings.set_version(&version());
+    // drop mutability for safety
+    let settings = settings;
 
     let init_type = if cli_matches.is_present("initial_condition") {
         InitType::Stdin

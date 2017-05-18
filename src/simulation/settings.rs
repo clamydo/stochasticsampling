@@ -136,7 +136,7 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Reads content of a file `param_file`, that should point to a valid TOML
 /// file, and Parsers it.
 /// Then returns the deserialized data in form of a Settings struct.
-pub fn read_parameter_file(param_file: &str, version: String) -> Result<Settings> {
+pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
     let toml_string = read_from_file(param_file)
         .chain_err(|| "Unable to read parameter file.")?;
@@ -144,10 +144,16 @@ pub fn read_parameter_file(param_file: &str, version: String) -> Result<Settings
     let mut settings: Settings = toml::from_str(&toml_string)
         .chain_err(|| "Unable to parse parameter file.")?;
 
-    // save version to metadata
-    settings.environment.version = version;
+    settings.environment.version = "".to_string();
 
     Ok(settings)
+}
+
+impl Settings {
+    pub fn set_version(&mut self, version: &str) {
+        // save version to metadata
+        self.environment.version = version.to_string();
+    }
 }
 
 
@@ -159,8 +165,7 @@ mod tests {
     fn read_settings() {
 
         let settings = read_parameter_file("./test/parameter.toml", "version".to_string()).unwrap();
-        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml",
-                                                   "version".to_string())
+        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml")
                 .unwrap();
         // TODO test for version
 
