@@ -167,6 +167,7 @@ impl Integrator {
                 Complex::from(integrate(v, h))
             });
 
+            let mut plans = Vec::with_capacity(4);
             // calculate FFT of stress tensor component wise
             for mut row in stress_field.outer_iter_mut() {
                 for mut elem in row.outer_iter_mut() {
@@ -174,9 +175,13 @@ impl Integrator {
                                                            fft::FFTDirection::Forward,
                                                            fft::FFTFlags::Estimate)
                             .unwrap();
-                    plan.execute()
+                    plans.push(plan);
                 }
             }
+
+            plans.par_iter_mut().for_each(|p| p.execute());
+
+
             (stress_field / Complex::new(gs.x as f64 * gs.y as f64 * gs.z as f64, 0.))
                 .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, 1])
                 .unwrap()
@@ -203,14 +208,17 @@ impl Integrator {
         // let mut u = (sigmak - &kksigmak.view()) * &self.pre_phase.view();
         let mut u = sigmak - &kksigmak.view();
 
-        for mut component in u.outer_iter_mut() {
-            let plan = FFTPlan::new_c2c_inplace_3d(&mut component,
-                                                   fft::FFTDirection::Backward,
-                                                   fft::FFTFlags::Estimate)
-                    .unwrap();
-            plan.execute()
+        // Fourier transform flow velocity component-wise
+        let mut plans: Vec<FFTPlan> = u.outer_iter_mut()
+            .map(|mut a| {
+                     FFTPlan::new_c2c_inplace_3d(&mut a,
+                                                 fft::FFTDirection::Backward,
+                                                 fft::FFTFlags::Estimate)
+                             .unwrap()
+                 })
+            .collect();
 
-        }
+        plans.par_iter_mut().for_each(|p| p.execute());
 
         let sh = u.shape();
 
@@ -334,15 +342,15 @@ mod tests {
 
         let i = Integrator::new(gs, bs, int_param);
 
-        let should0 = arr2(&[[-0.0833333333333332, 0.9330127018922195, 0.],
-                             [-0.0669872981077807, 0.4166666666666666, 0.],
-                             [0., 0., -0.3333333333333333]]);
-        let should1 = arr2(&[[0.6666666666666666, -1.0, 0.],
-                             [1.0, -0.3333333333333333, 0.],
-                             [0., 0., -0.3333333333333333]]);
-        let should2 = arr2(&[[-0.0833333333333332, 0.0669872981077807, 0.],
-                             [-0.9330127018922195, 0.4166666666666666, 0.],
-                             [0., 0., -0.3333333333333333]]);
+        let should0 = arr2(&[[-0.2499999999999999, 0.9330127018922195, 0.],
+                             [-0.0669872981077807, 0.2499999999999999, 0.],
+                             [0., 0., -0.5]]);
+        let should1 = arr2(&[[0.5, -1.0000000000000002, 0.],
+                             [0.9999999999999999, -0.5, 0.],
+                             [0., 0., -0.5]]);
+        let should2 = arr2(&[[-0.2499999999999999, 0.0669872981077807, 0.],
+                             [-0.9330127018922195, 0.2499999999999999, 0.],
+                             [0., 0., -0.5]]);
 
         let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
             should.iter().zip(stress.iter()) {
@@ -426,14 +434,12 @@ mod tests {
         d2.dist = Array::from_elem([gs.x, gs.y, gs.phi], 1. / gw.phi / gs.phi as f64);
 
 
-        let expect1 = arr2(&[[-0.333333333333333333, 0., 0.],
-                            [0., 0.6666666666666666666666, 0.],
-                            [0., 0., -0.333333333333333333333]]);
-        let expect2 = arr2(&[[0., 0., 0.],
-                            [0., 0., 0.],
-                            [0., 0., 0.]]);
+        let expect1 = arr2(&[[-0.49999999999999994, 0., 0.],
+                             [0., 0.5, 0.],
+                             [0., 0., -0.49999999999999994]]);
+        let expect2 = arr2(&[[0., 0., 0.], [0., 0., 0.], [0., 0., -0.49999999999999994]]);
 
-        // test_it(&d1, expect1.view(), "1");
+        test_it(&d1, expect1.view(), "1");
         test_it(&d2, expect2.view(), "2");
     }
 
