@@ -164,7 +164,8 @@ mod tests {
     #[test]
     fn read_settings() {
 
-        let settings = read_parameter_file("./test/parameter.toml", "version".to_string()).unwrap();
+        let mut settings = read_parameter_file("./test/parameter.toml").unwrap();
+        settings.set_version("version");
         let settings_default = read_parameter_file("./test/parameter_no_defaults.toml")
                 .unwrap();
         // TODO test for version
