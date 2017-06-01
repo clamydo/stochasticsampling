@@ -1,14 +1,18 @@
-use ndarray::{Array, ArrayView, Axis, Ix2, Ix3};
+use ndarray::{Array, ArrayView, Axis, Ix2, Ix3, Ix4};
 use simulation::grid_width::GridWidth;
 
-pub type FlowField = Array<f64, Ix3>;
-pub type VectorField = Array<f64, Ix3>;
-pub type ScalarField = Array<f64, Ix2>;
+pub type FlowField2D = Array<f64, Ix3>;
+pub type VectorField2D = Array<f64, Ix3>;
+pub type ScalarField2D = Array<f64, Ix2>;
+
+pub type FlowField3D = Array<f64, Ix4>;
+pub type VectorField3D = Array<f64, Ix4>;
+pub type ScalarField3D = Array<f64, Ix3>;
 
 
 /// Implements the operation `dx uy - dy ux` on a given discretized flow field
 /// `u=(ux, uy)`.
-pub fn vorticity(grid_width: GridWidth, u: ArrayView<f64, Ix3>) -> ScalarField {
+pub fn vorticity2d(grid_width: GridWidth, u: ArrayView<f64, Ix3>) -> ScalarField2D {
     let sh = u.shape();
     let sx = sh[1];
     let sy = sh[2];
@@ -78,6 +82,185 @@ pub fn vorticity(grid_width: GridWidth, u: ArrayView<f64, Ix3>) -> ScalarField {
     res
 }
 
+
+/// Implements the operation `dx uy - dy ux` on a given discretized flow field
+/// `u=(ux, uy)`.
+pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+    let sh = u.shape();
+    let sx = sh[1];
+    let sy = sh[2];
+    let sz = sh[3];
+
+    // allocate uninitialized memory, is assigned later
+    let len = sx * sy * sz;
+    let mut uninit = Vec::with_capacity(len);
+    unsafe {
+        uninit.set_len(len);
+    }
+
+    let mut res = Array::from_vec(uninit).into_shape((3, sx, sy, sz)).unwrap();
+
+    let hx = 2. * grid_width.x;
+    let hy = 2. * grid_width.y;
+    let hz = 2. * grid_width.z;
+
+    let hyx = hy / hx;
+    let hzy = hz / hy;
+    let hxz = hx / hz;
+
+    let ux = u.subview(Axis(0), 0);
+    let uy = u.subview(Axis(0), 1);
+    let uz = u.subview(Axis(0), 2);
+
+
+    /// /////////////////////
+    {
+        // calculate dy uz
+        let mut vx = res.subview_mut(Axis(0), 0);
+        // bulk
+        {
+            let mut s = vx.slice_mut(s![.., 1..-1, ..]);
+            s.assign(&uz.slice(s![.., 2.., ..]));
+            s -= &uz.slice(s![.., ..-2, ..]);
+            s *= hzy;
+        }
+        // borders
+        {
+            let mut s = vx.slice_mut(s![.., ..1, ..]);
+            s.assign(&uz.slice(s![.., 1..2, ..]));
+            s -= &uz.slice(s![.., -1.., ..]);
+            s *= hzy;
+        }
+        {
+            let mut s = vx.slice_mut(s![.., -1.., ..]);
+            s.assign(&uz.slice(s![.., ..1, ..]));
+            s -= &uz.slice(s![.., -2..-1, ..]);
+            s *= hzy;
+        }
+
+        // calculate -dz uy, mind the switched signes
+        // bulk
+        {
+            let mut s = vx.slice_mut(s![.., .., 1..-1]);
+            s -= &uy.slice(s![.., .., 2..]);
+            s += &uy.slice(s![.., .., ..-2]);
+            s /= hz;
+        }
+        // borders
+        {
+            let mut s = vx.slice_mut(s![.., .., ..1]);
+            s -= &uy.slice(s![.., .., 1..2]);
+            s += &uy.slice(s![.., -1.., ..]);
+            s /= hz;
+        }
+        {
+            let mut s = vx.slice_mut(s![.., .., -1..]);
+            s -= &uy.slice(s![.., .., ..1]);
+            s += &uy.slice(s![.., .., -2..-1]);
+            s /= hz;
+        }
+    }
+    /// ////////////////
+    /// /////////////////////
+    {
+        let mut vy = res.subview_mut(Axis(0), 1);
+        // calculate dz ux
+        // bulk
+        {
+            let mut s = vy.slice_mut(s![.., .., 1..-1]);
+            s.assign(&ux.slice(s![.., .., 2..]));
+            s -= &ux.slice(s![.., .., ..-2]);
+            s *= hxz;
+        }
+        // borders
+        {
+            let mut s = vy.slice_mut(s![.., .., ..1]);
+            s.assign(&ux.slice(s![.., .., 1..2]));
+            s -= &ux.slice(s![.., .., -1..]);
+            s *= hxz;
+        }
+        {
+            let mut s = vy.slice_mut(s![.., .., -1..]);
+            s.assign(&ux.slice(s![.., .., ..1]));
+            s -= &ux.slice(s![.., .., -2..-1]);
+            s *= hxz;
+        }
+
+        // calculate -dx dz, mind the switched signes
+        // bulk
+        {
+            let mut s = vy.slice_mut(s![1..-1, .., ..]);
+            s -= &uz.slice(s![2.., .., ..]);
+            s += &uz.slice(s![..-2, .., ..]);
+            s /= hx;
+        }
+        // borders
+        {
+            let mut s = vy.slice_mut(s![..1, .., ..]);
+            s -= &uz.slice(s![1..2, .., ..]);
+            s += &uz.slice(s![-1.., .., ..]);
+            s /= hx;
+        }
+        {
+            let mut s = vy.slice_mut(s![-1.., .., ..]);
+            s -= &uz.slice(s![..1, .., ..]);
+            s += &uz.slice(s![-2..-1, .., ..]);
+            s /= hx;
+        }
+    }
+    /// ////////////////
+    /// /////////////////////
+    {
+        let mut vz = res.subview_mut(Axis(0), 2);
+        // calculate dx uy
+        // bulk
+        {
+            let mut s = vz.slice_mut(s![1..-1, .., ..]);
+            s.assign(&uy.slice(s![2.., .., ..]));
+            s -= &uy.slice(s![..-2, .., ..]);
+            s *= hyx;
+        }
+        // borders
+        {
+            let mut s = vz.slice_mut(s![..1, .., ..]);
+            s.assign(&uy.slice(s![1..2, .., ..]));
+            s -= &uy.slice(s![-1.., .., ..]);
+            s *= hyx;
+        }
+        {
+            let mut s = vz.slice_mut(s![-1.., .., ..]);
+            s.assign(&uy.slice(s![..1, .., ..]));
+            s -= &uy.slice(s![-2..-1, .., ..]);
+            s *= hyx;
+        }
+
+        // calculate -dy ux, mind the switched signes
+        // bulk
+        {
+            let mut s = vz.slice_mut(s![.., 1..-1, ..]);
+            s -= &ux.slice(s![.., 2.., ..]);
+            s += &ux.slice(s![.., ..-2, ..]);
+            s /= hy;
+        }
+        // borders
+        {
+            let mut s = vz.slice_mut(s![.., ..1, ..]);
+            s -= &ux.slice(s![.., 1..2, ..]);
+            s += &ux.slice(s![.., -1.., ..]);
+            s /= hy;
+        }
+        {
+            let mut s = vz.slice_mut(s![.., -1.., ..]);
+            s -= &ux.slice(s![.., ..1, ..]);
+            s += &ux.slice(s![.., -2..-1, ..]);
+            s /= hy;
+        }
+    }
+    /// ////////////////
+
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,11 +291,15 @@ mod tests {
 
         let v = vorticity(gw, u.view());
 
-        let should = arr2(&[[-6., -8.5, -8.5, -8.5, -6.],
-                            [22.5, 4., 4., -12., 6.5],
-                            [6.5, 4., 4., 4., 6.5],
-                            [6.5, 4., 4., 4., 6.5],
-                            [-6., -8.5, -8.5, -8.5, -6.]]);
+        let should = arr2(
+            &[
+                [-6., -8.5, -8.5, -8.5, -6.],
+                [22.5, 4., 4., -12., 6.5],
+                [6.5, 4., 4., 4., 6.5],
+                [6.5, 4., 4., 4., 6.5],
+                [-6., -8.5, -8.5, -8.5, -6.],
+            ]
+        );
 
         println!("result: {}", v);
         println!("expected: {}", should);

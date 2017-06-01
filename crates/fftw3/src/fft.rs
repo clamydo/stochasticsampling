@@ -1,5 +1,5 @@
 use num::Complex;
-use ndarray::{ArrayViewMut, Ix2, Ix3};
+use ndarray::{ArrayViewMut, Ix2, Ix3, IxDyn};
 use std;
 use std::sync::Arc;
 
@@ -140,6 +140,38 @@ impl FFTPlan {
             plan = ::fftw3_ffi::fftw_plan_dft_3d(n0 as std::os::raw::c_int,
                                                  n1 as std::os::raw::c_int,
                                                  n2 as std::os::raw::c_int,
+                                                 p,
+                                                 p,
+                                                 direction as std::os::raw::c_int,
+                                                 flags as std::os::raw::c_uint);
+        }
+
+        if plan.is_null() {
+            None
+        } else {
+            Some(FFTPlan { plan: Arc::new(plan) })
+        }
+    }
+
+    /// Create a new FFTW3 complex to complex plan for an inplace
+    /// transformation.
+    /// WARNING: This is an unormalized transformation. A forwards and
+    /// backwards transformation will lead to input data scaled by the number
+    /// of elements.
+    /// TODO: Write test. Return Result, not Option.
+    pub fn new_c2c_inplace_3d_dyn(arr: &mut ArrayViewMut<Complex<f64>, IxDyn>,
+                           direction: FFTDirection,
+                           flags: FFTFlags)
+                           -> Option<FFTPlan> {
+
+        let dim = arr.dim();
+        let p = arr.as_ptr() as *mut FFTWComplex;
+
+        let plan;
+        unsafe {
+            plan = ::fftw3_ffi::fftw_plan_dft_3d(dim[0] as std::os::raw::c_int,
+                                                 dim[1] as std::os::raw::c_int,
+                                                 dim[2] as std::os::raw::c_int,
                                                  p,
                                                  p,
                                                  direction as std::os::raw::c_int,

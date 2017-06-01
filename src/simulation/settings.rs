@@ -36,6 +36,7 @@ pub struct GridSize {
     pub y: usize,
     pub z: usize,
     pub phi: usize,
+    pub theta: usize,
 }
 
 
@@ -166,9 +167,7 @@ mod tests {
 
         let mut settings = read_parameter_file("./test/parameter.toml").unwrap();
         settings.set_version("version");
-        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml")
-                .unwrap();
-        // TODO test for version
+        let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
 
         assert_eq!(settings_default.environment.init_file, None);
         assert_eq!(settings.environment.init_file, Some("foo/bar.cbor".to_string()));

@@ -10,9 +10,9 @@ pub mod settings;
 
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
-use self::integrators::flowfield::FlowField;
-use self::integrators::fourieroseen::{IntegrationParameter, Integrator};
-use self::particle::Particle;
+use self::integrators::flowfield::FlowField3D;
+use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator};
+use self::particle::Particle3D;
 use self::settings::{Settings, StressPrefactors};
 use ndarray::Array;
 use pcg_rand::Pcg64;
@@ -33,9 +33,9 @@ pub struct Simulation {
 /// Holds the current state of the simulation.
 struct SimulationState {
     distribution: Distribution,
-    flow_field: FlowField,
-    particles: Vec<Particle>,
-    random_samples: Vec<[f64; 3]>,
+    flow_field: FlowField3D,
+    particles: Vec<Particle3D>,
+    random_samples: Vec<[f64; 5]>,
     rng: Pcg64,
     /// count timesteps
     timestep: usize,
@@ -48,7 +48,7 @@ type Pcg64Seed = [u64; 4];
 /// Captures the full state of the simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
-    particles: Vec<Particle>,
+    particles: Vec<Particle3D>,
     rng_seed: Pcg64Seed,
     /// current timestep number
     timestep: usize,
@@ -85,11 +85,13 @@ impl Simulation {
 
         // initialize state with zeros
         let state = SimulationState {
-            distribution: Distribution::new(sim.grid_size,
-                                            GridWidth::new(sim.grid_size, sim.box_size)),
-            flow_field: Array::zeros((2, sim.grid_size.x, sim.grid_size.y)),
+            distribution: Distribution::new(
+                sim.grid_size,
+                GridWidth::new(sim.grid_size, sim.box_size),
+            ),
+            flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
-            random_samples: vec![[0f64; 3]; sim.number_of_particles],
+            random_samples: vec![[0f64; 5]; sim.number_of_particles],
             rng: SeedableRng::from_seed(seed),
             timestep: 0,
         };
@@ -102,12 +104,14 @@ impl Simulation {
     }
 
     /// Initialize the state of the simulation
-    pub fn init(&mut self, mut particles: Vec<Particle>) {
-        assert!(particles.len() == self.settings.simulation.number_of_particles,
-                "Given initial condition has not the same number of particles ({}) as given in \
+    pub fn init(&mut self, mut particles: Vec<Particle3D>) {
+        assert!(
+            particles.len() == self.settings.simulation.number_of_particles,
+            "Given initial condition has not the same number of particles ({}) as given in \
                  the parameter file ({}).",
-                particles.len(),
-                self.settings.simulation.number_of_particles);
+            particles.len(),
+            self.settings.simulation.number_of_particles
+        );
 
 
         let bs = self.settings.simulation.box_size;
@@ -116,7 +120,14 @@ impl Simulation {
         // provided for user given input.
         for p in &mut particles {
             // this makes sure, the input is sanitized
-            *p = Particle::new(p.position.x.v, p.position.y.v, p.orientation.v, bs);
+            *p = Particle3D::new(
+                p.position.x.v,
+                p.position.y.v,
+                p.position.z.v,
+                p.orientation.phi.v,
+                p.orientation.theta.v,
+                bs,
+            );
         }
 
         self.state.particles = particles;
@@ -125,7 +136,8 @@ impl Simulation {
         self.state.distribution.sample_from(&self.state.particles);
 
         self.state.distribution.dist *= self.settings.simulation.box_size.x *
-                                        self.settings.simulation.box_size.y;
+            self.settings.simulation.box_size.y *
+            self.settings.simulation.box_size.z;
     }
 
 
@@ -152,12 +164,12 @@ impl Simulation {
 
     // Getter
     /// Returns all particles
-    pub fn get_particles(&self) -> Vec<Particle> {
+    pub fn get_particles(&self) -> Vec<Particle3D> {
         self.state.particles.clone()
     }
 
     /// Returns the first `n` particles
-    pub fn get_particles_head(&self, n: usize) -> Vec<Particle> {
+    pub fn get_particles_head(&self, n: usize) -> Vec<Particle3D> {
         self.state.particles[..n].to_vec()
     }
 
@@ -167,7 +179,7 @@ impl Simulation {
     }
 
     /// Returns sampled flow field
-    pub fn get_flow_field(&self) -> FlowField {
+    pub fn get_flow_field(&self) -> FlowField3D {
         self.state.flow_field.clone()
     }
 
@@ -183,7 +195,8 @@ impl Simulation {
         self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
         self.state.distribution.dist *= self.settings.simulation.box_size.x *
-                                        self.settings.simulation.box_size.y;
+            self.settings.simulation.box_size.y *
+            self.settings.simulation.box_size.z;
 
         // Calculate flow field from distribution.
         self.state.flow_field = self.integrator
@@ -191,16 +204,22 @@ impl Simulation {
 
         // Generate all needed random numbers here. Makes parallelization easier.
         for r in &mut self.state.random_samples {
-            *r = [StandardNormal::rand(&mut self.state.rng).0,
-                  StandardNormal::rand(&mut self.state.rng).0,
-                  StandardNormal::rand(&mut self.state.rng).0];
+            *r = [
+                StandardNormal::rand(&mut self.state.rng).0,
+                StandardNormal::rand(&mut self.state.rng).0,
+                StandardNormal::rand(&mut self.state.rng).0,
+                StandardNormal::rand(&mut self.state.rng).0,
+                StandardNormal::rand(&mut self.state.rng).0,
+            ];
         }
 
         // Update particle positions
         self.integrator
-            .evolve_particles_inplace(&mut self.state.particles,
-                                      &self.state.random_samples,
-                                      self.state.flow_field.view());
+            .evolve_particles_inplace(
+                &mut self.state.particles,
+                &self.state.random_samples,
+                self.state.flow_field.view(),
+            );
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
