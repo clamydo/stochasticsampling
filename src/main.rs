@@ -110,9 +110,11 @@ fn run() -> Result<()> {
     path.create()
         .chain_err(|| "Cannot create output directory")?;
 
-    let worker = Worker::new(settings.environment.io_queue_size,
-                             &path,
-                             settings.environment.output_format)
+    let worker = Worker::new(
+        settings.environment.io_queue_size,
+        &path,
+        settings.environment.output_format,
+    )
             .chain_err(|| "Unable to create output thread.")?;
 
     worker
@@ -124,11 +126,12 @@ fn run() -> Result<()> {
 
 
 /// Spawns output thread and run simulation.
-fn run_simulation(settings: &Settings,
-                  mut simulation: &mut Simulation,
-                  out: Worker,
-                  show_progress: bool)
-                  -> Result<()> {
+fn run_simulation(
+    settings: &Settings,
+    mut simulation: &mut Simulation,
+    out: Worker,
+    show_progress: bool,
+) -> Result<()> {
 
     let n = settings.simulation.number_of_timesteps;
 
@@ -138,11 +141,7 @@ fn run_simulation(settings: &Settings,
     {
         let mut initial = OutputEntry::default();
         initial.distribution = Some(simulation.get_distribution());
-        initial.particles = if settings
-               .simulation
-               .output
-               .particle_every_timestep
-               .is_some() {
+        initial.particles = if settings.simulation.output.particle_every_timestep.is_some() {
             settings
                 .simulation
                 .output
@@ -181,34 +180,40 @@ fn run_simulation(settings: &Settings,
                 .simulation
                 .output
                 .distribution_every_timestep
-                .and_then(|x| if timestep % x == 0 {
-                              Some(simulation.get_distribution())
-                          } else {
-                              None
-                          }),
+                .and_then(
+                    |x| if timestep % x == 0 {
+                        Some(simulation.get_distribution())
+                    } else {
+                        None
+                    }
+                ),
             flow_field: settings
                 .simulation
                 .output
                 .flowfield_every_timestep
-                .and_then(|x| if timestep % x == 0 {
-                              Some(simulation.get_flow_field())
-                          } else {
-                              None
-                          }),
+                .and_then(
+                    |x| if timestep % x == 0 {
+                        Some(simulation.get_flow_field())
+                    } else {
+                        None
+                    }
+                ),
             particles: settings
                 .simulation
                 .output
                 .particle_every_timestep
-                .and_then(|x| if timestep % x == 0 {
-                              settings
-                                  .simulation
-                                  .output
-                                  .particle_head
-                                  .and_then(|x| Some(simulation.get_particles_head(x)))
-                                  .or_else(|| Some(simulation.get_particles()))
-                          } else {
-                              None
-                          }),
+                .and_then(
+                    |x| if timestep % x == 0 {
+                        settings
+                            .simulation
+                            .output
+                            .particle_head
+                            .and_then(|x| Some(simulation.get_particles_head(x)))
+                            .or_else(|| Some(simulation.get_particles()))
+                    } else {
+                        None
+                    }
+                ),
             timestep: timestep,
         };
 

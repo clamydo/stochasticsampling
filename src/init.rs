@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io;
 use std::path::Path;
 use stochasticsampling::simulation::Simulation;
-use stochasticsampling::simulation::particle::Particle;
+use stochasticsampling::simulation::particle::Particle3D;
 use stochasticsampling::simulation::settings::Settings;
 
 
@@ -68,7 +68,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
         }
         InitType::Random => {
             info!("Using isotropic initial condition.");
-            let p = Particle::randomly_placed_particles(settings.simulation.number_of_particles,
+            let p = Particle3D::randomly_placed_particles(settings.simulation.number_of_particles,
                                                         settings.simulation.box_size,
                                                         settings.simulation.seed);
 
