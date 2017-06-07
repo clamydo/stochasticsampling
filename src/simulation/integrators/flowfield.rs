@@ -92,7 +92,7 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
     let sz = sh[3];
 
     // allocate uninitialized memory, is assigned later
-    let len = sx * sy * sz;
+    let len = 3 * sx * sy * sz;
     let mut uninit = Vec::with_capacity(len);
     unsafe {
         uninit.set_len(len);
@@ -150,7 +150,7 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
         {
             let mut s = vx.slice_mut(s![.., .., ..1]);
             s -= &uy.slice(s![.., .., 1..2]);
-            s += &uy.slice(s![.., -1.., ..]);
+            s += &uy.slice(s![.., .., -1..]);
             s /= hz;
         }
         {

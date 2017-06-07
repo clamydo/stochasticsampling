@@ -23,10 +23,12 @@ extern crate log;
 extern crate fftw3;
 #[macro_use(s)]
 extern crate ndarray;
+extern crate ndarray_parallel;
 extern crate num;
 extern crate pcg_rand;
 extern crate rand;
 extern crate rayon;
+// extern crate rustfft;
 extern crate serde;
 extern crate serde_cbor;
 #[macro_use]

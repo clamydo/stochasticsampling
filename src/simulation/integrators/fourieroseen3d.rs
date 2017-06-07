@@ -27,14 +27,16 @@ use super::flowfield::vorticity3d;
 use consts::TWOPI;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use ndarray::{Array, ArrayView, Axis,  Ix1, Ix3, Ix4, Ix5, Ix6, IxDyn};
+use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4, Ix5, IxDyn};
+use ndarray_parallel::prelude::*;
 use num::Complex;
 use rayon::prelude::*;
 use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle3D;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
-// use std::f64::consts::PI;
+use std::sync::Arc;
+
 
 
 /// Holds parameter needed for time step
@@ -48,10 +50,8 @@ pub struct IntegrationParameter {
 }
 
 /// Holds precomuted values
-#[derive(Debug)]
 pub struct Integrator {
     /// First axis holds submatrices for different discrete angles.
-    box_size: BoxSize,
     grid_size: GridSize,
     grid_width: GridWidth,
     k_inorm: Array<Complex<f64>, Ix3>,
@@ -59,14 +59,17 @@ pub struct Integrator {
     stress_kernel: Array<f64, Ix4>,
     parameter: IntegrationParameter,
     sin_theta_grid: Array<f64, Ix1>,
+    fft_plan_stress: Arc<FFTPlan>,
+    fft_plan_flowfield: Arc<FFTPlan>,
 }
 
 impl Integrator {
     /// Returns a new instance of the mc_sampling integrator.
-    pub fn new(grid_size: GridSize,
-               box_size: BoxSize,
-               parameter: IntegrationParameter)
-               -> Integrator {
+    pub fn new(
+        grid_size: GridSize,
+        box_size: BoxSize,
+        parameter: IntegrationParameter,
+    ) -> Integrator {
 
         if (grid_size.phi - 2) % 4 != 0 {
             warn!(
@@ -86,8 +89,24 @@ impl Integrator {
                 .map(|v| v.sin());
 
 
+        let mut dummy: Array<Complex<f64>, IxDyn> =
+            Array::default(IxDyn(&[grid_size.x, grid_size.y, grid_size.z]));
+        let plan_stress = FFTPlan::new_c2c_inplace_3d_dyn(
+            &mut dummy.view_mut(),
+            fft::FFTDirection::Forward,
+            fft::FFTFlags::Unaligned,
+        )
+                .unwrap();
+
+        let mut dummy = Array::default([grid_size.x, grid_size.y, grid_size.z]);
+        let plan_ff = FFTPlan::new_c2c_inplace_3d(
+            &mut dummy.view_mut(),
+            fft::FFTDirection::Backward,
+            fft::FFTFlags::Unaligned,
+        )
+                .unwrap();
+
         Integrator {
-            box_size: box_size,
             grid_size: grid_size,
             grid_width: grid_width,
             k_inorm: get_inverse_norm_squared(mesh.view()),
@@ -95,6 +114,8 @@ impl Integrator {
             parameter: parameter,
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
             sin_theta_grid: sin_theta_grid,
+            fft_plan_stress: Arc::new(plan_stress),
+            fft_plan_flowfield: Arc::new(plan_ff),
         }
 
     }
@@ -102,10 +123,11 @@ impl Integrator {
 
     /// Calculates approximation of discretized stress kernel, to be used in
     /// the expectation value to obtain the stress tensor.
-    fn calc_stress_kernel(grid_size: GridSize,
-                          grid_width: GridWidth,
-                          stress: StressPrefactors)
-                          -> Array<f64, Ix4> {
+    fn calc_stress_kernel(
+        grid_size: GridSize,
+        grid_width: GridWidth,
+        stress: StressPrefactors,
+    ) -> Array<f64, Ix4> {
 
         let mut s = Array::<f64, _>::zeros((3, 3, grid_size.phi, grid_size.theta));
         // Calculate discrete angles, considering the cell centered sample points of
@@ -158,12 +180,14 @@ impl Integrator {
     ///     = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
     /// ```
     pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField3D {
-        fn fft_stress(kernel: &ArrayView<f64, Ix4>,
-                      dist: &ArrayView<f64, Ix5>,
-                      sin_theta: &ArrayView<f64, Ix1>,
-                      gs: &GridSize,
-                      gw: &GridWidth)
-                      -> Array<Complex<f64>, Ix6> {
+        fn fft_stress(
+            kernel: &ArrayView<f64, Ix4>,
+            dist: &ArrayView<f64, Ix5>,
+            sin_theta: &ArrayView<f64, Ix1>,
+            gs: &GridSize,
+            gw: &GridWidth,
+            plan: &Arc<FFTPlan>,
+        ) -> Array<Complex<f64>, Ix5> {
 
             let dist_sh = dist.dim();
             let stress_sh = kernel.dim();
@@ -205,27 +229,24 @@ impl Integrator {
 
             let stress_field = ((&stress * &dist).sum(Axis(6)).sum(Axis(5))) * gw.phi * gw.theta;
 
-            let mut stress_field = stress_field.map(|v| Complex::from(v));
+            let mut stress_field = stress_field
+                .map(|v| Complex::from(v))
+                .into_shape([stress_sh.0 * stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
+                .unwrap();
 
-            let mut plans = Vec::with_capacity(9);
-            // calculate FFT of stress tensor component wise
-            for mut row in stress_field.outer_iter_mut() {
-                for mut elem in row.outer_iter_mut() {
-                    let plan = FFTPlan::new_c2c_inplace_3d_dyn(
-                        &mut elem,
-                        fft::FFTDirection::Forward,
-                        fft::FFTFlags::Estimate,
-                    )
-                            .unwrap();
-                    plans.push(plan);
-                }
-            }
 
-            plans.par_iter_mut().for_each(|p| p.execute());
+            stress_field
+                .outer_iter_mut()
+                .into_par_iter()
+                .for_each(|mut v| plan.reexecute3d(&mut v));
+
+            let stress_field = stress_field
+                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
+                .unwrap();
 
 
             (stress_field / Complex::new(gs.x as f64 * gs.y as f64 * gs.z as f64, 0.))
-                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2, 1])
+                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
                 .unwrap()
         }
 
@@ -237,10 +258,8 @@ impl Integrator {
             &self.sin_theta_grid.view(),
             &self.grid_size,
             &self.grid_width,
+            &self.fft_plan_stress.clone(),
         );
-        let stress_field = stress_field
-            .broadcast([3, 3, self.grid_size.x, self.grid_size.y, self.grid_size.z])
-            .unwrap();
 
 
         let sigmak = ((&stress_field * &self.k_mesh.view()).sum(Axis(1)) * &self.k_inorm.view()) *
@@ -253,21 +272,9 @@ impl Integrator {
         // let mut u = (sigmak - &kksigmak.view()) * &self.pre_phase.view();
         let mut u = sigmak - &kksigmak.view();
 
-        // Fourier transform flow velocity component-wise
-        let mut plans: Vec<FFTPlan> = u.outer_iter_mut()
-            .map(
-                |mut a| {
-                    FFTPlan::new_c2c_inplace_3d(
-                        &mut a,
-                        fft::FFTDirection::Backward,
-                        fft::FFTFlags::Estimate,
-                    )
-                            .unwrap()
-                }
-            )
-            .collect();
-
-        plans.par_iter_mut().for_each(|p| p.execute());
+        u.outer_iter_mut()
+            .into_par_iter()
+            .for_each(|mut v| self.fft_plan_flowfield.reexecute3d(&mut v));
 
         u.map(|v| v.re)
     }
@@ -286,11 +293,13 @@ impl Integrator {
     ///
     /// *IMPORTANT*: This function expects `sqrt(2 d dt)` as a precomputed
     /// effective diffusion constant.
-    fn evolve_particle_inplace(&self,
-                               p: &mut Particle3D,
-                               random_samples: &[f64; 5],
-                               flow_field: &ArrayView<f64, Ix4>,
-                               vort: &ArrayView<f64, Ix4>) {
+    fn evolve_particle_inplace(
+        &self,
+        p: &mut Particle3D,
+        random_samples: &[f64; 5],
+        flow_field: &ArrayView<f64, Ix4>,
+        vort: &ArrayView<f64, Ix4>,
+    ) {
 
         let ix = (p.position.x.as_ref() / self.grid_width.x).floor() as isize;
         let iy = (p.position.y.as_ref() / self.grid_width.y).floor() as isize;
@@ -319,26 +328,31 @@ impl Integrator {
 
 
         // Get vorticity d/dx uy - d/dy ux
-        let vort = vort.slice(s![.., (ix - 1)..ix, (iy - 1)..iy, (iz - 1)..iz]).into_shape(3).unwrap();
+        let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
 
         // TODO check rotational diffusion!
 
         p.orientation.phi += param.rot_diffusion * random_samples[3] +
-            (0.5 * cot_theta * cos_phi * vort[0] + 0.5 * cot_theta * sin_phi * vort[1] -
-                 0.5 * vort[3]) * param.timestep;
+            (0.5 * cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
+                 0.5 * cot_theta * sin_phi * vort[[1, 0, 0, 0]] -
+                 0.5 * vort[[2, 0, 0, 0]]) * param.timestep;
 
 
         p.orientation.theta += param.rot_diffusion * random_samples[4] +
-            (-param.magnetic_reorientation * sin_theta + 0.5 * cos_theta * cos_phi * vort[0] +
-                 0.5 * cos_theta * sin_phi * vort[1] -
-                 0.5 * sin_theta * vort[3]) * param.timestep;
+            (-param.magnetic_reorientation * sin_theta +
+                 0.5 * cos_theta * cos_phi * vort[[0, 0, 0, 0]] +
+                 0.5 * cos_theta * sin_phi * vort[[1, 0, 0, 0]] -
+                 0.5 * sin_theta * vort[[2, 0, 0, 0]]) *
+                param.timestep;
     }
 
 
-    pub fn evolve_particles_inplace<'a>(&self,
-                                        particles: &mut Vec<Particle3D>,
-                                        random_samples: &[[f64; 5]],
-                                        flow_field: ArrayView<'a, f64, Ix4>) {
+    pub fn evolve_particles_inplace<'a>(
+        &self,
+        particles: &mut Vec<Particle3D>,
+        random_samples: &[[f64; 5]],
+        flow_field: ArrayView<'a, f64, Ix4>,
+    ) {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity3d(self.grid_width, flow_field);
 
