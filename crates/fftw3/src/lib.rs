@@ -1,4 +1,5 @@
 #![feature(custom_derive)]
+#![feature(unique)]
 
 #[cfg(test)]
 #[macro_use]
