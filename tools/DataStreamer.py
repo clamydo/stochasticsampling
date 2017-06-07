@@ -87,19 +87,26 @@ def sim_output_gen(source_file, index, start=0, step=1, stop=None):
             yield cbor.load(f).value
 
 
-def data_to_dist(data, gs):
-    """Takes data dictonary and returns numpy array of sampled
-    distribution in the correct shape, with (x, y, angle).
-    """
-    return np.array(data['distribution']['dist']['data']).reshape(
-        gs['x'], gs['y'], gs['phi'])
-
-
-def dist_to_concentration(dist, gw):
+def dist_to_concentration2d(dist, gw):
     """Takes an distribution array and returns a concentration
     field by naive integraton of orientation.
     """
     return np.sum(dist, axis=2) * gw['phi']
+
+
+def data_to_dist(data):
+    """Takes data dictonary and returns numpy array of sampled
+    distribution in the correct shape, with (x, y, angle).
+    """
+    return np.array(data['distribution']['dist']['data']).reshape(
+        data['distribution']['dist']['dim'])
+
+
+def dist_to_concentration3d(dist, gw):
+    """Takes an distribution array and returns a concentration
+    field by naive integraton of orientation.
+    """
+    return np.sum(dist, axis=(3, 4)) * gw['phi'] * gw['theta']
 
 
 def get_bs_gs_gw(sim_settings):
@@ -110,7 +117,8 @@ def get_bs_gs_gw(sim_settings):
         'x': bs['x'] / gs['x'],
         'y': bs['y'] / gs['y'],
         'z': bs['z'] / gs['z'],
-        'phi': 2 * np.pi / gs['phi']
+        'phi': 2 * np.pi / gs['phi'],
+        'theta': np.pi / gs['theta']
     }
 
     return bs, gs, gw
