@@ -58,7 +58,7 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix4> {
     let ks = get_k_sampling(grid_size, box_size);
 
-    mesh3d::<Complex<f64>>(ks)
+    mesh3d::<Complex<f64>>(&ks)
 
     // let mut res = Array::from_elem([3, grid_size.x, grid_size.y, grid_size.z],
     //                                Complex::new(0., 0.));
