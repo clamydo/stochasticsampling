@@ -118,7 +118,7 @@ def get_bs_gs_gw(sim_settings):
         'y': bs['y'] / gs['y'],
         'z': bs['z'] / gs['z'],
         'phi': 2 * np.pi / gs['phi'],
-        'theta': 2 * np.pi / gs['theta']
+        'theta': np.pi / gs['theta']
     }
 
     return bs, gs, gw
