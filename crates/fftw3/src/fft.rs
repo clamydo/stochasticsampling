@@ -23,6 +23,7 @@ pub enum FFTFlags {
     Measure = ::fftw3_ffi::FFTW_MEASURE as isize,
     /// This is equal to FFTW_MEASURE | FFTW_UNALIGNED
     Unaligned = ::fftw3_ffi::FFTW_UNALIGNED as isize,
+    EstimateUnaligned = (::fftw3_ffi::FFTW_ESTIMATE | ::fftw3_ffi::FFTW_UNALIGNED) as isize,
 }
 
 impl FFTPlan {
