@@ -155,6 +155,8 @@ impl Integrator {
                 e[[2, 0]] = a * theta.cos() * phi.cos() * theta.sin();
                 e[[2, 1]] = theta.cos() * (b + a * theta.sin() * phi.sin());
                 e[[2, 2]] = a * (-(1. / 3.) + theta.cos() * theta.cos());
+
+                e *= theta.sin();
             }
         }
 
