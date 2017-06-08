@@ -57,35 +57,7 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 ///     `res[c, i, j, m] -> k_c[i, j, m]`
 pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix4> {
     let ks = get_k_sampling(grid_size, box_size);
-
     mesh3d::<Complex<f64>>(&ks)
-
-    // let mut res = Array::from_elem([3, grid_size.x, grid_size.y, grid_size.z],
-    //                                Complex::new(0., 0.));
-    //
-    // // first component varies along first axis of field
-    // for (kx, mut x) in ks[0]
-    //         .iter()
-    //         .zip(res.subview_mut(Axis(0), 0).axis_iter_mut(Axis(0))) {
-    //     x.fill(*kx);
-    // }
-    //
-    // // second component varies along second axis of field
-    // for (ky, mut y) in ks[1]
-    //         .iter()
-    //         .zip(res.subview_mut(Axis(0), 1).axis_iter_mut(Axis(1))) {
-    //     y.fill(*ky)
-    // }
-    //
-    // // third component varies along third axis of field
-    // for (kz, mut z) in ks[2]
-    //         .iter()
-    //         .zip(res.subview_mut(Axis(0), 2).axis_iter_mut(Axis(2))) {
-    //     z.fill(*kz)
-    // }
-    //
-    // res
-
 }
 
 
