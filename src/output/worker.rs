@@ -34,10 +34,11 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(io_queue_size: usize,
-               output_path: &OutputPath,
-               output_format: OutputFormat)
-               -> Result<Worker> {
+    pub fn new(
+        io_queue_size: usize,
+        output_path: &OutputPath,
+        output_format: OutputFormat,
+    ) -> Result<Worker> {
 
         // Create communication channel for thread
         let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(io_queue_size);
@@ -53,13 +54,15 @@ impl Worker {
 
         // Spawn worker thread, that periodically flushes collections of simulation
         // states to disk.
-        let io_worker = thread::spawn(move || dispatch(rx, file, of, op));
+        let io_worker = thread::spawn(move || dispatch(&rx, file, of, &op));
 
-        Ok(Worker {
-               io_worker: io_worker,
-               tx: tx,
-               output_file: output_file,
-           })
+        Ok(
+            Worker {
+                io_worker: io_worker,
+                tx: tx,
+                output_file: output_file,
+            }
+        )
     }
 
     pub fn write_metadata(&self, settings: Settings) -> Result<()> {
@@ -120,11 +123,12 @@ fn prepare_output_file(path: &OutputPath, format: OutputFormat) -> Result<(File,
 }
 
 
-fn dispatch(rx: Receiver<IOWorkerMsg>,
-            mut file: File,
-            format: OutputFormat,
-            path: OutputPath)
-            -> Result<()> {
+fn dispatch(
+    rx: &Receiver<IOWorkerMsg>,
+    mut file: File,
+    format: OutputFormat,
+    path: &OutputPath,
+) -> Result<()> {
 
     let mut snapshot_counter = 0;
 
@@ -144,10 +148,9 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
 
                 let mut snapshot_file =
                     File::create(&filepath)
-                        .chain_err(|| {
-                                       format!("Cannot create snapshot file '{}'.",
-                                               filepath.display())
-                                   })?;
+                        .chain_err(
+                            || format!("Cannot create snapshot file '{}'.", filepath.display()),
+                        )?;
 
                 bincode::serialize_into(&mut snapshot_file,
                                                     &s,

@@ -3,7 +3,7 @@ use std::fs::DirBuilder;
 use std::path::{Path, PathBuf};
 use time;
 
-/// ´OutputPath´ represents a common path, which all files written to disk
+/// `OutputPath` represents a common path, which all files written to disk
 /// share.
 ///
 /// The `.with_extension()` method allows for easy change of file extension, to
@@ -22,7 +22,7 @@ impl OutputPath {
 
     pub fn create(&self) -> Result<()> {
         // create directory containing all produced files
-        create_output_dir(&self.path.parent().ok_or("Cannot create output directory")?)
+        create_output_dir(self.path.parent().ok_or("Cannot create output directory")?)
     }
 
     // Returns path with given file extension.

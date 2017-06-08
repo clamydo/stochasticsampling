@@ -27,7 +27,7 @@ use super::flowfield::vorticity3d;
 use consts::TWOPI;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4, Ix5, IxDyn};
+use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, IxDyn};
 use ndarray_parallel::prelude::*;
 use num::Complex;
 use rayon::prelude::*;
@@ -220,7 +220,7 @@ impl Integrator {
             let stress_field = ((&stress * dist).sum(Axis(6)).sum(Axis(5))) * gw.phi * gw.theta;
 
             let mut stress_field = stress_field
-                .map(|v| Complex::from(v))
+                .map(Complex::from)
                 .into_shape([stress_sh.0 * stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
                 .unwrap();
 
