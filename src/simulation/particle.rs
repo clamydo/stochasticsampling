@@ -98,18 +98,14 @@ impl Particle {
 
         for _ in 0..n {
             particles.push(
-                Particle {
-                    position: Position::new(
-                        bs.x * between.ind_sample(&mut rng),
-                        bs.y * between.ind_sample(&mut rng),
-                        bs.z * between.ind_sample(&mut rng),
-                        bs,
-                    ),
-                    orientation: Orientation::new(
-                        TWOPI * between.ind_sample(&mut rng),
-                        PI * between.ind_sample(&mut rng),
-                    ),
-                }
+                Particle::new(
+                    bs.x * between.ind_sample(&mut rng),
+                    bs.y * between.ind_sample(&mut rng),
+                    bs.z * between.ind_sample(&mut rng),
+                    TWOPI * between.ind_sample(&mut rng),
+                    PI * between.ind_sample(&mut rng),
+                    bs,
+                )
             )
         }
 
