@@ -1,7 +1,7 @@
 //! A representation for the probability distribution function.
 
 use super::grid_width::GridWidth;
-use super::particle::Particle3D;
+use super::particle::Particle;
 use super::settings::GridSize;
 use ndarray::{Array, Ix, Ix5};
 use std::ops::Index;
@@ -51,19 +51,19 @@ impl Distribution {
     /// width from it.
     /// WARNING: Expects coordinates to be in interval `[0, box_size)],
     /// excluding the right border.
-    pub fn coord_to_grid(&self, p: &Particle3D) -> GridCoordinate {
+    pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
         debug_assert!(
-            p.position.x.v >= 0. && p.position.y.v >= 0. && p.position.z.v >= 0. &&
-                p.orientation.phi.v >= 0. && p.orientation.theta.v >= 0.,
+            p.position.x >= 0. && p.position.y >= 0. && p.position.z >= 0. &&
+                p.orientation.phi >= 0. && p.orientation.theta >= 0.,
             "Got negative position or orientation {:?}",
             p
         );
 
-        let gx = (p.position.x.as_ref() / self.grid_width.x).floor() as Ix;
-        let gy = (p.position.y.as_ref() / self.grid_width.y).floor() as Ix;
-        let gz = (p.position.z.as_ref() / self.grid_width.z).floor() as Ix;
-        let gphi = (p.orientation.phi.as_ref() / self.grid_width.phi).floor() as Ix;
-        let gtheta = (p.orientation.theta.as_ref() / self.grid_width.theta).floor() as Ix;
+        let gx = (p.position.x / self.grid_width.x).floor() as Ix;
+        let gy = (p.position.y / self.grid_width.y).floor() as Ix;
+        let gz = (p.position.z / self.grid_width.z).floor() as Ix;
+        let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
+        let gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix;
 
         // make sure to produce valid indeces (necessary, because in some cases
         // Mf64 containes values that lie on the box border.
@@ -79,7 +79,7 @@ impl Distribution {
     /// Initialises the distribution with a number histogram. It counts the
     /// `particles` inside a bin of the grid. Returns the overall number of
     /// particles counted.
-    fn histogram_from(&mut self, particles: &[Particle3D]) -> usize {
+    fn histogram_from(&mut self, particles: &[Particle]) -> usize {
         // zero out distribution
         for i in self.dist.iter_mut() {
             *i = 0.0;
@@ -97,7 +97,7 @@ impl Distribution {
 
     /// Estimates the approximate values for the distribution function at the
     /// grid points using grid cell averages.
-    pub fn sample_from(&mut self, particles: &[Particle3D]) {
+    pub fn sample_from(&mut self, particles: &[Particle]) {
         let n = self.histogram_from(particles) as f64;
 
         // Scale by grid cell volume, in order to arrive at a sampled function,
@@ -150,7 +150,7 @@ mod tests {
     use ndarray_rand::RandomExt;
     use rand::distributions::Range;
     use simulation::grid_width::GridWidth;
-    use simulation::particle::Particle3D;
+    use simulation::particle::Particle;
     use simulation::settings::{BoxSize, GridSize};
     use std::f64::EPSILON;
     use test::Bencher;
@@ -187,7 +187,7 @@ mod tests {
         };
         let gw = GridWidth::new(grid_size, box_size);
         let n = 1000;
-        let p = Particle3D::randomly_placed_particles(n, box_size, [1, 1]);
+        let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, gw);
 
         d.histogram_from(&p);
@@ -196,7 +196,7 @@ mod tests {
         // Sum over all bins should be particle number
         assert_eq!(sum, n as f64);
 
-        let p2 = vec![Particle3D::new(0.6, 0.3, 0., box_size)];
+        let p2 = vec![Particle::new(0.6, 0.3, 0., box_size)];
 
         d.histogram_from(&p2);
         println!("{}", d.dist);
@@ -218,7 +218,7 @@ mod tests {
             phi: 2,
         };
         let n = 1000;
-        let p = Particle3D::randomly_placed_particles(n, box_size, [1, 1]);
+        let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.sample_from(&p);
@@ -240,7 +240,7 @@ mod tests {
             n
         );
 
-        let p2 = vec![Particle3D::new(0.6, 0.3, 0., box_size)];
+        let p2 = vec![Particle::new(0.6, 0.3, 0., box_size)];
 
         d.sample_from(&p2);
         println!("{}", d.dist);
@@ -268,7 +268,7 @@ mod tests {
             phi: 10,
         };
 
-        fn check(i: &[f64; 3], o: &[usize; 3], p: Particle3D, s: &str, gs: GridSize, bs: BoxSize) {
+        fn check(i: &[f64; 3], o: &[usize; 3], p: Particle, s: &str, gs: GridSize, bs: BoxSize) {
             let dist = Distribution::new(gs, GridWidth::new(gs, bs));
 
             let g = dist.coord_to_grid(&p);
@@ -332,7 +332,7 @@ mod tests {
 
 
         for (i, o) in input.iter().zip(result.iter()) {
-            let p = Particle3D::new(i[0], i[1], i[2], box_size);
+            let p = Particle::new(i[0], i[1], i[2], box_size);
 
             check(i, o, p, "mod", grid_size, box_size);
         }
@@ -356,7 +356,7 @@ mod tests {
         let result = [[0, 0, 9]];
 
         for (i, o) in input.iter().zip(result.iter()) {
-            let p = Particle3D {
+            let p = Particle {
                 position: Mod64Vector2 {
                     x: Mf64 { v: i[0], m: 0. },
                     y: Mf64 { v: i[1], m: 0. },

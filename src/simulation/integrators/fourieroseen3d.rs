@@ -33,10 +33,9 @@ use num::Complex;
 use rayon::prelude::*;
 use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
-use simulation::particle::Particle3D;
+use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
 use std::sync::Arc;
-
 
 
 /// Holds parameter needed for time step
@@ -51,7 +50,7 @@ pub struct IntegrationParameter {
 
 /// Holds precomuted values
 pub struct Integrator {
-    /// First axis holds submatrices for different discrete angles.
+    box_size: BoxSize,
     grid_size: GridSize,
     grid_width: GridWidth,
     k_inorm: Array<Complex<f64>, Ix3>,
@@ -107,6 +106,7 @@ impl Integrator {
                 .unwrap();
 
         Integrator {
+            box_size: box_size,
             grid_size: grid_size,
             grid_width: grid_width,
             k_inorm: get_inverse_norm_squared(mesh.view()),
@@ -297,15 +297,15 @@ impl Integrator {
     /// effective diffusion constant.
     fn evolve_particle_inplace(
         &self,
-        p: &mut Particle3D,
+        p: &mut Particle,
         random_samples: &[f64; 5],
         flow_field: &ArrayView<f64, Ix4>,
         vort: &ArrayView<f64, Ix4>,
     ) {
 
-        let ix = (p.position.x.as_ref() / self.grid_width.x).floor() as isize;
-        let iy = (p.position.y.as_ref() / self.grid_width.y).floor() as isize;
-        let iz = (p.position.z.as_ref() / self.grid_width.z).floor() as isize;
+        let ix = (p.position.x / self.grid_width.x).floor() as isize;
+        let iy = (p.position.y / self.grid_width.y).floor() as isize;
+        let iz = (p.position.z / self.grid_width.z).floor() as isize;
 
 
         let flow_x = flow_field[[0, ix as usize, iy as usize, iz as usize]];
@@ -314,10 +314,10 @@ impl Integrator {
 
         let param = &self.parameter;
 
-        let cos_phi = p.orientation.phi.as_ref().cos();
-        let sin_phi = p.orientation.phi.as_ref().sin();
-        let cos_theta = p.orientation.theta.as_ref().cos();
-        let sin_theta = p.orientation.theta.as_ref().sin();
+        let cos_phi = p.orientation.phi.cos();
+        let sin_phi = p.orientation.phi.sin();
+        let cos_theta = p.orientation.theta.cos();
+        let sin_theta = p.orientation.theta.sin();
         let cot_theta = cos_theta / sin_theta;
 
         // Evolve particle position.
@@ -346,12 +346,15 @@ impl Integrator {
                  0.5 * cos_theta * sin_phi * vort[[1, 0, 0, 0]] -
                  0.5 * sin_theta * vort[[2, 0, 0, 0]]) *
                 param.timestep;
+
+        // apply perioc boundary condition
+        p.pbc(self.box_size);
     }
 
 
     pub fn evolve_particles_inplace<'a>(
         &self,
-        particles: &mut Vec<Particle3D>,
+        particles: &mut Vec<Particle>,
         random_samples: &[[f64; 5]],
         flow_field: ArrayView<'a, f64, Ix4>,
     ) {
@@ -375,7 +378,7 @@ mod tests {
     use ndarray::{Array, Axis, arr2};
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
-    use simulation::particle::Particle3D;
+    use simulation::particle::Particle;
     use simulation::settings::StressPrefactors;
     use std::f64::consts::PI;
     use test::Bencher;
@@ -510,7 +513,7 @@ mod tests {
             }
         };
 
-        let p = vec![Particle3D::new(0.0, 0.0, 1.5707963267948966, bs)];
+        let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
         let mut d1 = Distribution::new(gs, gw);
         d1.sample_from(&p);
 
@@ -559,7 +562,7 @@ mod tests {
 
         let i = Integrator::new(gs, bs, int_param);
 
-        let p = vec![Particle3D::new(0.0, 0.0, 1.5707963267948966, bs)];
+        let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
 
@@ -641,11 +644,11 @@ mod tests {
         let i = Integrator::new(gs, bs, int_param);
 
         let mut p = vec![
-            Particle3D::new(0.6, 0.3, 0., bs),
-            Particle3D::new(0.6, 0.3, 1.5707963267948966, bs),
-            Particle3D::new(0.6, 0.3, 2.0943951023931953, bs),
-            Particle3D::new(0.6, 0.3, 4.71238898038469, bs),
-            Particle3D::new(0.6, 0.3, 6., bs),
+            Particle::new(0.6, 0.3, 0., bs),
+            Particle::new(0.6, 0.3, 1.5707963267948966, bs),
+            Particle::new(0.6, 0.3, 2.0943951023931953, bs),
+            Particle::new(0.6, 0.3, 4.71238898038469, bs),
+            Particle::new(0.6, 0.3, 6., bs),
         ];
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);
@@ -726,7 +729,7 @@ mod tests {
 
         let i = Integrator::new(gs, bs, int_param);
 
-        let mut p = Particle3D::new(0.6, 0.3, 0., bs);
+        let mut p = Particle::new(0.6, 0.3, 0., bs);
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&vec![p]);
 
