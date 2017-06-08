@@ -14,7 +14,7 @@ pub fn modulo(f: f64, m: f64) -> f64 {
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
     let theta = modulo(theta, TWOPI);
     if theta > PI {
-        (modulo(-phi, TWOPI), TWOPI - theta)
+        (modulo(phi + PI, TWOPI), TWOPI - theta)
     } else {
         (modulo(phi, TWOPI), theta)
     }
