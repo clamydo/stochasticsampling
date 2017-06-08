@@ -35,6 +35,7 @@ use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
+use std::f64::consts::PI;
 use std::sync::Arc;
 
 
@@ -57,7 +58,6 @@ pub struct Integrator {
     k_mesh: Array<Complex<f64>, Ix4>,
     stress_kernel: Array<f64, Ix4>,
     parameter: IntegrationParameter,
-    sin_theta_grid: Array<f64, Ix1>,
     fft_plan_stress: Arc<FFTPlan>,
     fft_plan_flowfield: Arc<FFTPlan>,
 }
@@ -80,13 +80,6 @@ impl Integrator {
         let grid_width = GridWidth::new(grid_size, box_size);
 
         let mesh = get_k_mesh(grid_size, box_size);
-        let sin_theta_grid = Array::linspace(
-            0. + grid_width.theta / 2.,
-            TWOPI - grid_width.theta / 2.,
-            grid_size.theta,
-        )
-                .map(|v| v.sin());
-
 
         let mut dummy: Array<Complex<f64>, IxDyn> =
             Array::default(IxDyn(&[grid_size.x, grid_size.y, grid_size.z]));
@@ -113,7 +106,6 @@ impl Integrator {
             k_mesh: mesh,
             parameter: parameter,
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
-            sin_theta_grid: sin_theta_grid,
             fft_plan_stress: Arc::new(plan_stress),
             fft_plan_flowfield: Arc::new(plan_ff),
         }
@@ -135,8 +127,7 @@ impl Integrator {
         let gw_half_phi = grid_width.phi / 2.;
         let gw_half_theta = grid_width.theta / 2.;
         let angles_phi = Array::linspace(0. + gw_half_phi, TWOPI - gw_half_phi, grid_size.phi);
-        let angles_theta =
-            Array::linspace(0. + gw_half_theta, TWOPI - gw_half_theta, grid_size.theta);
+        let angles_theta = Array::linspace(0. + gw_half_theta, PI - gw_half_theta, grid_size.theta);
 
         let a = stress.active;
         let b = stress.magnetic;
@@ -185,7 +176,6 @@ impl Integrator {
         fn fft_stress(
             kernel: &ArrayView<f64, Ix4>,
             dist: &ArrayView<f64, Ix5>,
-            sin_theta: &ArrayView<f64, Ix1>,
             gs: &GridSize,
             gw: &GridWidth,
             plan: &Arc<FFTPlan>,
@@ -227,9 +217,7 @@ impl Integrator {
                 )
                 .unwrap();
 
-            let dist = dist * sin_theta;
-
-            let stress_field = ((&stress * &dist).sum(Axis(6)).sum(Axis(5))) * gw.phi * gw.theta;
+            let stress_field = ((&stress * dist).sum(Axis(6)).sum(Axis(5))) * gw.phi * gw.theta;
 
             let mut stress_field = stress_field
                 .map(|v| Complex::from(v))
@@ -257,7 +245,6 @@ impl Integrator {
         let stress_field = fft_stress(
             &self.stress_kernel.view(),
             &d,
-            &self.sin_theta_grid.view(),
             &self.grid_size,
             &self.grid_width,
             &self.fft_plan_stress.clone(),
