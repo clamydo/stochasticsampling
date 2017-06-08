@@ -37,7 +37,6 @@ extern crate toml;
 
 
 pub mod consts;
-pub mod modulo;
 #[macro_use]
 pub mod serialization_helper;
 pub mod simulation;
