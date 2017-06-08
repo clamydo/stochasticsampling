@@ -22,7 +22,7 @@ use ndarray::{Array, Axis, Ix1, Ix4};
 // }
 
 
-pub fn mesh3d<T: Clone + Default>(k: Vec<Array<T, Ix1>>) -> Array<T, Ix4> {
+pub fn mesh3d<T: Clone + Default>(k: &[Array<T, Ix1>]) -> Array<T, Ix4> {
 
     let sh_x = k[0].len();
     let sh_y = k[1].len();
