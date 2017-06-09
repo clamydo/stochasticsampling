@@ -2,6 +2,7 @@
 
 use consts::TWOPI;
 use simulation::settings::{BoxSize, GridSize};
+use std::f64::consts::PI;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct GridWidth {
