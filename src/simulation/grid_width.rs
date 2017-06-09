@@ -20,7 +20,7 @@ impl GridWidth {
             y: box_size.y as f64 / grid_size.y as f64,
             z: box_size.z as f64 / grid_size.z as f64,
             phi: TWOPI / grid_size.phi as f64,
-            theta: TWOPI / grid_size.theta as f64,
+            theta: PI / grid_size.theta as f64,
         }
     }
 }
