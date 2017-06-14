@@ -96,7 +96,7 @@ impl Particle {
         let mut rng: Pcg64 = SeedableRng::from_seed(seed);
         let between = Range::new(0f64, 1.);
 
-        // WARNING: This is not isotrop! Needs to scale with sin(theta)
+
         for _ in 0..n {
             particles.push(
                 Particle::new(
@@ -104,7 +104,8 @@ impl Particle {
                     bs.y * between.ind_sample(&mut rng),
                     bs.z * between.ind_sample(&mut rng),
                     TWOPI * between.ind_sample(&mut rng),
-                    PI * between.ind_sample(&mut rng),
+                    // take care of the spherical geometry by drawing from sin
+                    pdf_sin(2. * between.ind_sample(&mut rng)),
                     bs,
                 )
             )
@@ -112,4 +113,9 @@ impl Particle {
 
         particles
     }
+}
+
+
+fn pdf_sin(x: f64) -> f64 {
+    (1. - x).acos()
 }
