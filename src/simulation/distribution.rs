@@ -112,6 +112,10 @@ impl Distribution {
             phi: gphi,
             theta: gtheta,
         } = self.grid_width;
+
+        // WARNING: In principle the scaling goes with sin(theta), since the volume on
+        // the sphere surface shrinks. But this is canceld by integration over the
+        // orientation in the flow-field calculation, so skipped here
         self.dist /= gx * gy * gz * gphi * gtheta * n;
     }
 }

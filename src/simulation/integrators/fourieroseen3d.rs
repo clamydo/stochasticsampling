@@ -147,7 +147,8 @@ impl Integrator {
                 e[[2, 1]] = theta.cos() * (b + a * theta.sin() * phi.sin());
                 e[[2, 2]] = a * (-(1. / 3.) + theta.cos() * theta.cos());
 
-                e *= theta.sin();
+                // Already taken care of by the modified cell average in the distribution code
+                // e *= theta.sin();
             }
         }
 
@@ -322,9 +323,9 @@ impl Integrator {
         // TODO check rotational diffusion!
 
         p.orientation.phi += param.rot_diffusion * random_samples[3] +
-            (0.5 * cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
-                 0.5 * cot_theta * sin_phi * vort[[1, 0, 0, 0]] -
-                 0.5 * vort[[2, 0, 0, 0]]) * param.timestep;
+            (cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
+                 cot_theta * sin_phi * vort[[1, 0, 0, 0]] -
+                 vort[[2, 0, 0, 0]]) * 0.5 * param.timestep;
 
 
         p.orientation.theta += param.rot_diffusion * random_samples[4] +

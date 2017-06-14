@@ -96,6 +96,7 @@ impl Particle {
         let mut rng: Pcg64 = SeedableRng::from_seed(seed);
         let between = Range::new(0f64, 1.);
 
+        // WARNING: This is not isotrop! Needs to scale with sin(theta)
         for _ in 0..n {
             particles.push(
                 Particle::new(
