@@ -30,6 +30,7 @@ use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, IxDyn};
 use ndarray_parallel::prelude::*;
 use num::Complex;
+use quaternion;
 use rayon::prelude::*;
 use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
@@ -286,7 +287,7 @@ impl Integrator {
     fn evolve_particle_inplace(
         &self,
         p: &mut Particle,
-        random_samples: &[f64; 5],
+        rv: &RandomVector,
         flow_field: &ArrayView<f64, Ix4>,
         vort: &ArrayView<f64, Ix4>,
     ) {
@@ -310,11 +311,10 @@ impl Integrator {
 
         // Evolve particle position.
         p.position.x += (flow_x + sin_theta * cos_phi) * param.timestep +
-            param.trans_diffusion * random_samples[0];
+            param.trans_diffusion * rv.x;
         p.position.y += (flow_y + sin_theta * sin_phi) * param.timestep +
-            param.trans_diffusion * random_samples[1];
-        p.position.z += (flow_z + cos_theta) * param.timestep +
-            param.trans_diffusion * random_samples[2];
+            param.trans_diffusion * rv.y;
+        p.position.z += (flow_z + cos_theta) * param.timestep + param.trans_diffusion * rv.z;
 
 
         // Get vorticity d/dx uy - d/dy ux
@@ -322,18 +322,33 @@ impl Integrator {
 
         // TODO check rotational diffusion!
 
-        p.orientation.phi += param.rot_diffusion * random_samples[3] +
-            (cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
-                 cot_theta * sin_phi * vort[[1, 0, 0, 0]] -
-                 vort[[2, 0, 0, 0]]) * 0.5 * param.timestep;
+        let cos_rph = rv.phi.cos();
+        let sin_rph = rv.phi.sin();
+        let cos_rth = rv.theta.cos();
+        let sin_rth = rv.theta.sin();
+
+        let vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
+        let rotational_axis = [sin_rth * cos_rph, sin_rth * sin_rph, cos_rth];
+
+        let q = quaternion::axis_angle(rotational_axis, rv.ang);
+
+        let vector = quaternion::rotate_vector(q, vector);
+
+        p.orientation.phi = vector[1].atan2(vector[0]);
+        p.orientation.theta = vector[2].asin();
 
 
-        p.orientation.theta += param.rot_diffusion * random_samples[4] +
-            (-param.magnetic_reorientation * sin_theta +
-                 0.5 * cos_theta * cos_phi * vort[[0, 0, 0, 0]] +
-                 0.5 * cos_theta * sin_phi * vort[[1, 0, 0, 0]] -
-                 0.5 * sin_theta * vort[[2, 0, 0, 0]]) *
-                param.timestep;
+        p.orientation.phi += (cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
+                                  cot_theta * sin_phi * vort[[1, 0, 0, 0]] -
+                                  vort[[2, 0, 0, 0]]) * 0.5 *
+            param.timestep;
+
+
+        p.orientation.theta += (-param.magnetic_reorientation * sin_theta +
+                                    0.5 * cos_theta * cos_phi * vort[[0, 0, 0, 0]] +
+                                    0.5 * cos_theta * sin_phi * vort[[1, 0, 0, 0]] -
+                                    0.5 * sin_theta * vort[[2, 0, 0, 0]]) *
+            param.timestep;
 
         // apply perioc boundary condition
         p.pbc(self.box_size);
@@ -343,7 +358,7 @@ impl Integrator {
     pub fn evolve_particles_inplace<'a>(
         &self,
         particles: &mut Vec<Particle>,
-        random_samples: &[[f64; 5]],
+        random_samples: &[RandomVector],
         flow_field: ArrayView<'a, f64, Ix4>,
     ) {
         // Calculate vorticity dx uy - dy ux
@@ -358,6 +373,15 @@ impl Integrator {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct RandomVector {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub phi: f64,
+    pub theta: f64,
+    pub ang: f64,
+}
 
 #[cfg(test)]
 mod tests {

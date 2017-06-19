@@ -26,6 +26,7 @@ extern crate ndarray;
 extern crate ndarray_parallel;
 extern crate num;
 extern crate pcg_rand;
+extern crate quaternion;
 extern crate rand;
 extern crate rayon;
 // extern crate rustfft;

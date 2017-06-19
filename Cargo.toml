@@ -21,6 +21,7 @@ ndarray-parallel = "*"
 num = "0.1.37"
 pbr = "1.0.0"
 pcg_rand = { path = "crates/external/pcg_rand"}
+quaternion = "0.3.0"
 rand = "0.3.15"
 rayon = "0.7.0"
 # rustfft = "2.0.0"

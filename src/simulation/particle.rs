@@ -116,6 +116,6 @@ impl Particle {
 }
 
 
-fn pdf_sin(x: f64) -> f64 {
+pub fn pdf_sin(x: f64) -> f64 {
     (1. - x).acos()
 }

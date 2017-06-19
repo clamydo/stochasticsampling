@@ -59,11 +59,22 @@ impl Distribution {
             p
         );
 
+        debug_assert!(
+            p.orientation.theta <= ::std::f64::consts::PI,
+            "Theta is not in range> {:?}",
+            p
+        );
+
         let gx = (p.position.x / self.grid_width.x).floor() as Ix;
         let gy = (p.position.y / self.grid_width.y).floor() as Ix;
         let gz = (p.position.z / self.grid_width.z).floor() as Ix;
         let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
-        let gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix;
+        let mut gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix;
+
+        // Clumsy fixing theta valuse of PI
+        if gtheta == self.dim().4 {
+            gtheta -= 1;
+        }
 
         // make sure to produce valid indeces (necessary, because in some cases
         // Mf64 containes values that lie on the box border.

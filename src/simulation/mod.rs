@@ -11,15 +11,15 @@ pub mod settings;
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
 use self::integrators::flowfield::FlowField3D;
-use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator};
-use self::particle::Particle;
+use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator, RandomVector};
+use self::particle::{Particle, pdf_sin};
 use self::settings::{Settings, StressPrefactors};
+use consts::TWOPI;
 use ndarray::Array;
 use pcg_rand::Pcg64;
-use rand::Rand;
-use rand::SeedableRng;
+use rand::{Rand, SeedableRng};
+use rand::distributions::{IndependentSample, Range};
 use rand::distributions::normal::StandardNormal;
-use std::f64;
 
 
 /// Main data structure representing the simulation.
@@ -35,7 +35,7 @@ struct SimulationState {
     distribution: Distribution,
     flow_field: FlowField3D,
     particles: Vec<Particle>,
-    random_samples: Vec<[f64; 5]>,
+    random_samples: Vec<RandomVector>,
     rng: Pcg64,
     /// count timesteps
     timestep: usize,
@@ -91,7 +91,10 @@ impl Simulation {
             ),
             flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
-            random_samples: vec![[0f64; 5]; sim.number_of_particles],
+            random_samples: vec![
+                RandomVector{x: 0., y: 0., z: 0., phi: 0., theta: 0., ang: 0.};
+                sim.number_of_particles
+            ],
             rng: SeedableRng::from_seed(seed),
             timestep: 0,
         };
@@ -202,15 +205,19 @@ impl Simulation {
         self.state.flow_field = self.integrator
             .calculate_flow_field(&self.state.distribution);
 
+        let between = Range::new(0f64, 1.);
+
         // Generate all needed random numbers here. Makes parallelization easier.
         for r in &mut self.state.random_samples {
-            *r = [
-                StandardNormal::rand(&mut self.state.rng).0,
-                StandardNormal::rand(&mut self.state.rng).0,
-                StandardNormal::rand(&mut self.state.rng).0,
-                StandardNormal::rand(&mut self.state.rng).0,
-                StandardNormal::rand(&mut self.state.rng).0,
-            ];
+            *r = RandomVector {
+                x: StandardNormal::rand(&mut self.state.rng).0,
+                y: StandardNormal::rand(&mut self.state.rng).0,
+                z: StandardNormal::rand(&mut self.state.rng).0,
+                phi: TWOPI * between.ind_sample(&mut self.state.rng),
+                // take care of the spherical geometry by drawing from sin
+                theta: pdf_sin(2. * between.ind_sample(&mut self.state.rng)),
+                ang: StandardNormal::rand(&mut self.state.rng).0,
+            };
         }
 
         // Update particle positions
