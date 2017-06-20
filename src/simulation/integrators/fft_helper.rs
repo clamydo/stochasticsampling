@@ -94,6 +94,7 @@ mod tests {
             y: 7,
             z: 3,
             phi: 1,
+            theta: 1,
         };
 
         let k = get_k_sampling(gs, bs);
@@ -144,6 +145,7 @@ mod tests {
             y: 3,
             z: 2,
             phi: 1,
+            theta: 1,
         };
 
         let mesh = get_k_mesh(gs, bs);
@@ -198,6 +200,7 @@ mod tests {
             y: 3,
             z: 2,
             phi: 1,
+            theta: 1,
         };
 
         let mesh = get_k_mesh(gs, bs);

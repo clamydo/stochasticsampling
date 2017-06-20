@@ -19,6 +19,7 @@
         y = 12
         z = 13
         phi = 6
+        theta = 7
     [simulation.output_at_timestep]
         distribution = 12
         flowfield = 42

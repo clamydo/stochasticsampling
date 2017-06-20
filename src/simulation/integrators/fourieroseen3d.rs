@@ -30,7 +30,6 @@ use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, IxDyn};
 use ndarray_parallel::prelude::*;
 use num::Complex;
-use quaternion;
 use rayon::prelude::*;
 use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
@@ -292,6 +291,29 @@ impl Integrator {
         vort: &ArrayView<f64, Ix4>,
     ) {
 
+        /// Calculates cross product of `a x b` inplace in `a`
+        fn cross(a: &mut [f64; 3], b: [f64; 3]) {
+            a[0] = a[1] * b[2] - a[2] * b[1];
+            a[1] = a[2] * b[0] - a[0] * b[2];
+            a[2] = a[0] * b[1] - a[1] * b[0];
+        }
+
+        /// Adds vector `b` inplace to `a`
+        fn add(a: &mut [f64; 3], b: [f64; 3]) {
+            a[0] += b[0];
+            a[1] += b[1];
+            a[2] += b[2];
+        }
+
+        /// Normalizes vector `a` in place
+        fn normalize(a: &mut [f64; 3]) {
+            let norm = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt();
+
+            a[0] /= norm;
+            a[1] /= norm;
+            a[2] /= norm;
+        }
+
         let ix = (p.position.x / self.grid_width.x).floor() as isize;
         let iy = (p.position.y / self.grid_width.y).floor() as isize;
         let iz = (p.position.z / self.grid_width.z).floor() as isize;
@@ -322,20 +344,19 @@ impl Integrator {
 
         // TODO check rotational diffusion!
 
-        let cos_rph = rv.phi.cos();
-        let sin_rph = rv.phi.sin();
-        let cos_rth = rv.theta.cos();
-        let sin_rth = rv.theta.sin();
+        let mut vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
+        let mut boost = [
+            param.rot_diffusion * rv.rx,
+            param.rot_diffusion * rv.ry,
+            param.rot_diffusion * rv.rz,
+        ];
 
-        let vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
-        let rotational_axis = [sin_rth * cos_rph, sin_rth * sin_rph, cos_rth];
-
-        let q = quaternion::axis_angle(rotational_axis, param.rot_diffusion * rv.ang);
-
-        let vector = quaternion::rotate_vector(q, vector);
+        cross(&mut boost, vector);
+        add(&mut vector, boost);
+        normalize(&mut vector);
 
         p.orientation.phi = vector[1].atan2(vector[0]);
-        p.orientation.theta = vector[2].asin();
+        p.orientation.theta = PI / 2. - vector[2].asin();
 
 
         p.orientation.phi += (cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
@@ -378,9 +399,9 @@ pub struct RandomVector {
     pub x: f64,
     pub y: f64,
     pub z: f64,
-    pub phi: f64,
-    pub theta: f64,
-    pub ang: f64,
+    pub rx: f64,
+    pub ry: f64,
+    pub rz: f64,
 }
 
 #[cfg(test)]
@@ -396,359 +417,359 @@ mod tests {
     use test::Bencher;
     use test_helper::equal_floats;
 
-    /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
-    /// function in parallel. Instead test with RUST_TEST_THREADS=1.
-    #[test]
-    fn new() {
-        let bs = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let gs = GridSize {
-            x: 10,
-            y: 10,
-            z: 10,
-            phi: 3,
-        };
-        let s = StressPrefactors {
-            active: 1.,
-            magnetic: 1.,
-        };
-
-        let int_param = IntegrationParameter {
-            timestep: 1.,
-            trans_diffusion: 1.,
-            rot_diffusion: 1.,
-            stress: s,
-            magnetic_reorientation: 1.,
-        };
-
-        let i = Integrator::new(gs, bs, int_param);
-
-        let should0 = arr2(
-            &[
-                [-0.2499999999999999, 0.9330127018922195, 0.],
-                [-0.0669872981077807, 0.2499999999999999, 0.],
-                [0., 0., 0.],
-            ]
-        );
-        let should1 = arr2(
-            &[
-                [0.5, -1.0000000000000002, 0.],
-                [0.9999999999999999, -0.5, 0.],
-                [0., 0., 0.],
-            ]
-        );
-        let should2 = arr2(
-            &[
-                [-0.2499999999999999, 0.0669872981077807, 0.],
-                [-0.9330127018922195, 0.2499999999999999, 0.],
-                [0., 0., 0.],
-            ]
-        );
-
-        let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
-            should.iter().zip(stress.iter())
-        {
-            assert!(equal_floats(*a, *b), "{} != {}", should, stress);
-        };
-
-        check(should0, i.stress_kernel.subview(Axis(2), 0));
-        check(should1, i.stress_kernel.subview(Axis(2), 1));
-        check(should2, i.stress_kernel.subview(Axis(2), 2));
-
-        assert_eq!(i.stress_kernel.dim(), (3, 3, 3));
-    }
-
-    #[test]
-    fn test_stress_expectation_value() {
-
-        let bs = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let gs = GridSize {
-            x: 1,
-            y: 1,
-            z: 1,
-            phi: 6,
-        };
-
-        let gw = GridWidth::new(gs, bs);
-
-        let s = StressPrefactors {
-            active: 1.,
-            magnetic: 0.,
-        };
-
-        let int_param = IntegrationParameter {
-            timestep: 0.0,
-            trans_diffusion: 0.0,
-            rot_diffusion: 0.0,
-            stress: s,
-            magnetic_reorientation: 0.0,
-        };
-
-        let i = Integrator::new(gs, bs, int_param);
-
-        let test_it = |d: &Distribution, expect: ArrayView<f64, Ix2>, case| {
-            println!("Distribution {}", d.dist);
-
-            let dist_sh = d.dim();
-            let stress_sh = i.stress_kernel.dim();
-
-            // Put axis in order, so that components fields are continuous in memory,
-            // so it can be passed to FFTW easily
-            let stress = &i.stress_kernel
-                              .view()
-                              .into_shape((stress_sh.0, stress_sh.1, 1, 1, dist_sh.2))
-                              .unwrap();
-            let stress = stress
-                .broadcast((stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2))
-                .unwrap();
-
-            let stress_field = (&stress * &d.dist.view()).map_axis(
-                Axis(4), |v| {
-                    // Complex::from(periodic_simpson_integrate(v, h))
-                    Complex::from(integrate(v, gw.phi))
-                }
-            );
-
-
-            let is = stress_field.slice(s![.., .., ..1, ..1]);
-            println!("stress {}", is.into_shape([3, 3]).unwrap());
-
-            for (i, e) in is.iter().zip(expect.iter()) {
-                assert!(equal_floats(i.re, *e), "{}: {} != {}", case, i.re, *e);
-            }
-        };
-
-        let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
-        let mut d1 = Distribution::new(gs, gw);
-        d1.sample_from(&p);
-
-        let mut d2 = Distribution::new(gs, gw);
-        d2.dist = Array::from_elem([gs.x, gs.y, gs.phi], 1. / gw.phi / gs.phi as f64);
-
-
-        let expect1 = arr2(
-            &[
-                [-0.49999999999999994, 0., 0.],
-                [0., 0.5, 0.],
-                [0., 0., -0.49999999999999994],
-            ]
-        );
-        let expect2 = arr2(&[[0., 0., 0.], [0., 0., 0.], [0., 0., -0.49999999999999994]]);
-
-        test_it(&d1, expect1.view(), "1");
-        test_it(&d2, expect2.view(), "2");
-    }
-
-    #[test]
-    fn test_calculate_flow_field() {
-        let bs = BoxSize {
-            x: 21.,
-            y: 21.,
-            z: 21.,
-        };
-        let gs = GridSize {
-            x: 21,
-            y: 21,
-            z: 21,
-            phi: 50,
-        };
-        let s = StressPrefactors {
-            active: 1.,
-            magnetic: 0.,
-        };
-
-        let int_param = IntegrationParameter {
-            timestep: 0.0,
-            trans_diffusion: 0.0,
-            rot_diffusion: 0.0,
-            stress: s,
-            magnetic_reorientation: 0.0,
-        };
-
-        let i = Integrator::new(gs, bs, int_param);
-
-        let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
-        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
-        d.sample_from(&p);
-
-        let u = i.calculate_flow_field(&d);
-
-        let theory = |x1: f64, x2: f64| {
-            [
-                (x1 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.)),
-                (x2 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.)),
-            ]
-        };
-
-        let mut grid = get_k_mesh(
-            gs,
-            BoxSize {
-                x: TWOPI,
-                y: TWOPI,
-                z: 1.,
-            },
-        )
-                .remove_axis(Axis(3));
-
-
-        // bring components to the back
-        grid.swap_axes(0, 1);
-        grid.swap_axes(1, 2);
-
-        let mut th_u_x = grid.map_axis(Axis(2), |v| theory(v[0].re, v[1].re)[0]);
-
-        let mut th_u_y = grid.map_axis(Axis(2), |v| theory(v[0].re, v[1].re)[1]);
-
-        th_u_x[[0, 0]] = 0.;
-        th_u_y[[0, 0]] = 0.;
-
-        // println!("th_u_x: {}", th_u_x);
-        // println!("sim_u_x: {}", u.subview(Axis(0), 0));
-
-        let diff = (th_u_x - u.subview(Axis(0), 0))
-            .map(|v| v.abs())
-            .scalar_sum();
-
-        assert!(diff <= 0.14, "diff: {}", diff);
-
-        let diff = (th_u_y - u.subview(Axis(0), 1))
-            .map(|v| v.abs())
-            .scalar_sum();
-
-        assert!(diff <= 0.22, "diff: {}", diff);
-
-        assert!(equal_floats(u.scalar_sum(), 0.), "{} != 0", u.scalar_sum());
-    }
-
-    #[test]
-    fn test_evolve_particles_inplace() {
-        let bs = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let gs = GridSize {
-            x: 10,
-            y: 10,
-            z: 10,
-            phi: 6,
-        };
-        let s = StressPrefactors {
-            active: 1.,
-            magnetic: 1.,
-        };
-
-        let int_param = IntegrationParameter {
-            timestep: 0.1,
-            trans_diffusion: 0.1,
-            rot_diffusion: 0.1,
-            stress: s,
-            magnetic_reorientation: 0.1,
-        };
-
-        let i = Integrator::new(gs, bs, int_param);
-
-        let mut p = vec![
-            Particle::new(0.6, 0.3, 0., bs),
-            Particle::new(0.6, 0.3, 1.5707963267948966, bs),
-            Particle::new(0.6, 0.3, 2.0943951023931953, bs),
-            Particle::new(0.6, 0.3, 4.71238898038469, bs),
-            Particle::new(0.6, 0.3, 6., bs),
-        ];
-        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
-        d.sample_from(&p);
-
-        let u = i.calculate_flow_field(&d);
-
-        i.evolve_particles_inplace(
-            &mut p,
-            &vec![
-                [0.1, 0.1, 0.1],
-                [0.1, 0.1, 0.1],
-                [0.1, 0.1, 0.1],
-                [0.1, 0.1, 0.1],
-                [0.1, 0.1, 0.1],
-            ],
-            u.view(),
-        );
-
-        // TODO Check these values!
-        assert!(
-            equal_floats(p[0].position.x.v, 0.71),
-            "got {}, expected {}",
-            p[0].position.x.v,
-            0.71
-        );
-        assert!(
-            equal_floats(p[0].position.y.v, 0.31),
-            "got {}, expected {}",
-            p[0].position.y.v,
-            0.31
-        );
-
-
-        let orientations = [
-            0.24447719561927586,
-            1.8052735224141725,
-            2.3238722980124713,
-            4.946866176003965,
-            6.244078898485779,
-        ];
-
-        for (p, o) in p.iter().zip(&orientations) {
-            assert!(
-                equal_floats(p.orientation.v, *o),
-                "got {} = {}",
-                p.orientation.v,
-                *o
-            );
-        }
-    }
-
-    #[bench]
-    fn bench_evolve_particle_inplace(b: &mut Bencher) {
-        let bs = BoxSize {
-            x: 10.,
-            y: 10.,
-            z: 10.,
-        };
-        let gs = GridSize {
-            x: 10,
-            y: 10,
-            z: 10,
-            phi: 6,
-        };
-        let gw = GridWidth::new(gs, bs);
-        let s = StressPrefactors {
-            active: 1.,
-            magnetic: 1.,
-        };
-
-        let int_param = IntegrationParameter {
-            timestep: 0.1,
-            trans_diffusion: 0.1,
-            rot_diffusion: 0.1,
-            stress: s,
-            magnetic_reorientation: 0.1,
-        };
-
-        let i = Integrator::new(gs, bs, int_param);
-
-        let mut p = Particle::new(0.6, 0.3, 0., bs);
-        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
-        d.sample_from(&vec![p]);
-
-        let u = i.calculate_flow_field(&d);
-
-        let vort = vorticity(gw, u.view());
-
-        b.iter(|| i.evolve_particle_inplace(&mut p, &[0.1, 0.1, 0.1], &u.view(), &vort.view()));
-    }
+    // /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
+    // /// function in parallel. Instead test with RUST_TEST_THREADS=1.
+    // #[test]
+    // fn new() {
+    //     let bs = BoxSize {
+    //         x: 1.,
+    //         y: 1.,
+    //         z: 1.,
+    //     };
+    //     let gs = GridSize {
+    //         x: 10,
+    //         y: 10,
+    //         z: 10,
+    //         phi: 3,
+    //     };
+    //     let s = StressPrefactors {
+    //         active: 1.,
+    //         magnetic: 1.,
+    //     };
+    //
+    //     let int_param = IntegrationParameter {
+    //         timestep: 1.,
+    //         trans_diffusion: 1.,
+    //         rot_diffusion: 1.,
+    //         stress: s,
+    //         magnetic_reorientation: 1.,
+    //     };
+    //
+    //     let i = Integrator::new(gs, bs, int_param);
+    //
+    //     let should0 = arr2(
+    //         &[
+    //             [-0.2499999999999999, 0.9330127018922195, 0.],
+    //             [-0.0669872981077807, 0.2499999999999999, 0.],
+    //             [0., 0., 0.],
+    //         ]
+    //     );
+    //     let should1 = arr2(
+    //         &[
+    //             [0.5, -1.0000000000000002, 0.],
+    //             [0.9999999999999999, -0.5, 0.],
+    //             [0., 0., 0.],
+    //         ]
+    //     );
+    //     let should2 = arr2(
+    //         &[
+    //             [-0.2499999999999999, 0.0669872981077807, 0.],
+    //             [-0.9330127018922195, 0.2499999999999999, 0.],
+    //             [0., 0., 0.],
+    //         ]
+    //     );
+    //
+    //     let check = |should: Array<f64, Ix2>, stress: ArrayView<f64, Ix2>| for (a, b) in
+    //         should.iter().zip(stress.iter())
+    //     {
+    //         assert!(equal_floats(*a, *b), "{} != {}", should, stress);
+    //     };
+    //
+    //     check(should0, i.stress_kernel.subview(Axis(2), 0));
+    //     check(should1, i.stress_kernel.subview(Axis(2), 1));
+    //     check(should2, i.stress_kernel.subview(Axis(2), 2));
+    //
+    //     assert_eq!(i.stress_kernel.dim(), (3, 3, 3));
+    // }
+    //
+    // #[test]
+    // fn test_stress_expectation_value() {
+    //
+    //     let bs = BoxSize {
+    //         x: 1.,
+    //         y: 1.,
+    //         z: 1.,
+    //     };
+    //     let gs = GridSize {
+    //         x: 1,
+    //         y: 1,
+    //         z: 1,
+    //         phi: 6,
+    //     };
+    //
+    //     let gw = GridWidth::new(gs, bs);
+    //
+    //     let s = StressPrefactors {
+    //         active: 1.,
+    //         magnetic: 0.,
+    //     };
+    //
+    //     let int_param = IntegrationParameter {
+    //         timestep: 0.0,
+    //         trans_diffusion: 0.0,
+    //         rot_diffusion: 0.0,
+    //         stress: s,
+    //         magnetic_reorientation: 0.0,
+    //     };
+    //
+    //     let i = Integrator::new(gs, bs, int_param);
+    //
+    //     let test_it = |d: &Distribution, expect: ArrayView<f64, Ix2>, case| {
+    //         println!("Distribution {}", d.dist);
+    //
+    //         let dist_sh = d.dim();
+    //         let stress_sh = i.stress_kernel.dim();
+    //
+    //         // Put axis in order, so that components fields are continuous in memory,
+    //         // so it can be passed to FFTW easily
+    //         let stress = &i.stress_kernel
+    //                           .view()
+    //                           .into_shape((stress_sh.0, stress_sh.1, 1, 1, dist_sh.2))
+    //                           .unwrap();
+    //         let stress = stress
+    //             .broadcast((stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2))
+    //             .unwrap();
+    //
+    //         let stress_field = (&stress * &d.dist.view()).map_axis(
+    //             Axis(4), |v| {
+    //                 // Complex::from(periodic_simpson_integrate(v, h))
+    //                 Complex::from(integrate(v, gw.phi))
+    //             }
+    //         );
+    //
+    //
+    //         let is = stress_field.slice(s![.., .., ..1, ..1]);
+    //         println!("stress {}", is.into_shape([3, 3]).unwrap());
+    //
+    //         for (i, e) in is.iter().zip(expect.iter()) {
+    //             assert!(equal_floats(i.re, *e), "{}: {} != {}", case, i.re, *e);
+    //         }
+    //     };
+    //
+    //     let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
+    //     let mut d1 = Distribution::new(gs, gw);
+    //     d1.sample_from(&p);
+    //
+    //     let mut d2 = Distribution::new(gs, gw);
+    //     d2.dist = Array::from_elem([gs.x, gs.y, gs.phi], 1. / gw.phi / gs.phi as f64);
+    //
+    //
+    //     let expect1 = arr2(
+    //         &[
+    //             [-0.49999999999999994, 0., 0.],
+    //             [0., 0.5, 0.],
+    //             [0., 0., -0.49999999999999994],
+    //         ]
+    //     );
+    //     let expect2 = arr2(&[[0., 0., 0.], [0., 0., 0.], [0., 0., -0.49999999999999994]]);
+    //
+    //     test_it(&d1, expect1.view(), "1");
+    //     test_it(&d2, expect2.view(), "2");
+    // }
+    //
+    // #[test]
+    // fn test_calculate_flow_field() {
+    //     let bs = BoxSize {
+    //         x: 21.,
+    //         y: 21.,
+    //         z: 21.,
+    //     };
+    //     let gs = GridSize {
+    //         x: 21,
+    //         y: 21,
+    //         z: 21,
+    //         phi: 50,
+    //     };
+    //     let s = StressPrefactors {
+    //         active: 1.,
+    //         magnetic: 0.,
+    //     };
+    //
+    //     let int_param = IntegrationParameter {
+    //         timestep: 0.0,
+    //         trans_diffusion: 0.0,
+    //         rot_diffusion: 0.0,
+    //         stress: s,
+    //         magnetic_reorientation: 0.0,
+    //     };
+    //
+    //     let i = Integrator::new(gs, bs, int_param);
+    //
+    //     let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
+    //     let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
+    //     d.sample_from(&p);
+    //
+    //     let u = i.calculate_flow_field(&d);
+    //
+    //     let theory = |x1: f64, x2: f64| {
+    //         [
+    //             (x1 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.)),
+    //             (x2 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 * x2).powf(5. / 2.)),
+    //         ]
+    //     };
+    //
+    //     let mut grid = get_k_mesh(
+    //         gs,
+    //         BoxSize {
+    //             x: TWOPI,
+    //             y: TWOPI,
+    //             z: 1.,
+    //         },
+    //     )
+    //             .remove_axis(Axis(3));
+    //
+    //
+    //     // bring components to the back
+    //     grid.swap_axes(0, 1);
+    //     grid.swap_axes(1, 2);
+    //
+    //     let mut th_u_x = grid.map_axis(Axis(2), |v| theory(v[0].re, v[1].re)[0]);
+    //
+    //     let mut th_u_y = grid.map_axis(Axis(2), |v| theory(v[0].re, v[1].re)[1]);
+    //
+    //     th_u_x[[0, 0]] = 0.;
+    //     th_u_y[[0, 0]] = 0.;
+    //
+    //     // println!("th_u_x: {}", th_u_x);
+    //     // println!("sim_u_x: {}", u.subview(Axis(0), 0));
+    //
+    //     let diff = (th_u_x - u.subview(Axis(0), 0))
+    //         .map(|v| v.abs())
+    //         .scalar_sum();
+    //
+    //     assert!(diff <= 0.14, "diff: {}", diff);
+    //
+    //     let diff = (th_u_y - u.subview(Axis(0), 1))
+    //         .map(|v| v.abs())
+    //         .scalar_sum();
+    //
+    //     assert!(diff <= 0.22, "diff: {}", diff);
+    //
+    //     assert!(equal_floats(u.scalar_sum(), 0.), "{} != 0", u.scalar_sum());
+    // }
+    //
+    // #[test]
+    // fn test_evolve_particles_inplace() {
+    //     let bs = BoxSize {
+    //         x: 1.,
+    //         y: 1.,
+    //         z: 1.,
+    //     };
+    //     let gs = GridSize {
+    //         x: 10,
+    //         y: 10,
+    //         z: 10,
+    //         phi: 6,
+    //     };
+    //     let s = StressPrefactors {
+    //         active: 1.,
+    //         magnetic: 1.,
+    //     };
+    //
+    //     let int_param = IntegrationParameter {
+    //         timestep: 0.1,
+    //         trans_diffusion: 0.1,
+    //         rot_diffusion: 0.1,
+    //         stress: s,
+    //         magnetic_reorientation: 0.1,
+    //     };
+    //
+    //     let i = Integrator::new(gs, bs, int_param);
+    //
+    //     let mut p = vec![
+    //         Particle::new(0.6, 0.3, 0., bs),
+    //         Particle::new(0.6, 0.3, 1.5707963267948966, bs),
+    //         Particle::new(0.6, 0.3, 2.0943951023931953, bs),
+    //         Particle::new(0.6, 0.3, 4.71238898038469, bs),
+    //         Particle::new(0.6, 0.3, 6., bs),
+    //     ];
+    //     let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
+    //     d.sample_from(&p);
+    //
+    //     let u = i.calculate_flow_field(&d);
+    //
+    //     i.evolve_particles_inplace(
+    //         &mut p,
+    //         &vec![
+    //             [0.1, 0.1, 0.1],
+    //             [0.1, 0.1, 0.1],
+    //             [0.1, 0.1, 0.1],
+    //             [0.1, 0.1, 0.1],
+    //             [0.1, 0.1, 0.1],
+    //         ],
+    //         u.view(),
+    //     );
+    //
+    //     // TODO Check these values!
+    //     assert!(
+    //         equal_floats(p[0].position.x.v, 0.71),
+    //         "got {}, expected {}",
+    //         p[0].position.x.v,
+    //         0.71
+    //     );
+    //     assert!(
+    //         equal_floats(p[0].position.y.v, 0.31),
+    //         "got {}, expected {}",
+    //         p[0].position.y.v,
+    //         0.31
+    //     );
+    //
+    //
+    //     let orientations = [
+    //         0.24447719561927586,
+    //         1.8052735224141725,
+    //         2.3238722980124713,
+    //         4.946866176003965,
+    //         6.244078898485779,
+    //     ];
+    //
+    //     for (p, o) in p.iter().zip(&orientations) {
+    //         assert!(
+    //             equal_floats(p.orientation.v, *o),
+    //             "got {} = {}",
+    //             p.orientation.v,
+    //             *o
+    //         );
+    //     }
+    // }
+    //
+    // #[bench]
+    // fn bench_evolve_particle_inplace(b: &mut Bencher) {
+    //     let bs = BoxSize {
+    //         x: 10.,
+    //         y: 10.,
+    //         z: 10.,
+    //     };
+    //     let gs = GridSize {
+    //         x: 10,
+    //         y: 10,
+    //         z: 10,
+    //         phi: 6,
+    //     };
+    //     let gw = GridWidth::new(gs, bs);
+    //     let s = StressPrefactors {
+    //         active: 1.,
+    //         magnetic: 1.,
+    //     };
+    //
+    //     let int_param = IntegrationParameter {
+    //         timestep: 0.1,
+    //         trans_diffusion: 0.1,
+    //         rot_diffusion: 0.1,
+    //         stress: s,
+    //         magnetic_reorientation: 0.1,
+    //     };
+    //
+    //     let i = Integrator::new(gs, bs, int_param);
+    //
+    //     let mut p = Particle::new(0.6, 0.3, 0., bs);
+    //     let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
+    //     d.sample_from(&vec![p]);
+    //
+    //     let u = i.calculate_flow_field(&d);
+    //
+    //     let vort = vorticity(gw, u.view());
+    //
+    //     b.iter(|| i.evolve_particle_inplace(&mut p, &[0.1, 0.1, 0.1], &u.view(), &vort.view()));
+    // }
 }

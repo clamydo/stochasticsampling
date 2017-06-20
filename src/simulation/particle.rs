@@ -98,17 +98,15 @@ impl Particle {
 
 
         for _ in 0..n {
-            particles.push(
-                Particle::new(
-                    bs.x * between.ind_sample(&mut rng),
-                    bs.y * between.ind_sample(&mut rng),
-                    bs.z * between.ind_sample(&mut rng),
-                    TWOPI * between.ind_sample(&mut rng),
-                    // take care of the spherical geometry by drawing from sin
-                    pdf_sin(2. * between.ind_sample(&mut rng)),
-                    bs,
-                )
-            )
+            particles.push(Particle::new(
+                bs.x * between.ind_sample(&mut rng),
+                bs.y * between.ind_sample(&mut rng),
+                bs.z * between.ind_sample(&mut rng),
+                TWOPI * between.ind_sample(&mut rng),
+                // take care of the spherical geometry by drawing from sin
+                pdf_sin(2. * between.ind_sample(&mut rng)),
+                bs,
+            ))
         }
 
         particles
@@ -118,4 +116,38 @@ impl Particle {
 
 pub fn pdf_sin(x: f64) -> f64 {
     (1. - x).acos()
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f64::consts::PI;
+    use test_helper::equal_floats;
+
+    #[test]
+    fn ang_pbc_test() {
+
+        let input = [[1., 0.], [1., PI], [1., -0.1], [1., PI + 0.1]];
+        let expect = [[1., 0.], [1., PI], [1. + PI, 0.09999999999999964], [1. + PI, PI - 0.1]];
+
+        for (i, e) in input.iter().zip(expect.iter()) {
+            let (phi, theta) = ang_pbc(i[0], i[1]);
+
+            assert!(
+                equal_floats(phi, e[0]),
+                "PHI; input: {:?}, expected: {}, output: {}",
+                i,
+                e[0],
+                phi
+            );
+            assert!(
+                equal_floats(theta, e[1]),
+                "THETA; input: {:?}, expected: {}, output: {}",
+                i,
+                e[1],
+                theta
+            );
+        }
+    }
 }
