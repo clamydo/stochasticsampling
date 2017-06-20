@@ -330,7 +330,7 @@ impl Integrator {
         let vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
         let rotational_axis = [sin_rth * cos_rph, sin_rth * sin_rph, cos_rth];
 
-        let q = quaternion::axis_angle(rotational_axis, rv.ang);
+        let q = quaternion::axis_angle(rotational_axis, param.rot_diffusion * rv.ang);
 
         let vector = quaternion::rotate_vector(q, vector);
 
