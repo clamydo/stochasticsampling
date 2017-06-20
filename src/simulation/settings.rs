@@ -68,15 +68,15 @@ pub struct Parameters {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Output {
     #[serde(default)]
-    pub distribution_every_timestep: Option<usize>,
+    pub distribution: Option<usize>,
     #[serde(default)]
-    pub flowfield_every_timestep: Option<usize>,
+    pub flowfield: Option<usize>,
     #[serde(default)]
-    pub particle_head: Option<usize>,
+    pub particles_head: Option<usize>,
     #[serde(default)]
-    pub particle_every_timestep: Option<usize>,
+    pub particles: Option<usize>,
     #[serde(default)]
-    pub snapshot_every_timestep: Option<usize>,
+    pub snapshot: Option<usize>,
 }
 
 /// Holds simulation specific settings.
@@ -86,7 +86,7 @@ pub struct SimulationSettings {
     pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub output: Output,
+    pub output_at_timestep: Output,
     pub timestep: f64,
     pub seed: [u64; 2],
 }
@@ -189,15 +189,15 @@ mod tests {
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.seed, [1, 1]);
 
-        assert_eq!(settings.simulation.output.distribution_every_timestep, Some(12));
-        assert_eq!(settings_default.simulation.output.distribution_every_timestep, None);
-        assert_eq!(settings.simulation.output.flowfield_every_timestep, Some(42));
-        assert_eq!(settings_default.simulation.output.flowfield_every_timestep, None);
-        assert_eq!(settings.simulation.output.particle_every_timestep, Some(100));
-        assert_eq!(settings_default.simulation.output.particle_every_timestep, None);
-        assert_eq!(settings.simulation.output.particle_head, Some(10));
-        assert_eq!(settings_default.simulation.output.particle_head, None);
-        assert_eq!(settings.simulation.output.snapshot_every_timestep, Some(666));
-        assert_eq!(settings_default.simulation.output.snapshot_every_timestep, None);
+        assert_eq!(settings.simulation.output_at_timestep.distribution, Some(12));
+        assert_eq!(settings_default.simulation.output_at_timestep.distribution, None);
+        assert_eq!(settings.simulation.output_at_timestep.flowfield, Some(42));
+        assert_eq!(settings_default.simulation.output_at_timestep.flowfield, None);
+        assert_eq!(settings.simulation.output_at_timestep.particles, Some(100));
+        assert_eq!(settings_default.simulation.output_at_timestep.particles, None);
+        assert_eq!(settings.simulation.output_at_timestep.particles_head, Some(10));
+        assert_eq!(settings_default.simulation.output_at_timestep.particles_head, None);
+        assert_eq!(settings.simulation.output_at_timestep.snapshot, Some(666));
+        assert_eq!(settings_default.simulation.output_at_timestep.snapshot, None);
     }
 }

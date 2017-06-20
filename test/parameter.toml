@@ -19,12 +19,12 @@
         y = 12
         z = 13
         phi = 6
-    [simulation.output]
-        distribution_every_timestep = 12
-        flowfield_every_timestep = 42
-        particle_every_timestep = 100
+    [simulation.output_at_timestep]
+        distribution = 12
+        flowfield = 42
+        particle = 100
         particle_head = 10
-        snapshot_every_timestep = 666
+        snapshot = 666
 
 [parameters]
     magnetic_reorientation = 1.0

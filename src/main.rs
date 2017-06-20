@@ -141,11 +141,11 @@ fn run_simulation(
     {
         let mut initial = OutputEntry::default();
         initial.distribution = Some(simulation.get_distribution());
-        initial.particles = if settings.simulation.output.particle_every_timestep.is_some() {
+        initial.particles = if settings.simulation.output_at_timestep.particles.is_some() {
             settings
                 .simulation
-                .output
-                .particle_head
+                .output_at_timestep
+                .particles_head
                 .and_then(|n| Some(simulation.get_particles_head(n)))
                 .or_else(|| Some(simulation.get_particles()))
         } else {
@@ -178,8 +178,8 @@ fn run_simulation(
         let entry = OutputEntry {
             distribution: settings
                 .simulation
-                .output
-                .distribution_every_timestep
+                .output_at_timestep
+                .distribution
                 .and_then(
                     |x| if timestep % x == 0 {
                         Some(simulation.get_distribution())
@@ -189,8 +189,8 @@ fn run_simulation(
                 ),
             flow_field: settings
                 .simulation
-                .output
-                .flowfield_every_timestep
+                .output_at_timestep
+                .flowfield
                 .and_then(
                     |x| if timestep % x == 0 {
                         Some(simulation.get_flow_field())
@@ -200,14 +200,14 @@ fn run_simulation(
                 ),
             particles: settings
                 .simulation
-                .output
-                .particle_every_timestep
+                .output_at_timestep
+                .particles
                 .and_then(
                     |x| if timestep % x == 0 {
                         settings
                             .simulation
-                            .output
-                            .particle_head
+                            .output_at_timestep
+                            .particles_head
                             .and_then(|x| Some(simulation.get_particles_head(x)))
                             .or_else(|| Some(simulation.get_particles()))
                     } else {
@@ -222,7 +222,7 @@ fn run_simulation(
                 .chain_err(|| "Unable to append simulation entry.")?;
         }
 
-        match settings.simulation.output.snapshot_every_timestep {
+        match settings.simulation.output_at_timestep.snapshot {
             Some(x) if timestep % x == 0 => {
                 let snapshot = simulation.get_snapshot();
                 out.write_snapshot(snapshot)
