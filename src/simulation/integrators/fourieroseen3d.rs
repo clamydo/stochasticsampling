@@ -379,9 +379,7 @@ impl Integrator {
         flow_field: ArrayView<'a, f64, Ix4>,
     ) {
         // Calculate vorticity dx uy - dy ux
-        // let vort = vorticity3d(self.grid_width, flow_field);
-        let dim = flow_field.dim();
-        let vort = Array::zeros([3, dim.0, dim.1, dim.2]);
+        let vort = vorticity3d(self.grid_width, flow_field);
 
         particles
             .par_iter_mut()

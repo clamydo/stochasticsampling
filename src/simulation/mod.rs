@@ -206,11 +206,9 @@ impl Simulation {
             self.settings.simulation.box_size.z;
 
         // Calculate flow field from distribution.
-        // self.state.flow_field = self.integrator
-        //     .calculate_flow_field(&self.state.distribution);
-
-        let gs = self.settings.simulation.grid_size;
-        self.state.flow_field = Array::zeros([3, gs.x, gs.y, gs.z]);
+        self.state.flow_field = self.integrator.calculate_flow_field(
+            &self.state.distribution,
+        );
 
         let between = Range::new(0f64, 1.);
 
