@@ -72,7 +72,7 @@ impl Simulation {
             timestep: sim.timestep,
             // see documentation of `integrator.evolve_particle_inplace` for a rational
             trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
-            rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+            rot_diffusion: (4. * param.diffusion.rotational * sim.timestep).sqrt(),
             stress: scaled_stress_prefactors,
             magnetic_reorientation: param.magnetic_reorientation,
         };
@@ -92,7 +92,11 @@ impl Simulation {
             flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
             random_samples: vec![
-                RandomVector{x: 0., y: 0., z: 0., rx: 0., ry: 0., rz: 0.};
+                // RandomVector{x: 0., y: 0., z: 0., rx: 0., ry: 0., rz: 0.};
+                RandomVector{
+                    x: 0., y: 0., z: 0.,
+                    axis_angle: 0., rotate_angle1: 0., rotate_angle2: 0.
+                };
                 sim.number_of_particles
             ],
             rng: SeedableRng::from_seed(seed),
@@ -204,8 +208,9 @@ impl Simulation {
         // Calculate flow field from distribution.
         // self.state.flow_field = self.integrator
         //     .calculate_flow_field(&self.state.distribution);
-        let GridSize{x: gx, y: gy, z:gz, phi: _, theta: _} = self.settings.simulation.grid_size;
-        self.state.flow_field = Array::zeros([3, gx, gy, gz]);
+
+        let gs = self.settings.simulation.grid_size;
+        self.state.flow_field = Array::zeros([3, gs.x, gs.y, gs.z]);
 
         let between = Range::new(0f64, 1.);
 
@@ -215,19 +220,18 @@ impl Simulation {
                 x: StandardNormal::rand(&mut self.state.rng).0,
                 y: StandardNormal::rand(&mut self.state.rng).0,
                 z: StandardNormal::rand(&mut self.state.rng).0,
-                rx: StandardNormal::rand(&mut self.state.rng).0,
-                ry: StandardNormal::rand(&mut self.state.rng).0,
-                rz: StandardNormal::rand(&mut self.state.rng).0,
+                axis_angle: TWOPI * between.ind_sample(&mut self.state.rng),
+                rotate_angle1: StandardNormal::rand(&mut self.state.rng).0,
+                rotate_angle2: StandardNormal::rand(&mut self.state.rng).0,
             };
         }
 
         // Update particle positions
-        self.integrator
-            .evolve_particles_inplace(
-                &mut self.state.particles,
-                &self.state.random_samples,
-                self.state.flow_field.view(),
-            );
+        self.integrator.evolve_particles_inplace(
+            &mut self.state.particles,
+            &self.state.random_samples,
+            self.state.flow_field.view(),
+        );
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;

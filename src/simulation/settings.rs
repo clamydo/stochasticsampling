@@ -147,6 +147,8 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
 
     settings.environment.version = "".to_string();
 
+    // TODO Check settings for sanity. For example, particles_head <= number_of_particles
+
     Ok(settings)
 }
 
