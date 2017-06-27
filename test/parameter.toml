@@ -23,8 +23,8 @@
     [simulation.output_at_timestep]
         distribution = 12
         flowfield = 42
-        particle = 100
-        particle_head = 10
+        particles = 100
+        particles_head = 10
         snapshot = 666
 
 [parameters]

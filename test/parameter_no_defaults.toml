@@ -16,7 +16,7 @@
         z = 13
         phi = 6
         theta = 7
-    [simulation.output]
+    [simulation.output_at_timestep]
 
 [parameters]
     magnetic_reorientation = 1.0

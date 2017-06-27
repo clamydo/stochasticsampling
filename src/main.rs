@@ -187,7 +187,7 @@ fn run_simulation(
                         None
                     }
                 ),
-            flow_field: settings
+            flowfield: settings
                 .simulation
                 .output_at_timestep
                 .flowfield
@@ -217,7 +217,7 @@ fn run_simulation(
             timestep: timestep,
         };
 
-        if entry.distribution.is_some() || entry.flow_field.is_some() || entry.particles.is_some() {
+        if entry.distribution.is_some() || entry.flowfield.is_some() || entry.particles.is_some() {
             out.append(entry)
                 .chain_err(|| "Unable to append simulation entry.")?;
         }

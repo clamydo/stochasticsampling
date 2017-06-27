@@ -7,7 +7,7 @@ use super::particle::Particle;
 #[derive(Debug, Default, Serialize)]
 pub struct OutputEntry {
     pub distribution: Option<Distribution>,
-    pub flow_field: Option<FlowField3D>,
+    pub flowfield: Option<FlowField3D>,
     pub particles: Option<Vec<Particle>>,
     pub timestep: usize,
 }

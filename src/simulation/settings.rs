@@ -127,8 +127,9 @@ fn read_from_file(filename: &str) -> Result<String> {
     let mut f = File::open(filename).chain_err(|| "Unable to open file.")?;
     let mut content = String::new();
 
-    f.read_to_string(&mut content)
-        .chain_err(|| "Unable to read file.")?;
+    f.read_to_string(&mut content).chain_err(
+        || "Unable to read file.",
+    )?;
 
     Ok(content)
 }
@@ -139,17 +140,42 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(param_file)
-        .chain_err(|| "Unable to read parameter file.")?;
+    let toml_string = read_from_file(param_file).chain_err(
+        || "Unable to read parameter file.",
+    )?;
 
-    let mut settings: Settings = toml::from_str(&toml_string)
-        .chain_err(|| "Unable to parse parameter file.")?;
+    let mut settings: Settings = toml::from_str(&toml_string).chain_err(
+        || "Unable to parse parameter file.",
+    )?;
 
     settings.environment.version = "".to_string();
 
-    // TODO Check settings for sanity. For example, particles_head <= number_of_particles
+    check_settings(&settings)?;
 
     Ok(settings)
+}
+
+
+fn check_settings(s: &Settings) -> Result<()> {
+
+    // TODO Check settings for sanity. For example, particles_head <=
+    // number_of_particles
+    let bs = s.simulation.box_size;
+
+    if bs.x <= 0. || bs.y <= 0. || bs.z <= 0. {
+        bail!("Box size is invalid. Must be bigger than 0: {:?}", bs)
+    }
+
+    if s.simulation.output_at_timestep.particles_head.is_some() {
+        if s.simulation.number_of_particles <
+            s.simulation.output_at_timestep.particles_head.unwrap()
+        {
+            bail!("Cannot output more particles than available. `particles_head`
+                   must be smaller or equal to `number_of_particles`")
+        }
+    }
+
+    Ok(())
 }
 
 impl Settings {
