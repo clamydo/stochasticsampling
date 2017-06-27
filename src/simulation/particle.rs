@@ -128,6 +128,23 @@ mod tests {
     use test_helper::equal_floats;
 
     #[test]
+    fn random_particles_test() {
+        let bs = BoxSize {
+            x: 1.,
+            y: 2.,
+            z: 3.,
+        };
+
+        let p = Particle::randomly_placed_particles(1, bs, [1, 1]);
+
+        let Position{x, y, z} = p[0].position;
+
+        assert!(0. <= x && x < 1.);
+        assert!(0. <= y && x < 1.);
+        assert!(0. <= z && x < 1.);
+    }
+
+    #[test]
     fn ang_pbc_test() {
 
         let input = [[1., 0.], [1., PI], [1., -0.1], [1., PI + 0.1]];
