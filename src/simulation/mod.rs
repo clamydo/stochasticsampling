@@ -64,7 +64,7 @@ impl Simulation {
         let param = settings.parameters;
 
         let scaled_stress_prefactors = StressPrefactors {
-            active: 0.5 * param.stress.active,
+            active: param.stress.active,
             magnetic: 0.5 * param.stress.magnetic,
         };
 
@@ -92,10 +92,13 @@ impl Simulation {
             flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
             random_samples: vec![
-                // RandomVector{x: 0., y: 0., z: 0., rx: 0., ry: 0., rz: 0.};
-                RandomVector{
-                    x: 0., y: 0., z: 0.,
-                    axis_angle: 0., rotate_angle1: 0., rotate_angle2: 0.
+                RandomVector {
+                    x: 0.,
+                    y: 0.,
+                    z: 0.,
+                    axis_angle: 0.,
+                    rotate_angle1: 0.,
+                    rotate_angle2: 0.,
                 };
                 sim.number_of_particles
             ],
