@@ -12,7 +12,7 @@ use self::distribution::Distribution;
 use self::grid_width::GridWidth;
 use self::integrators::flowfield::FlowField3D;
 use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator, RandomVector};
-use self::particle::{Particle, pdf_sin};
+use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use consts::TWOPI;
 use ndarray::Array;
@@ -21,12 +21,16 @@ use rand::{Rand, SeedableRng};
 use rand::distributions::{IndependentSample, Range};
 use rand::distributions::normal::StandardNormal;
 
+struct ValueCache {
+    rot_diff: f64,
+}
 
 /// Main data structure representing the simulation.
 pub struct Simulation {
     integrator: Integrator,
     settings: Settings,
     state: SimulationState,
+    vcache: ValueCache,
 }
 
 
@@ -97,8 +101,7 @@ impl Simulation {
                     y: 0.,
                     z: 0.,
                     axis_angle: 0.,
-                    rotate_angle1: 0.,
-                    rotate_angle2: 0.,
+                    rotate_angle: 0.,
                 };
                 sim.number_of_particles
             ],
@@ -110,6 +113,9 @@ impl Simulation {
             integrator: integrator,
             settings: settings,
             state: state,
+            vcache: ValueCache {
+                rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+            },
         }
     }
 
@@ -222,8 +228,10 @@ impl Simulation {
                 y: StandardNormal::rand(&mut self.state.rng).0,
                 z: StandardNormal::rand(&mut self.state.rng).0,
                 axis_angle: TWOPI * between.ind_sample(&mut self.state.rng),
-                rotate_angle1: StandardNormal::rand(&mut self.state.rng).0,
-                rotate_angle2: StandardNormal::rand(&mut self.state.rng).0,
+                rotate_angle: rayleigh_pdf(
+                    self.vcache.rot_diff,
+                    between.ind_sample(&mut self.state.rng),
+                ),
             };
         }
 
@@ -238,6 +246,11 @@ impl Simulation {
         self.state.timestep += 1;
         self.state.timestep
     }
+}
+
+
+fn rayleigh_pdf(sigma: f64, x: f64) -> f64 {
+    sigma * f64::sqrt(-2. * f64::ln(1. - x))
 }
 
 impl Iterator for Simulation {
