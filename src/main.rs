@@ -167,8 +167,11 @@ fn run_simulation(
     pb.show_time_left = show_progress;
     pb.show_message = show_progress;
 
+    // in case the simulation was resumed
+    let timestep_start = simulation.timestep + 1;
+    
     // Run the simulation and send data to asynchronous to the IO-thread.
-    for timestep in 1..(n + 1) {
+    for timestep in timestep_start..(n + 1) {
         pb.inc();
         simulation.do_timestep();
 
