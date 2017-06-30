@@ -155,8 +155,6 @@ impl Integrator {
     }
 
 
-
-
     /// Calculate flow field by convolving the Green's function of the stokes
     /// equation (Oseen tensor) with the stress field divergence (force
     /// density).
@@ -266,8 +264,6 @@ impl Integrator {
     }
 
 
-
-
     /// Updates a test particle configuration according to the given parameters.
     ///
     /// Y(t) = sqrt(t) * X(t), if X is normally distributed with variance 1,
@@ -316,9 +312,6 @@ impl Integrator {
         // Get vorticity d/dx uy - d/dy ux
         let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
 
-        // TODO check rotational diffusion!
-
-
         let rotational_diffusion_quat_mut = |p: &mut Particle, r: &RandomVector| {
             let rotational_axis = |alpha: f64| {
                 let cos_ax = alpha.cos();
@@ -363,7 +356,7 @@ impl Integrator {
                                     0.5 * sin_theta * vort[[2, 0, 0, 0]]) *
             param.timestep;
 
-        // apply perioc boundary condition
+        // IMPORTANT: apply perioc boundary condition
         p.pbc(self.box_size);
     }
 
@@ -393,50 +386,7 @@ pub struct RandomVector {
     pub z: f64,
     pub axis_angle: f64,
     pub rotate_angle: f64,
-    // pub rotate_angle1: f64,
-    // pub rotate_angle2: f64,
 }
-
-// fn rotational_diffusion_gauss_vec_mut(p: &mut Particle, d: f64, r:
-// &RandomVector) {
-//     /// Calculates cross product of `a x b` inplace in `a`
-//     fn cross(a: &mut [f64; 3], b: [f64; 3]) {
-//         a[0] = a[1] * b[2] - a[2] * b[1];
-//         a[1] = a[2] * b[0] - a[0] * b[2];
-//         a[2] = a[0] * b[1] - a[1] * b[0];
-//     }
-//
-//     /// Adds vector `b` inplace to `a`
-//     fn add(a: &mut [f64; 3], b: [f64; 3]) {
-//         a[0] += b[0];
-//         a[1] += b[1];
-//         a[2] += b[2];
-//     }
-//
-//     /// Normalizes vector `a` in place
-//     fn normalize(a: &mut [f64; 3]) {
-//         let norm = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt();
-//
-//         a[0] /= norm;
-//         a[1] /= norm;
-//         a[2] /= norm;
-//     }
-//
-//     let cos_phi = p.orientation.phi.cos();
-//     let sin_phi = p.orientation.phi.sin();
-//     let cos_theta = p.orientation.theta.cos();
-//     let sin_theta = p.orientation.theta.sin();
-//
-//     let mut vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
-//     let mut boost = [d * r.rx, d * r.ry, d * r.rz];
-//
-//     cross(&mut boost, vector);
-//     add(&mut vector, boost);
-//     normalize(&mut vector);
-//
-//     p.orientation.phi = vector[1].atan2(vector[0]);
-//     p.orientation.theta = PI / 2. - vector[2].asin();
-// }
 
 
 #[cfg(test)]
