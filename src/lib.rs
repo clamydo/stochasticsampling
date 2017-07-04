@@ -15,6 +15,8 @@ extern crate test;
 extern crate quickcheck;
 #[cfg(test)]
 extern crate ndarray_rand;
+#[cfg(test)]
+extern crate bincode;
 
 #[macro_use]
 extern crate error_chain;

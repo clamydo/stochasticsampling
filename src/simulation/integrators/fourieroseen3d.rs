@@ -555,7 +555,115 @@ mod tests {
     //     test_it(&d1, expect1.view(), "1");
     //     test_it(&d2, expect2.view(), "2");
     // }
-    //
+
+    #[test]
+    fn test_calculate_flow_field_against_cache() {
+        use std::fs::File;
+        use bincode;
+
+
+        let mut f = File::open("test/flowfield/ff_test.bincode").unwrap();
+        let cache_ff: FlowField3D = bincode::deserialize_from(&mut f, ::bincode::Infinite).unwrap();
+
+        let bs = BoxSize {
+            x: 11.,
+            y: 11.,
+            z: 11.,
+        };
+        let gs = GridSize {
+            x: 11,
+            y: 11,
+            z: 11,
+            phi: 11,
+            theta: 11,
+        };
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 0.,
+        };
+
+        let int_param = IntegrationParameter {
+            timestep: 0.0,
+            trans_diffusion: 0.0,
+            rot_diffusion: 0.0,
+            stress: s,
+            magnetic_reorientation: 0.0,
+        };
+
+        let i = Integrator::new(gs, bs, int_param);
+
+        let p = vec![
+            Particle::new(
+                0.0,
+                0.0,
+                0.0,
+                ::std::f64::consts::PI / 2.,
+                ::std::f64::consts::PI / 2.,
+                bs
+            ),
+        ];
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
+        d.sample_from(&p);
+        d.dist *= bs.x * bs.y * bs.z;
+
+        let ff = i.calculate_flow_field(&d);
+
+        // let mut f = File::create("test/flowfield/ff_test.bincode").unwrap();
+        // bincode::serialize_into(&mut f, &ff, ::bincode::Infinite).unwrap();
+
+        println!("Cached version' shape: {:?}", cache_ff.shape());
+        println!("Calculated version' shape: {:?}", ff.shape());
+
+        for (a, b) in ff.indexed_iter().zip(cache_ff.indexed_iter()) {
+            let (ia, va) = a;
+            let (_, vb) = b;
+
+            let va = (va * 1e26).round() / 1e26;
+            let vb = (vb * 1e26).round() / 1e26;
+
+            assert!(equal_floats(va, vb), "{} != {} at {:?}", va, vb, ia);
+        }
+    }
+
+    #[bench]
+    fn bench_calculate_flow(b: &mut Bencher) {
+        let bs = BoxSize {
+            x: 30.,
+            y: 30.,
+            z: 30.,
+        };
+        let gs = GridSize {
+            x: 10,
+            y: 10,
+            z: 10,
+            phi: 10,
+            theta: 10,
+        };
+        let s = StressPrefactors {
+            active: 1.,
+            magnetic: 0.,
+        };
+
+        let int_param = IntegrationParameter {
+            timestep: 0.0,
+            trans_diffusion: 0.0,
+            rot_diffusion: 0.0,
+            stress: s,
+            magnetic_reorientation: 0.0,
+        };
+
+        let i = Integrator::new(gs, bs, int_param);
+
+        let p = Particle::randomly_placed_particles(10000, bs, [1, 1]);
+
+        let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
+        d.sample_from(&p);
+        d.dist *= bs.x * bs.y * bs.z;
+
+        b.iter(|| {
+            ::test::black_box(i.calculate_flow_field(&d));
+        })
+    }
     // #[test]
     // fn test_calculate_flow_field() {
     //     let bs = BoxSize {
@@ -568,6 +676,7 @@ mod tests {
     //         y: 21,
     //         z: 21,
     //         phi: 50,
+    //         theta: 50,
     //     };
     //     let s = StressPrefactors {
     //         active: 1.,
@@ -584,7 +693,8 @@ mod tests {
     //
     //     let i = Integrator::new(gs, bs, int_param);
     //
-    //     let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
+    // let p = vec![Particle::new(0.0, 0.0, 0.0, 0.0, ::std::f64::consts::PI /
+    // 2., 1.5707963267948966, bs)];
     //     let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
     //     d.sample_from(&p);
     //
