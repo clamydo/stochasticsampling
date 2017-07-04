@@ -182,42 +182,36 @@ impl Integrator {
             let dist_sh = dist.dim();
             let stress_sh = kernel.dim();
 
+            let n_angle = dist_sh.3 * dist_sh.4;
+            let n_stress = stress_sh.0 * stress_sh.1;
+            let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
+
             // Put axis in order, so that components fields are continuous in memory,
             // so it can be passed to FFTW easily
-            let stress = kernel
-                .into_shape(IxDyn(
-                    &[
-                        stress_sh.0,
-                        stress_sh.1,
-                        1usize,
-                        1usize,
-                        1usize,
-                        dist_sh.3,
-                        dist_sh.4,
-                    ],
-                ))
-                .unwrap();
-            let stress = stress
-                .broadcast(IxDyn(
-                    &[
-                        stress_sh.0,
-                        stress_sh.1,
-                        dist_sh.0,
-                        dist_sh.1,
-                        dist_sh.2,
-                        dist_sh.3,
-                        dist_sh.4,
-                    ],
-                ))
+            let stress = kernel.into_shape([n_stress, n_angle]).unwrap();
+
+            let dist = dist.into_shape([n_dist, n_angle]).unwrap();
+
+            let len = n_stress * n_dist;
+            let mut uninit = Vec::with_capacity(len);
+            unsafe {
+                uninit.set_len(len);
+            }
+
+            let mut stress_field = Array::from_vec(uninit)
+                .into_shape((n_stress, n_dist))
                 .unwrap();
 
-            let stress_field = ((&stress * dist).sum(Axis(6)).sum(Axis(5))) * gw.phi * gw.theta;
+            // Calculating the integral over the orientation. Weights come further down
+            for (s, mut o1) in stress.outer_iter().zip(stress_field.outer_iter_mut()) {
+                for (d, mut o2) in dist.outer_iter().zip(o1.iter_mut()) {
+                    *o2 = Complex::from(s.dot(&d))
+                }
+            }
 
             let mut stress_field = stress_field
-                .map(Complex::from)
-                .into_shape([stress_sh.0 * stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
+                .into_shape((n_stress, dist_sh.0, dist_sh.1, dist_sh.2))
                 .unwrap();
-
 
             stress_field.outer_iter_mut().into_par_iter().for_each(
                 |mut v| {
@@ -230,8 +224,16 @@ impl Integrator {
                 .unwrap();
 
 
-            (stress_field / Complex::new(gs.x as f64 * gs.y as f64 * gs.z as f64, 0.))
-                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
+            (stress_field * Complex::from(gw.phi * gw.theta) /
+                 Complex::from(gs.x as f64 * gs.y as f64 * gs.z as f64)).into_shape(
+                [
+                    stress_sh.0,
+                    stress_sh.1,
+                    dist_sh.0,
+                    dist_sh.1,
+                    dist_sh.2,
+                ],
+            )
                 .unwrap()
         }
 
@@ -633,11 +635,11 @@ mod tests {
             z: 30.,
         };
         let gs = GridSize {
-            x: 10,
-            y: 10,
-            z: 10,
-            phi: 10,
-            theta: 10,
+            x: 15,
+            y: 15,
+            z: 15,
+            phi: 15,
+            theta: 15,
         };
         let s = StressPrefactors {
             active: 1.,
@@ -660,9 +662,7 @@ mod tests {
         d.sample_from(&p);
         d.dist *= bs.x * bs.y * bs.z;
 
-        b.iter(|| {
-            ::test::black_box(i.calculate_flow_field(&d));
-        })
+        b.iter(|| { ::test::black_box(i.calculate_flow_field(&d)); })
     }
     // #[test]
     // fn test_calculate_flow_field() {
