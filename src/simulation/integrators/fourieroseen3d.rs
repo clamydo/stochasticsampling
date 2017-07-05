@@ -202,10 +202,13 @@ impl Integrator {
                 .into_shape((n_stress, n_dist))
                 .unwrap();
 
-            // Calculating the integral over the orientation. Weights come further down
+            let norm = gw.phi * gw.theta / (gs.x as f64 * gs.y as f64 * gs.z as f64);
+
+            // Calculating the integral over the orientation. `norm` includes weights for
+            // integration and normalisation of DFT
             for (s, mut o1) in stress.outer_iter().zip(stress_field.outer_iter_mut()) {
                 for (d, mut o2) in dist.outer_iter().zip(o1.iter_mut()) {
-                    *o2 = Complex::from(s.dot(&d))
+                    *o2 = Complex::from(s.dot(&d) * norm)
                 }
             }
 
@@ -219,21 +222,16 @@ impl Integrator {
                 },
             );
 
-            let stress_field = stress_field
-                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
-                .unwrap();
-
-
-            (stress_field * Complex::from(gw.phi * gw.theta) /
-                 Complex::from(gs.x as f64 * gs.y as f64 * gs.z as f64)).into_shape(
-                [
-                    stress_sh.0,
-                    stress_sh.1,
-                    dist_sh.0,
-                    dist_sh.1,
-                    dist_sh.2,
-                ],
-            )
+            stress_field
+                .into_shape(
+                    [
+                        stress_sh.0,
+                        stress_sh.1,
+                        dist_sh.0,
+                        dist_sh.1,
+                        dist_sh.2,
+                    ]
+                )
                 .unwrap()
         }
 
@@ -255,7 +253,6 @@ impl Integrator {
         let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum(Axis(0)) * &self.k_inorm.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
-        // let mut u = (sigmak - &kksigmak.view()) * &self.pre_phase.view();
         let mut u = sigmak - &kksigmak.view();
 
         u.outer_iter_mut().into_par_iter().for_each(|mut v| {
@@ -620,8 +617,10 @@ mod tests {
             let (ia, va) = a;
             let (_, vb) = b;
 
-            let va = (va * 1e26).round() / 1e26;
-            let vb = (vb * 1e26).round() / 1e26;
+            let f = 2.0f64.powi(51);
+
+            let va = (va * f).round() / f;
+            let vb = (vb * f).round() / f;
 
             assert!(equal_floats(va, vb), "{} != {} at {:?}", va, vb, ia);
         }
