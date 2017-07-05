@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.3.0-rc12"
+version = "0.3.0-rc13"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 
@@ -43,4 +43,4 @@ members = ["crates/fftw3"]
 
 [profile.release]
 lto = true
-debug = false
+debug = true
