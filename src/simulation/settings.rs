@@ -83,12 +83,18 @@ pub struct Output {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
+    #[serde(default = "default_final_snapshot")]
+    pub final_snapshot: bool,
     pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub output_at_timestep: Output,
     pub timestep: f64,
     pub seed: [u64; 2],
+}
+
+fn default_final_snapshot() -> bool {
+    true
 }
 
 // use enum_str macro to encode this variant into strings
@@ -212,6 +218,8 @@ mod tests {
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.simulation.box_size, BoxSize{ x: 1., y: 2., z: 3. });
         assert_eq!(settings.simulation.grid_size, GridSize{x: 11, y: 12, z: 13, phi: 6, theta: 7});
+        assert_eq!(settings_default.simulation.final_snapshot, true);
+        assert_eq!(settings.simulation.final_snapshot, false);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);

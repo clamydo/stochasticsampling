@@ -6,6 +6,7 @@
     version = "version"
 
 [simulation]
+    final_snapshot = false
     number_of_particles = 100
     number_of_timesteps = 500
     timestep = 0.1
