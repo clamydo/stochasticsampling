@@ -1,23 +1,29 @@
 [environment]
-    io_queue_size = 50
-    output_format = "bincode"
-    prefix = "foo"
+    io_queue_size = 1
+    prefix = "profiling"
 
 [simulation]
-    box_size = [ 1.0, 1.0 ]
-    grid_size = [ 50, 50, 50 ]
-    number_of_particles = 1000000
+    number_of_particles = 10000000
     number_of_timesteps = 500
     timestep = 0.1
     seed = [ 1, 1 ]
+    [simulation.box_size]
+        x = 30.0
+        y = 20.0
+        z = 30.0
+    [simulation.grid_size]
+        x = 30
+        y = 30
+        z = 30
+        phi = 30
+        theta = 30
     [simulation.output_at_timestep]
 
 [parameters]
     magnetic_reorientation = 1.0
-    number_density = 1.0
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0
     [parameters.stress]
-        active =  1.0
-        magnetic = 1.0
+        active = 1.0
+        magentic = 1.0
