@@ -72,6 +72,7 @@ impl Worker {
     }
 
     pub fn append(&self, output: OutputEntry) -> Result<()> {
+        debug!("Some data was appended to the output queue.");
         self.tx
             .send(IOWorkerMsg::Output(output))
             .chain_err(|| "Cannot append data to file.")?;
@@ -143,6 +144,7 @@ fn dispatch(
             IOWorkerMsg::Quit => break,
 
             IOWorkerMsg::Snapshot(s) => {
+                debug!("Writing snapshot.");
                 snapshot_counter += 1;
                 let filepath = path.with_extension(&format!("bincode.{}", snapshot_counter));
 
@@ -161,6 +163,7 @@ fn dispatch(
             }
 
             IOWorkerMsg::Output(v) => {
+                debug!("Writing simulation output.");
                 // write starting offset of blob into index file
                 let pos = file.seek(SeekFrom::Current(0)).unwrap();
                 let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
@@ -182,6 +185,7 @@ fn dispatch(
             }
 
             IOWorkerMsg::Settings(v) => {
+                debug!("Write parameters into output file.");
                 // Serialize settings as first object in file
                 match format {
                     OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),
