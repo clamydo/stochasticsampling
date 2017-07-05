@@ -77,8 +77,8 @@ pub struct Output {
     pub particles_head: Option<usize>,
     #[serde(default)]
     pub particles: Option<usize>,
-    #[serde(default = "default_save_initial_condition")]
-    pub save_initial_condition: bool,
+    #[serde(default = "default_initial_condition")]
+    pub initial_condition: bool,
     #[serde(default)]
     pub snapshot: Option<usize>,
 }
@@ -87,7 +87,7 @@ fn default_final_snapshot() -> bool {
     true
 }
 
-fn default_save_initial_condition() -> bool {
+fn default_initial_condition() -> bool {
     true
 }
 
@@ -245,8 +245,8 @@ mod tests {
         assert_eq!(settings.simulation.output_at_timestep.particles_head, Some(10));
         assert_eq!(settings_default.simulation.output_at_timestep.particles_head, None);
 
-        assert_eq!(settings_default.simulation.output_at_timestep.save_initial_condition, true);
-        assert_eq!(settings.simulation.output_at_timestep.save_initial_condition, false);
+        assert_eq!(settings_default.simulation.output_at_timestep.initial_condition, true);
+        assert_eq!(settings.simulation.output_at_timestep.initial_condition, false);
 
         assert_eq!(settings.simulation.output_at_timestep.snapshot, Some(666));
         assert_eq!(settings_default.simulation.output_at_timestep.snapshot, None);

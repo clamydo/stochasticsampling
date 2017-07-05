@@ -142,7 +142,7 @@ fn run_simulation(
     if settings
         .simulation
         .output_at_timestep
-        .save_initial_condition
+        .initial_condition
     {
         info!("Saving initial condition.");
         let mut initial = OutputEntry::default();
