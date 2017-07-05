@@ -69,11 +69,8 @@ impl Distribution {
         let gy = (p.position.y / self.grid_width.y).floor() as Ix;
         let gz = (p.position.z / self.grid_width.z).floor() as Ix;
         let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
-        let gtheta = if p.orientation.theta == ::std::f64::consts::PI {
-            self.dist.dim().4
-        } else {
-            (p.orientation.theta / self.grid_width.theta).floor() as Ix
-        };
+        let gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix %
+            self.dist.dim().4;
 
         // trust in positions are in bound of PBC
         [gx, gy, gz, gphi, gtheta]
@@ -278,7 +275,7 @@ mod tests {
             theta: 1,
         };
 
-        fn check(i: &[f64; 5], o: &[usize; 5], p: Particle, s: &str, gs: GridSize, bs: BoxSize) {
+        fn check(i: &[f64; 5], o: &[usize; 5], p: Particle, gs: GridSize, bs: BoxSize) {
             let dist = Distribution::new(gs, GridWidth::new(gs, bs));
 
             let g = dist.coord_to_grid(&p);
@@ -286,15 +283,13 @@ mod tests {
             for ((a, b), c) in i.iter().zip(o.iter()).zip(g.iter()) {
                 assert!(
                     b == c,
-                    "{}: For input {:?}. Expected first coordinate to be '{}', got '{}'.",
-                    s,
+                    "For input {:?}. Expected coordinate to be '{}', got '{}'.",
                     a,
                     b,
                     c
                 );
             }
         };
-
 
         let input = [
             // [0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
@@ -308,7 +303,7 @@ mod tests {
             [0.5, 0.5, 0., -1., 0.],
             [0.5, 0.5, 0., 0., 0.],
             [0., 0., 0., 2. * ::std::f64::consts::PI, 0.],
-            [0.51000000000000005, 0.5, 0., 6.283185307179586, 0.],
+            [0.51000000000000005, 0.5, 0., 6.283185307179584, 0.],
         ];
 
         let result = [
@@ -323,39 +318,14 @@ mod tests {
             [25, 25, 0, 8, 0],
             [25, 25, 0, 0, 0],
             [0, 0, 0, 0, 0],
-            [25, 25, 0, 0, 0],
+            [25, 25, 0, 9, 0],
         ];
 
 
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle::new(i[0], i[1], i[2], i[3], i[4], box_size);
 
-            check(i, o, p, "mod", grid_size, box_size);
-        }
-
-
-        // check without modulo floats in between
-        let box_size = BoxSize {
-            x: 10.,
-            y: 10.,
-            z: 1.,
-        };
-        let grid_size = GridSize {
-            x: 50,
-            y: 50,
-            z: 1,
-            phi: 10,
-            theta: 1,
-        };
-
-        // next smaller float to 2 pi
-        let input = [[0., 0., 0., 6.283185307179585, 0.]];
-        let result = [[0, 0, 0, 9, 0]];
-
-        for (i, o) in input.iter().zip(result.iter()) {
-            let p = Particle::new(i[0], i[1], i[2], i[3], i[4], box_size);
-
-            check(i, o, p, "nomod", grid_size, box_size);
+            check(i, o, p, grid_size, box_size);
         }
 
     }
