@@ -6,7 +6,6 @@
     version = "version"
 
 [simulation]
-    final_snapshot = false
     number_of_particles = 100
     number_of_timesteps = 500
     timestep = 0.1
@@ -27,6 +26,8 @@
         particles = 100
         particles_head = 10
         snapshot = 666
+        save_initial_condition = false
+        final_snapshot = false
 
 [parameters]
     magnetic_reorientation = 1.0

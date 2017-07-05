@@ -102,26 +102,30 @@ fn run() -> Result<()> {
     let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
     let path = OutputPath::new(output_dir, &settings.environment.prefix);
 
-    let mut simulation = init::init_simulation(&settings, init_type)
-        .chain_err(|| "Error during initialization of simulation.")?;
+    let mut simulation = init::init_simulation(&settings, init_type).chain_err(
+        || "Error during initialization of simulation.",
+    )?;
 
     let show_progress = cli_matches.is_present("progress_bar");
 
-    path.create()
-        .chain_err(|| "Cannot create output directory")?;
+    path.create().chain_err(|| "Cannot create output directory")?;
 
     let worker = Worker::new(
         settings.environment.io_queue_size,
         &path,
         settings.environment.output_format,
-    )
-            .chain_err(|| "Unable to create output thread.")?;
+    ).chain_err(|| "Unable to create output thread.")?;
 
-    worker
-        .write_metadata(settings.clone())
-        .chain_err(|| "Unable to write metadata to output.")?;
+    worker.write_metadata(settings.clone()).chain_err(
+        || "Unable to write metadata to output.",
+    )?;
 
-    Ok(run_simulation(&settings, &mut simulation, worker, show_progress)?)
+    Ok(run_simulation(
+        &settings,
+        &mut simulation,
+        worker,
+        show_progress,
+    )?)
 }
 
 
@@ -135,10 +139,12 @@ fn run_simulation(
 
     let n = settings.simulation.number_of_timesteps;
 
-
-    // Output sampled distribtuion for initial state. Scope, so `initial` is
-    // directly discarted.
+    if settings
+        .simulation
+        .output_at_timestep
+        .save_initial_condition
     {
+        info!("Saving initial condition.");
         let mut initial = OutputEntry::default();
         initial.distribution = Some(simulation.get_distribution());
         initial.particles = if settings.simulation.output_at_timestep.particles.is_some() {
@@ -152,8 +158,9 @@ fn run_simulation(
             None
         };
 
-        out.append(initial)
-            .chain_err(|| "Unable to append initial condition.")?;
+        out.append(initial).chain_err(
+            || "Unable to append initial condition.",
+        )?;
     }
 
     let mut pb = ProgressBar::new(n as u64);
@@ -183,32 +190,25 @@ fn run_simulation(
                 .simulation
                 .output_at_timestep
                 .distribution
-                .and_then(
-                    |x| if timestep % x == 0 {
-                        info!("Timestep {}: Save distribution...", timestep);
-                        Some(simulation.get_distribution())
-                    } else {
-                        None
-                    }
-                ),
-            flowfield: settings
-                .simulation
-                .output_at_timestep
-                .flowfield
-                .and_then(
-                    |x| if timestep % x == 0 {
+                .and_then(|x| if timestep % x == 0 {
+                    info!("Timestep {}: Save distribution...", timestep);
+                    Some(simulation.get_distribution())
+                } else {
+                    None
+                }),
+            flowfield: settings.simulation.output_at_timestep.flowfield.and_then(
+                |x| {
+                    if timestep % x == 0 {
                         info!("Timestep {}: Save flow-field...", timestep);
                         Some(simulation.get_flow_field())
                     } else {
                         None
                     }
-                ),
-            particles: settings
-                .simulation
-                .output_at_timestep
-                .particles
-                .and_then(
-                    |x| if timestep % x == 0 {
+                },
+            ),
+            particles: settings.simulation.output_at_timestep.particles.and_then(
+                |x| {
+                    if timestep % x == 0 {
                         info!("Timestep {}: Save particles...", timestep);
                         settings
                             .simulation
@@ -219,13 +219,16 @@ fn run_simulation(
                     } else {
                         None
                     }
-                ),
+                },
+            ),
             timestep: timestep,
         };
 
         if entry.distribution.is_some() || entry.flowfield.is_some() || entry.particles.is_some() {
-            out.append(entry)
-                .chain_err(|| "Unable to append simulation entry.")?;
+            debug!("Some output is appended to queue.");
+            out.append(entry).chain_err(
+                || "Unable to append simulation entry.",
+            )?;
         }
 
         match settings.simulation.output_at_timestep.snapshot {
@@ -242,10 +245,11 @@ fn run_simulation(
     // TODO Why is this necessary?
     println!("");
 
-    if settings.simulation.final_snapshot {
+    if settings.simulation.output_at_timestep.final_snapshot {
         let snapshot = simulation.get_snapshot();
-        out.write_snapshot(snapshot)
-            .chain_err(|| "Error writing last snapshot.")?;
+        out.write_snapshot(snapshot).chain_err(
+            || "Error writing last snapshot.",
+        )?;
     }
 
     print!("Writing buffer to disk… ");

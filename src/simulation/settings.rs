@@ -69,22 +69,32 @@ pub struct Parameters {
 pub struct Output {
     #[serde(default)]
     pub distribution: Option<usize>,
+    #[serde(default = "default_final_snapshot")]
+    pub final_snapshot: bool,
     #[serde(default)]
     pub flowfield: Option<usize>,
     #[serde(default)]
     pub particles_head: Option<usize>,
     #[serde(default)]
     pub particles: Option<usize>,
+    #[serde(default = "default_save_initial_condition")]
+    pub save_initial_condition: bool,
     #[serde(default)]
     pub snapshot: Option<usize>,
+}
+
+fn default_final_snapshot() -> bool {
+    true
+}
+
+fn default_save_initial_condition() -> bool {
+    true
 }
 
 /// Holds simulation specific settings.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
-    #[serde(default = "default_final_snapshot")]
-    pub final_snapshot: bool,
     pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
@@ -93,9 +103,6 @@ pub struct SimulationSettings {
     pub seed: [u64; 2],
 }
 
-fn default_final_snapshot() -> bool {
-    true
-}
 
 // use enum_str macro to encode this variant into strings
 serde_enum_str!(OutputFormat {
@@ -218,8 +225,6 @@ mod tests {
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.simulation.box_size, BoxSize{ x: 1., y: 2., z: 3. });
         assert_eq!(settings.simulation.grid_size, GridSize{x: 11, y: 12, z: 13, phi: 6, theta: 7});
-        assert_eq!(settings_default.simulation.final_snapshot, true);
-        assert_eq!(settings.simulation.final_snapshot, false);
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
@@ -227,12 +232,22 @@ mod tests {
 
         assert_eq!(settings.simulation.output_at_timestep.distribution, Some(12));
         assert_eq!(settings_default.simulation.output_at_timestep.distribution, None);
+
+        assert_eq!(settings_default.simulation.output_at_timestep.final_snapshot, true);
+        assert_eq!(settings.simulation.output_at_timestep.final_snapshot, false);
+
         assert_eq!(settings.simulation.output_at_timestep.flowfield, Some(42));
         assert_eq!(settings_default.simulation.output_at_timestep.flowfield, None);
+
         assert_eq!(settings.simulation.output_at_timestep.particles, Some(100));
         assert_eq!(settings_default.simulation.output_at_timestep.particles, None);
+
         assert_eq!(settings.simulation.output_at_timestep.particles_head, Some(10));
         assert_eq!(settings_default.simulation.output_at_timestep.particles_head, None);
+
+        assert_eq!(settings_default.simulation.output_at_timestep.save_initial_condition, true);
+        assert_eq!(settings.simulation.output_at_timestep.save_initial_condition, false);
+
         assert_eq!(settings.simulation.output_at_timestep.snapshot, Some(666));
         assert_eq!(settings_default.simulation.output_at_timestep.snapshot, None);
     }
