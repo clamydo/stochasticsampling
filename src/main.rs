@@ -185,6 +185,7 @@ fn run_simulation(
                 .distribution
                 .and_then(
                     |x| if timestep % x == 0 {
+                        info!("Timestep {}: Save distribution...", timestep);
                         Some(simulation.get_distribution())
                     } else {
                         None
@@ -196,6 +197,7 @@ fn run_simulation(
                 .flowfield
                 .and_then(
                     |x| if timestep % x == 0 {
+                        info!("Timestep {}: Save flow-field...", timestep);
                         Some(simulation.get_flow_field())
                     } else {
                         None
@@ -207,6 +209,7 @@ fn run_simulation(
                 .particles
                 .and_then(
                     |x| if timestep % x == 0 {
+                        info!("Timestep {}: Save particles...", timestep);
                         settings
                             .simulation
                             .output_at_timestep
@@ -227,6 +230,7 @@ fn run_simulation(
 
         match settings.simulation.output_at_timestep.snapshot {
             Some(x) if timestep % x == 0 => {
+                info!("Timestep {}: Save snapshot...", timestep);
                 let snapshot = simulation.get_snapshot();
                 out.write_snapshot(snapshot)
             }
@@ -238,15 +242,17 @@ fn run_simulation(
     // TODO Why is this necessary?
     println!("");
 
-    let snapshot = simulation.get_snapshot();
-    out.write_snapshot(snapshot)
-        .chain_err(|| "Error writing last snapshot.")?;
+    if settings.simulation.final_snapshot {
+        let snapshot = simulation.get_snapshot();
+        out.write_snapshot(snapshot)
+            .chain_err(|| "Error writing last snapshot.")?;
+    }
 
-    print!("Write buffer to disk… ");
+    print!("Writing buffer to disk… ");
     let opath = out.get_output_filepath().to_str().unwrap().to_string();
 
     out.quit()?;
 
-    println!("written '{}'.", opath);
+    println!("DONE '{}'.", opath);
     Ok(())
 }
