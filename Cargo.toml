@@ -43,4 +43,8 @@ members = ["crates/fftw3"]
 
 [profile.release]
 lto = true
+debug = false
+
+[profile.bench]
+lto = true
 debug = true
