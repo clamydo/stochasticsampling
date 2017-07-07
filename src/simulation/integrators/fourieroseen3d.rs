@@ -87,14 +87,14 @@ impl Integrator {
         let plan_stress = FFTPlan::new_c2c_inplace_3d_dyn(
             &mut dummy.view_mut(),
             fft::FFTDirection::Forward,
-            fft::FFTFlags::Unaligned,
+            fft::FFTFlags::Measure,
         ).unwrap();
 
         let mut dummy = Array::default([grid_size.x, grid_size.y, grid_size.z]);
         let plan_ff = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Backward,
-            fft::FFTFlags::Unaligned,
+            fft::FFTFlags::Measure,
         ).unwrap();
 
         Integrator {
