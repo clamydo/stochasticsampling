@@ -7,6 +7,8 @@ use rand::distributions::{IndependentSample, Range};
 use simulation::settings::BoxSize;
 use std::f64::consts::PI;
 
+const PIHALF = PI / 2.;
+
 pub fn modulo(f: f64, m: f64) -> f64 {
     ((f % m) + m) % m
 }
@@ -63,6 +65,18 @@ impl Orientation {
         self.phi = phi;
         self.theta = theta;
     }
+
+    pub fn orientation_from_orientation_vector(&mut self, v: &[f64; 3]) {
+        let rxy = (v[0] * v[0] + v[1] * v[1]).sqrt();
+
+        // transform back to spherical coordinate
+        self.phi = v[1].atan2(v[0]);
+        self.theta = PIHALF - (v[2]).atan2(rxy);
+
+        debug_assert!((v[2] / r).abs() <= 1.0);
+        debug_assert!(self.theta.is_finite());
+        debug_assert!(self.theta.is_finite());
+    }
 }
 
 /// Coordinates (including the orientation) of a particle in 2D.
@@ -98,17 +112,15 @@ impl Particle {
 
 
         for _ in 0..n {
-            particles.push(
-                Particle::new(
-                    bs.x * between.ind_sample(&mut rng),
-                    bs.y * between.ind_sample(&mut rng),
-                    bs.z * between.ind_sample(&mut rng),
-                    TWOPI * between.ind_sample(&mut rng),
-                    // take care of the spherical geometry by drawing from sin
-                    pdf_sin(2. * between.ind_sample(&mut rng)),
-                    bs,
-                )
-            )
+            particles.push(Particle::new(
+                bs.x * between.ind_sample(&mut rng),
+                bs.y * between.ind_sample(&mut rng),
+                bs.z * between.ind_sample(&mut rng),
+                TWOPI * between.ind_sample(&mut rng),
+                // take care of the spherical geometry by drawing from sin
+                pdf_sin(2. * between.ind_sample(&mut rng)),
+                bs,
+            ))
         }
 
         particles
@@ -128,24 +140,48 @@ mod tests {
     use test_helper::equal_floats;
 
     #[test]
-    fn random_particles_test() {
+    fn test_random_particles() {
         let bs = BoxSize {
             x: 1.,
             y: 2.,
             z: 3.,
         };
 
-        let p = Particle::randomly_placed_particles(1, bs, [1, 1]);
+        let particles = Particle::randomly_placed_particles(1000, bs, [1, 1]);
 
-        let Position{x, y, z} = p[0].position;
+        for p in &particles {
+            let Position { x, y, z } = p.position;
 
-        assert!(0. <= x && x < 1.);
-        assert!(0. <= y && x < 1.);
-        assert!(0. <= z && x < 1.);
+            assert!(0. <= x && x < 1.);
+            assert!(0. <= y && x < 2.);
+            assert!(0. <= z && x < 3.);
+        }
     }
 
     #[test]
-    fn ang_pbc_test() {
+    fn test_modulo() {
+
+        let input = [
+            [2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI],
+            [-4.440892098500626e-16, 2. * ::std::f64::consts::PI],
+        ];
+        let output = [0., 0.];
+
+        for (i, o) in input.iter().zip(output.iter()) {
+            let a = modulo(i[0], i[1]);
+            assert!(
+                a == *o,
+                "in: {} mod {}, out: {}, expected: {}",
+                i[0],
+                i[1],
+                a,
+                *o
+            );
+        }
+    }
+
+    #[test]
+    fn test_ang_pbc() {
 
         let input = [[1., 0.], [1., PI], [1., -0.1], [1., PI + 0.1]];
         let expect = [
@@ -176,7 +212,8 @@ mod tests {
     }
 
     #[test]
-    fn pdf_sin_test() {
+    fn test_pdf_sin() {
+        // TODO: Check statstics
         use std::f64::consts::PI;
         let input = [0., 1., 2.];
         let expect = [0., PI / 2., PI];

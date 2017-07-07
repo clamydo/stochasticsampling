@@ -275,9 +275,30 @@ impl Integrator {
         flow_field: &ArrayView<f64, Ix4>,
         vort: &ArrayView<f64, Ix4>,
     ) {
+
+        debug_assert!(
+            0. <= p.position.x && p.position.x < self.box_size.x,
+            "x: {}",
+            p.position.x
+        );
+        debug_assert!(
+            0. <= p.position.y && p.position.y < self.box_size.y,
+            "y: {}",
+            p.position.y
+        );
+        debug_assert!(
+            0. <= p.position.z && p.position.z < self.box_size.z,
+            "z: {}",
+            p.position.z
+        );
+
         let ix = (p.position.x / self.grid_width.x).floor() as isize;
         let iy = (p.position.y / self.grid_width.y).floor() as isize;
         let iz = (p.position.z / self.grid_width.z).floor() as isize;
+
+        debug_assert!(0 <= ix && ix < self.grid_size.x as isize, "ix: {}", ix);
+        debug_assert!(0 <= iy && iy < self.grid_size.y as isize, "iy: {}", iy);
+        debug_assert!(0 <= iz && iz < self.grid_size.z as isize, "iz: {}", iz);
 
 
         let flow_x = flow_field[[0, ix as usize, iy as usize, iz as usize]];
@@ -290,20 +311,20 @@ impl Integrator {
         let sin_phi = p.orientation.phi.sin();
         let cos_theta = p.orientation.theta.cos();
         let sin_theta = p.orientation.theta.sin();
-        let cot_theta = cos_theta / sin_theta;
+
+        // orientation vector of `n`
+        let vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
 
         // Evolve particle position.
-        p.position.x += (flow_x + sin_theta * cos_phi) * param.timestep +
-            param.trans_diffusion * rv.x;
-        p.position.y += (flow_y + sin_theta * sin_phi) * param.timestep +
-            param.trans_diffusion * rv.y;
-        p.position.z += (flow_z + cos_theta) * param.timestep + param.trans_diffusion * rv.z;
+        p.position.x += (flow_x + vector[0]) * param.timestep + param.trans_diffusion * rv.x;
+        p.position.y += (flow_y + vector[1]) * param.timestep + param.trans_diffusion * rv.y;
+        p.position.z += (flow_z + vector[2]) * param.timestep + param.trans_diffusion * rv.z;
 
+        debug_assert!(p.position.x.is_finite());
+        debug_assert!(p.position.y.is_finite());
+        debug_assert!(p.position.y.is_finite());
 
-        // Get vorticity d/dx uy - d/dy ux
-        let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
-
-        let rotational_diffusion_quat_mut = |p: &mut Particle, r: &RandomVector| {
+        let rotational_diffusion_quat_mut = |r: &RandomVector| {
             let rotational_axis = |alpha: f64| {
                 let cos_ax = alpha.cos();
                 let sin_ax = alpha.sin();
@@ -315,40 +336,45 @@ impl Integrator {
                 ]
             };
 
-            // orientation vector of `p`
-            let vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
-
             let ax = rotational_axis(r.axis_angle);
 
             // quaternion encoding a rotation around `rotational_axis` with
             // angle drawn from Rayleigh-distribution
             let q = quaternion::axis_angle(ax, r.rotate_angle);
 
-            let vector = quaternion::rotate_vector(q, vector);
-
-            let x2y2 = vector[0] * vector[0] + vector[1] * vector[1];
-
-            // transform back to spherical coordinates
-            p.orientation.phi = vector[1].atan2(vector[0]);
-            p.orientation.theta = PI / 2. - (vector[2] / x2y2.sqrt()).atan();
+            // return rot
+            quaternion::rotate_vector(q, vector)
         };
 
-        rotational_diffusion_quat_mut(p, rv);
+        let mut new_vector = rotational_diffusion_quat_mut(rv);
 
-        p.orientation.phi += (cot_theta * cos_phi * vort[[0, 0, 0, 0]] +
-                                  cot_theta * sin_phi * vort[[1, 0, 0, 0]] -
-                                  vort[[2, 0, 0, 0]]) * 0.5 *
-            param.timestep;
+        let half_timestep = 0.5 * param.timestep;
+        // Get vorticity d/dx uy - d/dy ux
+        let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
 
+        // (1-nn) . (-W[u] . n) == - 0.5 * Curl[u] x n
+        new_vector[0] -= half_timestep *
+            (vort[[1, 0, 0, 0]] * vector[2] - vort[[2, 0, 0, 0]] * vector[1]);
+        new_vector[1] -= half_timestep *
+            (vort[[2, 0, 0, 0]] * vector[0] - vort[[0, 0, 0, 0]] * vector[2]);
+        new_vector[2] -= half_timestep *
+            (vort[[0, 0, 0, 0]] * vector[1] - vort[[1, 0, 0, 0]] * vector[0]);
 
-        p.orientation.theta += (-param.magnetic_reorientation * sin_theta +
-                                    0.5 * cos_theta * cos_phi * vort[[0, 0, 0, 0]] +
-                                    0.5 * cos_theta * sin_phi * vort[[1, 0, 0, 0]] -
-                                    0.5 * sin_theta * vort[[2, 0, 0, 0]]) *
-            param.timestep;
+        p.orientation.orientation_from_orientation_vector(
+            &new_vector,
+        );
 
-        // IMPORTANT: apply perioc boundary condition
+        // influence of magnetic field
+        p.orientation.theta -= param.magnetic_reorientation * sin_theta * param.timestep;
+
+        // IMPORTANT: apply periodic boundary condition
         p.pbc(self.box_size);
+
+        debug_assert!(p.position.x.is_finite());
+        debug_assert!(p.position.y.is_finite());
+        debug_assert!(p.position.y.is_finite());
+        debug_assert!(p.orientation.phi.is_finite());
+        debug_assert!(p.orientation.theta.is_finite());
     }
 
 

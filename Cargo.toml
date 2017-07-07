@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.3.0-rc15"
+version = "0.3.0-rc16"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 
@@ -48,3 +48,4 @@ debug = false
 [profile.bench]
 lto = true
 debug = true
+opt-level = 0
