@@ -628,9 +628,6 @@ mod tests {
         // let mut f = File::create("test/flowfield/ff_test.bincode").unwrap();
         // bincode::serialize_into(&mut f, &ff, ::bincode::Infinite).unwrap();
 
-        println!("Cached version' shape: {:?}", cache_ff.shape());
-        println!("Calculated version' shape: {:?}", ff.shape());
-
         for (a, b) in ff.indexed_iter().zip(cache_ff.indexed_iter()) {
             let (ia, va) = a;
             let (_, vb) = b;

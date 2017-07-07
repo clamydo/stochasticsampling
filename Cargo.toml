@@ -48,4 +48,4 @@ debug = false
 [profile.bench]
 lto = true
 debug = true
-opt-level = 0
+opt-level = 3
