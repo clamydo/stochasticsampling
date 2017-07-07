@@ -7,7 +7,7 @@ use rand::distributions::{IndependentSample, Range};
 use simulation::settings::BoxSize;
 use std::f64::consts::PI;
 
-const PIHALF = PI / 2.;
+const PIHALF: f64 = PI / 2.;
 
 pub fn modulo(f: f64, m: f64) -> f64 {
     ((f % m) + m) % m
@@ -73,7 +73,6 @@ impl Orientation {
         self.phi = v[1].atan2(v[0]);
         self.theta = PIHALF - (v[2]).atan2(rxy);
 
-        debug_assert!((v[2] / r).abs() <= 1.0);
         debug_assert!(self.theta.is_finite());
         debug_assert!(self.theta.is_finite());
     }
@@ -221,6 +220,58 @@ mod tests {
 
         for ((i, o), e) in input.iter().zip(expect.iter()).zip(output.iter()) {
             assert!(equal_floats(*o, *e), "{} => {}, not {}", i, o, e)
+        }
+    }
+
+    #[test]
+    fn test_orientation_from_orientation_vector() {
+        let input = [
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., 0., 1.],
+            [1., 1., 0.],
+            [1., 0., 1.],
+            [-1., 0., 0.],
+            [0., -1., 0.],
+            [0., 0., -1.],
+            [-1., 1., 0.],
+            [1., 0., -1.],
+            [15.23456, 0., 0.],
+        ];
+
+        let expect = [
+            [PI / 2., 0.],
+            [PI / 2., PI / 2.],
+            [0., 0.],
+            [PI / 2., PI / 4.],
+            [PI / 4., 0.],
+            [PI / 2., PI],
+            [PI / 2., -PI / 2.],
+            [PI, 0.],
+            [PI / 2., 3. * PI / 4.],
+            [3. / 4. * PI, 0.],
+            [PI / 2., 0.],
+        ];
+
+        let mut o = Orientation::new(0., 0.);
+
+        for (i, e) in input.iter().zip(expect.iter()) {
+            o.orientation_from_orientation_vector(i);
+
+            assert!(
+                equal_floats(e[0], o.theta),
+                "input: {:?} -> theta {} != {}",
+                i,
+                o.theta,
+                e[0]
+            );
+            assert!(
+                equal_floats(e[1], o.phi),
+                "input: {:?} -> phi {} != {}",
+                i,
+                o.phi,
+                e[1]
+            );
         }
     }
 }
