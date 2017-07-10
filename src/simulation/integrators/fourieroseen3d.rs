@@ -360,11 +360,9 @@ impl Integrator {
         new_vector[2] += half_timestep *
             (vort[[0, 0, 0, 0]] * vector[1] - vort[[1, 0, 0, 0]] * vector[0]);
 
-        p.orientation.orientation_from_orientation_vector(
-            &new_vector,
-        );
+        p.orientation.from_vector_mut(&new_vector);
 
-        // influence of magnetic field
+        // influence of magnetic field pointing in z-direction
         p.orientation.theta -= param.magnetic_reorientation * sin_theta * param.timestep;
 
         // IMPORTANT: apply periodic boundary condition

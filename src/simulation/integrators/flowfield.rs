@@ -186,7 +186,7 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
             s *= hxz;
         }
 
-        // calculate -dx dz, mind the switched signes
+        // calculate -dx uz, mind the switched signes
         // bulk
         {
             let mut s = vy.slice_mut(s![1..-1, .., ..]);

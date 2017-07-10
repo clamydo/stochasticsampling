@@ -66,7 +66,7 @@ impl Orientation {
         self.theta = theta;
     }
 
-    pub fn orientation_from_orientation_vector(&mut self, v: &[f64; 3]) {
+    pub fn from_vector_mut(&mut self, v: &[f64; 3]) {
         let rxy = (v[0] * v[0] + v[1] * v[1]).sqrt();
 
         // transform back to spherical coordinate
