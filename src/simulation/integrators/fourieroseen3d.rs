@@ -352,12 +352,12 @@ impl Integrator {
         // Get vorticity d/dx uy - d/dy ux
         let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
 
-        // (1-nn) . (-W[u] . n) == - 0.5 * Curl[u] x n
-        new_vector[0] -= half_timestep *
+        // (1-nn) . (W[u] . n) == 0.5 * Curl[u] x n
+        new_vector[0] += half_timestep *
             (vort[[1, 0, 0, 0]] * vector[2] - vort[[2, 0, 0, 0]] * vector[1]);
-        new_vector[1] -= half_timestep *
+        new_vector[1] += half_timestep *
             (vort[[2, 0, 0, 0]] * vector[0] - vort[[0, 0, 0, 0]] * vector[2]);
-        new_vector[2] -= half_timestep *
+        new_vector[2] += half_timestep *
             (vort[[0, 0, 0, 0]] * vector[1] - vort[[1, 0, 0, 0]] * vector[0]);
 
         p.orientation.orientation_from_orientation_vector(
