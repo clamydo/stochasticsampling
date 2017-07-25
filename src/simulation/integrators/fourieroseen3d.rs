@@ -407,13 +407,11 @@ pub struct RandomVector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::fft_helper::get_k_mesh;
-    use ndarray::{Array, Axis};
+    use ndarray::Array;
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
     use simulation::settings::StressPrefactors;
-    use std::f64::consts::PI;
     use test::Bencher;
     use test_helper::equal_floats;
 

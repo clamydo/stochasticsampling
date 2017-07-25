@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.3.0-rc16"
+version = "0.3.0-rc17"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 
@@ -10,31 +10,31 @@ name = "simulation"
 path = "src/main.rs"
 
 [dependencies]
-bincode = "0.7.0"
-clap = { version = "2.21.2", features = ["yaml"] }
-colored = "1.4.1"
+bincode = "0.8.0"
+clap = { version = "2.25.1", features = ["yaml"] }
+colored = "1.5.2"
 env_logger = "0.4.2"
 error-chain = "0.10.0"
 fftw3 = { path = "crates/fftw3" }
 log = "0.3.6"
-ndarray = { version = "0.9.0", features = ["serde"] }
-ndarray-parallel = "*"
-num = "0.1.37"
+ndarray = { version = "0.10.0", features = ["serde-1"] }
+ndarray-parallel = "0.5.0"
+num = "0.1.40"
 pbr = "1.0.0"
 pcg_rand = { path = "crates/external/pcg_rand"}
 quaternion = "0.3.0"
 rand = "0.3.15"
-rayon = "0.7.0"
+rayon = "0.8.2"
 # rustfft = "2.0.0"
-serde = "0.9.11"
-serde_cbor = "0.5.2"
-serde_derive = "0.9.11"
+serde = "1.0.10"
+serde_cbor = "0.6.1"
+serde_derive = "1.0.10"
 time = "0.1.35"
-toml = { version = "0.3.1", default-features = false, features = ["serde"] }
+toml = { version = "0.4.2", default-features = false, features = ["serde"] }
 
 [dev-dependencies]
 quickcheck = "0.4"
-ndarray-rand = "0.5.0"
+ndarray-rand = "0.6.0"
 
 [build-dependencies]
 vergen = "0.1.1"
