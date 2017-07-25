@@ -109,6 +109,28 @@ def dist_to_concentration3d(dist, gw):
     return np.sum(dist, axis=(3, 4)) * gw['phi'] * gw['theta']
 
 
+def get_mean_orientation(dist, gw):
+    """Takes distribution and returns mean orientation vector field"""
+
+    phi = np.linspace(0, 2 * np.pi, gs['phi'], endpoint=False) + gw['phi'] / 2
+    theta = np.linspace(0, np.pi, gs['theta'], endpoint=False) + \
+        gw['theta'] / 2
+
+    ph, th = np.meshgrid(phi, theta, indexing='ij')
+
+    x = np.sin(th) * np.cos(ph)
+    y = np.sin(th) * np.sin(ph)
+    z = np.cos(th)
+
+    n = dist.shape[0] * dist.shape[1] * dist.shape[2]
+
+    vx = np.sum(dist * x, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+    vy = np.sum(dist * y, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+    vz = np.sum(dist * z, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+
+    return np.transpose(np.array([vx, vy, vz]), (1, 2, 3, 0))
+
+
 def get_bs_gs_gw(sim_settings):
     bs = sim_settings['simulation']['box_size']
     gs = sim_settings['simulation']['grid_size']
