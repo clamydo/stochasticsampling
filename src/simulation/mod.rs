@@ -10,32 +10,36 @@ pub mod settings;
 
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
-use self::integrators::fourieroseen::{IntegrationParameter, Integrator};
-use self::integrators::flowfield::FlowField;
+use self::integrators::flowfield::FlowField3D;
+use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator, RandomVector};
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
+use consts::TWOPI;
 use ndarray::Array;
 use pcg_rand::Pcg64;
-use rand::Rand;
-use rand::SeedableRng;
+use rand::{Rand, SeedableRng};
+use rand::distributions::{IndependentSample, Range};
 use rand::distributions::normal::StandardNormal;
-use std::f64;
 
+struct ValueCache {
+    rot_diff: f64,
+}
 
 /// Main data structure representing the simulation.
 pub struct Simulation {
     integrator: Integrator,
     settings: Settings,
     state: SimulationState,
+    vcache: ValueCache,
 }
 
 
 /// Holds the current state of the simulation.
 struct SimulationState {
     distribution: Distribution,
-    flow_field: FlowField,
+    flow_field: FlowField3D,
     particles: Vec<Particle>,
-    random_samples: Vec<[f64; 3]>,
+    random_samples: Vec<RandomVector>,
     rng: Pcg64,
     /// count timesteps
     timestep: usize,
@@ -64,7 +68,7 @@ impl Simulation {
         let param = settings.parameters;
 
         let scaled_stress_prefactors = StressPrefactors {
-            active: 0.5 * param.stress.active,
+            active: param.stress.active,
             magnetic: 0.5 * param.stress.magnetic,
         };
 
@@ -77,9 +81,7 @@ impl Simulation {
             magnetic_reorientation: param.magnetic_reorientation,
         };
 
-        let integrator = Integrator::new(sim.grid_size,
-                                         sim.box_size,
-                                         int_param);
+        let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
 
 
         // normal distribution with variance timestep
@@ -87,11 +89,22 @@ impl Simulation {
 
         // initialize state with zeros
         let state = SimulationState {
-            distribution: Distribution::new(sim.grid_size,
-                                            GridWidth::new(sim.grid_size, sim.box_size)),
-            flow_field: Array::zeros((2, sim.grid_size[0], sim.grid_size[1])),
+            distribution: Distribution::new(
+                sim.grid_size,
+                GridWidth::new(sim.grid_size, sim.box_size),
+            ),
+            flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
-            random_samples: vec![[0f64; 3]; sim.number_of_particles],
+            random_samples: vec![
+                RandomVector {
+                    x: 0.,
+                    y: 0.,
+                    z: 0.,
+                    axis_angle: 0.,
+                    rotate_angle: 0.,
+                };
+                sim.number_of_particles
+            ],
             rng: SeedableRng::from_seed(seed),
             timestep: 0,
         };
@@ -100,16 +113,21 @@ impl Simulation {
             integrator: integrator,
             settings: settings,
             state: state,
+            vcache: ValueCache {
+                rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+            },
         }
     }
 
     /// Initialize the state of the simulation
     pub fn init(&mut self, mut particles: Vec<Particle>) {
-        assert!(particles.len() == self.settings.simulation.number_of_particles,
-                "Given initial condition has not the same number of particles ({}) as given in \
+        assert!(
+            particles.len() == self.settings.simulation.number_of_particles,
+            "Given initial condition has not the same number of particles ({}) as given in \
                  the parameter file ({}).",
-                particles.len(),
-                self.settings.simulation.number_of_particles);
+            particles.len(),
+            self.settings.simulation.number_of_particles
+        );
 
 
         let bs = self.settings.simulation.box_size;
@@ -118,18 +136,24 @@ impl Simulation {
         // provided for user given input.
         for p in &mut particles {
             // this makes sure, the input is sanitized
-            *p = Particle::new(p.position.x.v, p.position.y.v, p.orientation.v, bs);
+            *p = Particle::new(
+                p.position.x,
+                p.position.y,
+                p.position.z,
+                p.orientation.phi,
+                p.orientation.theta,
+                bs,
+            );
         }
 
         self.state.particles = particles;
 
         // Do a first sampling, so that the initial condition can also be obtained
-        self.state
-            .distribution
-            .sample_from(&self.state.particles);
+        self.state.distribution.sample_from(&self.state.particles);
 
-        self.state.distribution.dist *= self.settings.simulation.box_size[0] *
-                                        self.settings.simulation.box_size[1];
+        self.state.distribution.dist *= self.settings.simulation.box_size.x *
+            self.settings.simulation.box_size.y *
+            self.settings.simulation.box_size.z;
     }
 
 
@@ -171,7 +195,7 @@ impl Simulation {
     }
 
     /// Returns sampled flow field
-    pub fn get_flow_field(&self) -> FlowField {
+    pub fn get_flow_field(&self) -> FlowField3D {
         self.state.flow_field.clone()
     }
 
@@ -184,34 +208,49 @@ impl Simulation {
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
-        self.state
-            .distribution
-            .sample_from(&self.state.particles);
+        self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
-        self.state.distribution.dist *= self.settings.simulation.box_size[0] *
-                                        self.settings.simulation.box_size[1];
+        self.state.distribution.dist *= self.settings.simulation.box_size.x *
+            self.settings.simulation.box_size.y *
+            self.settings.simulation.box_size.z;
 
         // Calculate flow field from distribution.
-        self.state.flow_field = self.integrator
-            .calculate_flow_field(self.state.distribution.dist.view());
+        self.state.flow_field = self.integrator.calculate_flow_field(
+            &self.state.distribution,
+        );
+
+        let between = Range::new(0f64, 1.);
 
         // Generate all needed random numbers here. Makes parallelization easier.
         for r in &mut self.state.random_samples {
-            *r = [StandardNormal::rand(&mut self.state.rng).0,
-                  StandardNormal::rand(&mut self.state.rng).0,
-                  StandardNormal::rand(&mut self.state.rng).0];
+            *r = RandomVector {
+                x: StandardNormal::rand(&mut self.state.rng).0,
+                y: StandardNormal::rand(&mut self.state.rng).0,
+                z: StandardNormal::rand(&mut self.state.rng).0,
+                axis_angle: TWOPI * between.ind_sample(&mut self.state.rng),
+                rotate_angle: rayleigh_pdf(
+                    self.vcache.rot_diff,
+                    between.ind_sample(&mut self.state.rng),
+                ),
+            };
         }
 
         // Update particle positions
-        self.integrator
-            .evolve_particles_inplace(&mut self.state.particles,
-                                      &self.state.random_samples,
-                                      self.state.flow_field.view());
+        self.integrator.evolve_particles_inplace(
+            &mut self.state.particles,
+            &self.state.random_samples,
+            self.state.flow_field.view(),
+        );
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
         self.state.timestep
     }
+}
+
+
+fn rayleigh_pdf(sigma: f64, x: f64) -> f64 {
+    sigma * f64::sqrt(-2. * f64::ln(1. - x))
 }
 
 impl Iterator for Simulation {

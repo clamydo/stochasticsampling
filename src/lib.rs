@@ -11,10 +11,11 @@
 #[cfg(test)]
 extern crate test;
 #[cfg(test)]
-#[macro_use]
 extern crate quickcheck;
 #[cfg(test)]
 extern crate ndarray_rand;
+#[cfg(test)]
+extern crate bincode;
 
 #[macro_use]
 extern crate error_chain;
@@ -23,10 +24,13 @@ extern crate log;
 extern crate fftw3;
 #[macro_use(s)]
 extern crate ndarray;
+extern crate ndarray_parallel;
 extern crate num;
 extern crate pcg_rand;
+extern crate quaternion;
 extern crate rand;
 extern crate rayon;
+// extern crate rustfft;
 extern crate serde;
 extern crate serde_cbor;
 #[macro_use]
@@ -35,7 +39,6 @@ extern crate toml;
 
 
 pub mod consts;
-pub mod modulo;
 #[macro_use]
 pub mod serialization_helper;
 pub mod simulation;
@@ -45,5 +48,3 @@ mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain!{}
 }
-
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");

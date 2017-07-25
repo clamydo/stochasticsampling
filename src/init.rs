@@ -40,7 +40,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             };
 
             info!("Reading initial condition from {}", fname);
-            let mut f = File::open(fname).chain_err(|| "Unable to open input file.")?;
+            let mut f = File::open(fname).chain_err(|| format!("Unable to open input file '{}'.", fname))?;
 
             match Path::new(&fname).extension() {
                 Some(ext) => {

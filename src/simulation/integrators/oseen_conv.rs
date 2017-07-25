@@ -21,19 +21,20 @@
 //! field is now calculated using contributions of every other cell but the
 //! cell itself.
 
+use super::flowfield::vorticity;
+use super::integrate::integrate;
 use consts::TWOPI;
-use fftw3::complex::Complex;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use ndarray::{Array, ArrayView, Axis, Ix, Ix1, Ix2, Ix3, Ix4};
+use ndarray::{Array, ArrayView, Axis, Ix, Ix2, Ix3, Ix4};
+use num::Complex;
 use rayon::prelude::*;
 use simulation::distribution::Distribution;
 use simulation::grid_width::GridWidth;
 use simulation::particle::Particle;
-use simulation::settings::{GridSize, StressPrefactors};
+use simulation::settings::{BoxSize, GridSize, StressPrefactors};
 use std::f64::consts::PI;
 
-pub type FlowField = Array<f64, Ix3>;
 
 /// Holds parameter needed for time step
 #[derive(Debug)]
@@ -58,7 +59,7 @@ pub struct Integrator {
 impl Integrator {
     /// Returns a new instance of the mc_sampling integrator.
     pub fn new(grid_size: GridSize,
-               grid_width: GridWidth,
+               box_size: BoxSize,
                parameter: IntegrationParameter)
                -> Integrator {
 
@@ -66,6 +67,8 @@ impl Integrator {
             warn!("To have an orientation grid point in the direction of magnetic field, use a \
                    grid size of 2 + 4 * n, with n an integer.");
         }
+
+        let grid_width = GridWidth::new(grid_size, box_size);
 
         Integrator {
             stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
@@ -145,8 +148,10 @@ impl Integrator {
             let fft_norm = (grid_size[0] * grid_size[1]) as f64;
             let p = 1. / 8. / PI / norm / norm / norm / fft_norm;
 
-            [[Complex::new(2. * x * x + y * y, 0.) * p, Complex::new(x * y, 0.) * p],
-             [Complex::new(y * x, 0.) * p, Complex::new(x * x + 2. * y * y, 0.) * p]]
+            [[Complex::new(2. * x * x + y * y, 0.) * p,
+              Complex::new(x * y, 0.) * p],
+             [Complex::new(y * x, 0.) * p,
+              Complex::new(x * x + 2. * y * y, 0.) * p]]
         };
 
         // Allocate array to prepare FFT
@@ -290,8 +295,7 @@ impl Integrator {
         let int = (g.to_owned() * sk).sum(Axis(1));
 
         // Integrate along angle
-        int.map_axis(Axis(3),
-                     |v| Complex::from(periodic_simpson_integrate(v, h.a)))
+        int.map_axis(Axis(3), |v| Complex::from(integrate(v, h.a)))
     }
 
 
@@ -331,7 +335,7 @@ impl Integrator {
 
         plans.par_iter_mut().for_each(|p| p.execute());
 
-        u.map(|x| x.re())
+        u.map(|x| x.re)
     }
 
 
@@ -393,7 +397,7 @@ impl Integrator {
                                         random_samples: &[[f64; 3]],
                                         flow_field: ArrayView<'a, f64, Ix3>) {
         // Calculate vorticity dx uy - dy ux
-        let vort = vorticity(self.grid_width, &flow_field);
+        let vort = vorticity(self.grid_width, flow_field);
 
         particles
             .par_iter_mut()
@@ -405,113 +409,17 @@ impl Integrator {
 }
 
 
-/// Implements the operation `dx uy - dy ux` on a given discretized flow field
-/// `u=(ux, uy)`.
-fn vorticity(grid_width: GridWidth, u: &ArrayView<f64, Ix3>) -> Array<f64, Ix2> {
-    let sh = u.shape();
-    let sx = sh[1];
-    let sy = sh[2];
-
-    // allocate uninitialized memory, is assigned later
-    let len = sx * sy;
-    let mut uninit = Vec::with_capacity(len);
-    unsafe {
-        uninit.set_len(len);
-    }
-
-    let mut res = Array::from_vec(uninit).into_shape((sx, sy)).unwrap();
-
-    let hx = 2. * grid_width.x;
-    let hy = 2. * grid_width.y;
-
-    let ux = u.subview(Axis(0), 0);
-    let uy = u.subview(Axis(0), 1);
-
-    // trick to calculate dx dy / hx - dy dx / hy more easily
-    let hyx = hy / hx;
-
-    // calculate dx uy
-    // bulk
-    {
-        let mut s = res.slice_mut(s![1..-1, ..]);
-        s.assign(&uy.slice(s![2.., ..]));
-        s -= &uy.slice(s![..-2, ..]);
-        s *= hyx;
-    }
-    // borders
-    {
-        let mut s = res.slice_mut(s![..1, ..]);
-        s.assign(&uy.slice(s![1..2, ..]));
-        s -= &uy.slice(s![-1.., ..]);
-        s *= hyx;
-    }
-    {
-        let mut s = res.slice_mut(s![-1.., ..]);
-        s.assign(&uy.slice(s![..1, ..]));
-        s -= &uy.slice(s![-2..-1, ..]);
-        s *= hyx;
-    }
-
-    // calculate -dy dx, mind the switched signes
-    // bulk
-    {
-        let mut s = res.slice_mut(s![.., 1..-1]);
-        s -= &ux.slice(s![.., 2..]);
-        s += &ux.slice(s![.., ..-2]);
-        s /= hy;
-    }
-    // borders
-    {
-        let mut s = res.slice_mut(s![.., ..1]);
-        s -= &ux.slice(s![.., 1..2]);
-        s += &ux.slice(s![.., -1..]);
-        s /= hy;
-    }
-    {
-        let mut s = res.slice_mut(s![.., -1..]);
-        s -= &ux.slice(s![.., ..1]);
-        s += &ux.slice(s![.., -2..-1]);
-        s /= hy;
-    }
-
-    res
-}
-
-/// Implements Simpon's Rule integration on an array, representing sampled
-/// points of a periodic function.
-fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
-    let len = samples.dim();
-
-    assert!(len % 2 == 0,
-            "Periodic Simpson's rule only works for even number of sample points, since the \
-             first point in the integration interval is also the last. Please specify an even \
-             number of grid cells.");
-
-    unsafe {
-        let mut s = samples.uget(0) + samples.uget(0);
-
-        for i in 1..(len / 2) {
-            s += 2. * samples.uget(2 * i);
-            s += 4. * samples.uget(2 * i - 1);
-        }
-
-        s += 4. * samples.uget(len - 1);
-        s * h / 3.
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fftw3::complex::Complex;
     use ndarray::{Array, Axis, arr2};
+    use num::Complex;
     use simulation::distribution::Distribution;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
     use simulation::settings::StressPrefactors;
     use std::f64::{EPSILON, MAX};
-    use std::f64::consts::PI;
     use test::Bencher;
 
     fn equal_floats(a: f64, b: f64) -> bool {
@@ -526,7 +434,6 @@ mod tests {
     fn new() {
         let bs = [1., 1.];
         let gs = [10, 10, 3];
-        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -540,7 +447,7 @@ mod tests {
             magnetic_reorientation: 1.,
         };
 
-        let i = Integrator::new(gs, gw, int_param);
+        let i = Integrator::new(gs, bs, int_param);
 
         let should0 = arr2(&[[-0.0833333333333332, 0.9330127018922195],
                              [-0.0669872981077807, 0.4166666666666666]]);
@@ -567,7 +474,6 @@ mod tests {
     fn test_evolve_particles_inplace() {
         let bs = [1., 1.];
         let gs = [10, 10, 6];
-        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -581,7 +487,7 @@ mod tests {
             magnetic_reorientation: 0.1,
         };
 
-        let i = Integrator::new(gs, gw, int_param);
+        let i = Integrator::new(gs, bs, int_param);
 
         let mut p = vec![Particle::new(0.6, 0.3, 0., bs),
                          Particle::new(0.6, 0.3, 1.5707963267948966, bs),
@@ -642,7 +548,7 @@ mod tests {
             magnetic_reorientation: 0.1,
         };
 
-        let i = Integrator::new(gs, gw, int_param);
+        let i = Integrator::new(gs, bs, int_param);
 
         let mut p = Particle::new(0.6, 0.3, 0., bs);
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
@@ -650,96 +556,16 @@ mod tests {
 
         let u = i.calculate_flow_field(&d);
 
-        let vort = vorticity(gw, &u.view());
+        let vort = vorticity(gw, u.view());
 
         b.iter(|| i.evolve_particle_inplace(&mut p, &[0.1, 0.1, 0.1], &u.view(), &vort.view()));
     }
 
-    #[test]
-    fn test_vorticity() {
-        let bs = [50., 50.];
-        let gs = [50, 50, 1];
-        let gw = GridWidth::new(gs, bs);
-
-        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50)
-            .into_shape((2, 5, 5))
-            .unwrap();
-        u[[0, 1, 4]] = 42.;
-
-        let v = vorticity(gw, &u.view());
-
-        let should = arr2(&[[-6., -8.5, -8.5, -8.5, -6.],
-                            [22.5, 4., 4., -12., 6.5],
-                            [6.5, 4., 4., 4., 6.5],
-                            [6.5, 4., 4., 4., 6.5],
-                            [-6., -8.5, -8.5, -8.5, -6.]]);
-
-        println!("result: {}", v);
-        println!("expected: {}", should);
-
-        for (a, b) in v.iter().zip(should.iter()) {
-            assert!(equal_floats(*a, *b), "expected {}, got {}", b, a);
-        }
-    }
-
-    #[bench]
-    fn bench_vorticity(b: &mut Bencher) {
-        let bs = [400., 400.];
-        let gs = [400, 400, 1];
-        let gw = GridWidth::new(gs, bs);
-
-        let u: Array<f64, Ix3> = Array::linspace(1., 80000., 80000)
-            .into_shape((2, 200, 200))
-            .unwrap();
-
-        b.iter(|| vorticity(gw, &u.view()));
-    }
-
-    #[test]
-    fn test_simpson() {
-        let h = PI / 100.;
-        let f = Array::range(0., PI, h).map(|x| x.sin());
-        let integral = super::periodic_simpson_integrate(f.view(), h);
-
-        assert!(equal_floats(integral, 2.000000010824505),
-                "h: {}, result: {}",
-                h,
-                integral);
-
-
-        let h = 4. / 100.;
-        let f = Array::range(0., 4., h).map(|x| x * x);
-        let integral = super::periodic_simpson_integrate(f.view(), h);
-        assert!(equal_floats(integral, 21.120000000000001),
-                "h: {}, result: {}",
-                h,
-                integral);
-    }
-
-    #[test]
-    fn test_simpson_map_axis() {
-        let points = 100;
-        let h = PI / points as f64;
-        let f = Array::range(0., PI, h)
-            .map(|x| x.sin())
-            .into_shape((1, 1, points))
-            .unwrap()
-            .broadcast((10, 10, points))
-            .unwrap()
-            .to_owned();
-
-        let integral = f.map_axis(Axis(2), |v| super::periodic_simpson_integrate(v, h));
-
-        for e in integral.iter() {
-            assert!((e - 2.000000010824505).abs() < EPSILON);
-        }
-    }
 
     #[test]
     fn test_calc_stress_divergence() {
         let bs = [1., 1.];
         let gs = [10, 10, 10];
-        let gw = GridWidth::new(gs, bs);
         let s = StressPrefactors {
             active: 1.,
             magnetic: 1.,
@@ -753,7 +579,7 @@ mod tests {
             magnetic_reorientation: 1.,
         };
 
-        let i = Integrator::new(gs, gw, int_param);
+        let i = Integrator::new(gs, bs, int_param);
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
 
         d.dist = Array::zeros(gs);

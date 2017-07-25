@@ -19,13 +19,13 @@ macro_rules! serde_enum_str {
             }
         }
 
-        impl ::serde::Deserialize for $name {
+        impl<'de> ::serde::Deserialize<'de> for $name {
             fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
-                where D: ::serde::Deserializer,
+                where D: ::serde::Deserializer<'de>,
             {
                 struct Visitor;
 
-                impl ::serde::de::Visitor for Visitor {
+                impl<'de> ::serde::de::Visitor<'de> for Visitor {
                     type Value = $name;
 
                     fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {

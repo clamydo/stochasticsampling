@@ -34,10 +34,11 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(io_queue_size: usize,
-               output_path: &OutputPath,
-               output_format: OutputFormat)
-               -> Result<Worker> {
+    pub fn new(
+        io_queue_size: usize,
+        output_path: &OutputPath,
+        output_format: OutputFormat,
+    ) -> Result<Worker> {
 
         // Create communication channel for thread
         let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(io_queue_size);
@@ -53,13 +54,15 @@ impl Worker {
 
         // Spawn worker thread, that periodically flushes collections of simulation
         // states to disk.
-        let io_worker = thread::spawn(move || dispatch(rx, file, of, op));
+        let io_worker = thread::spawn(move || dispatch(&rx, file, of, &op));
 
-        Ok(Worker {
-               io_worker: io_worker,
-               tx: tx,
-               output_file: output_file,
-           })
+        Ok(
+            Worker {
+                io_worker: io_worker,
+                tx: tx,
+                output_file: output_file,
+            }
+        )
     }
 
     pub fn write_metadata(&self, settings: Settings) -> Result<()> {
@@ -69,6 +72,7 @@ impl Worker {
     }
 
     pub fn append(&self, output: OutputEntry) -> Result<()> {
+        debug!("Some data was appended to the output queue.");
         self.tx
             .send(IOWorkerMsg::Output(output))
             .chain_err(|| "Cannot append data to file.")?;
@@ -120,20 +124,19 @@ fn prepare_output_file(path: &OutputPath, format: OutputFormat) -> Result<(File,
 }
 
 
-fn dispatch(rx: Receiver<IOWorkerMsg>,
-            mut file: File,
-            format: OutputFormat,
-            path: OutputPath)
-            -> Result<()> {
+fn dispatch(
+    rx: &Receiver<IOWorkerMsg>,
+    mut file: File,
+    format: OutputFormat,
+    path: &OutputPath,
+) -> Result<()> {
 
     let mut snapshot_counter = 0;
 
     let index_file_path = path.with_extension("index");
     let mut index_file =
-        File::create(&index_file_path).chain_err(|| {
-                           format!("Cannot create index file '{}'",
-                                   index_file_path.display())
-                       })?;
+        File::create(&index_file_path)
+            .chain_err(|| format!("Cannot create index file '{}'", index_file_path.display()))?;
 
 
     loop {
@@ -141,14 +144,15 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
             IOWorkerMsg::Quit => break,
 
             IOWorkerMsg::Snapshot(s) => {
+                debug!("Writing snapshot.");
                 snapshot_counter += 1;
                 let filepath = path.with_extension(&format!("bincode.{}", snapshot_counter));
 
                 let mut snapshot_file =
-                    File::create(&filepath).chain_err(|| {
-                                       format!("Cannot create snapshot file '{}'.",
-                                               filepath.display())
-                                   })?;
+                    File::create(&filepath)
+                        .chain_err(
+                            || format!("Cannot create snapshot file '{}'.", filepath.display()),
+                        )?;
 
                 bincode::serialize_into(&mut snapshot_file,
                                                     &s,
@@ -159,30 +163,29 @@ fn dispatch(rx: Receiver<IOWorkerMsg>,
             }
 
             IOWorkerMsg::Output(v) => {
+                debug!("Writing simulation output.");
                 // write starting offset of blob into index file
                 let pos = file.seek(SeekFrom::Current(0)).unwrap();
                 let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
-                index_file.write_all(&pos_le)
+                index_file
+                    .write_all(&pos_le)
                     .chain_err(|| "Failed to write into index file.")?;
 
                 // write all snapshots into one cbor file
                 match format {
                     OutputFormat::CBOR => {
                         serde_cbor::ser::to_writer_sd(&mut file, &v)
-                        .chain_err(||
-                            "Cannot write simulation output (format: CBOR).")?
+                            .chain_err(|| "Cannot write simulation output (format: CBOR).")?
                     }
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(
-                            &mut file, &v,
-                            Infinite)
-                        .chain_err(||
-                            "Cannot write simulation output (format: bincode).")?
+                        bincode::serialize_into(&mut file, &v, Infinite)
+                            .chain_err(|| "Cannot write simulation output (format: bincode).")?
                     }
                 }
             }
 
             IOWorkerMsg::Settings(v) => {
+                debug!("Write parameters into output file.");
                 // Serialize settings as first object in file
                 match format {
                     OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),

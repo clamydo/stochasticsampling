@@ -87,29 +87,61 @@ def sim_output_gen(source_file, index, start=0, step=1, stop=None):
             yield cbor.load(f).value
 
 
-def data_to_dist(data, gs):
-    """Takes data dictonary and returns numpy array of sampled
-    distribution in the correct shape, with (x, y, angle).
-    """
-    return np.array(data['distribution']['dist']['data']).reshape(*gs)
-
-
-def dist_to_concentration(dist, gw):
+def dist_to_concentration2d(dist, gw):
     """Takes an distribution array and returns a concentration
     field by naive integraton of orientation.
     """
-    return np.sum(dist, axis=2) * gw[2]
+    return np.sum(dist, axis=2) * gw['phi']
+
+
+def data_to_dist(data):
+    """Takes data dictonary and returns numpy array of sampled
+    distribution in the correct shape, with (x, y, angle).
+    """
+    return np.array(data['distribution']['dist']['data']).reshape(
+        data['distribution']['dist']['dim'])
+
+
+def dist_to_concentration3d(dist, gw):
+    """Takes an distribution array and returns a concentration
+    field by naive integraton of orientation.
+    """
+    return np.sum(dist, axis=(3, 4)) * gw['phi'] * gw['theta']
+
+
+def get_mean_orientation(dist, gw):
+    """Takes distribution and returns mean orientation vector field"""
+
+    phi = np.linspace(0, 2 * np.pi, gs['phi'], endpoint=False) + gw['phi'] / 2
+    theta = np.linspace(0, np.pi, gs['theta'], endpoint=False) + \
+        gw['theta'] / 2
+
+    ph, th = np.meshgrid(phi, theta, indexing='ij')
+
+    x = np.sin(th) * np.cos(ph)
+    y = np.sin(th) * np.sin(ph)
+    z = np.cos(th)
+
+    n = dist.shape[0] * dist.shape[1] * dist.shape[2]
+
+    vx = np.sum(dist * x, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+    vy = np.sum(dist * y, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+    vz = np.sum(dist * z, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+
+    return np.transpose(np.array([vx, vy, vz]), (1, 2, 3, 0))
 
 
 def get_bs_gs_gw(sim_settings):
     bs = sim_settings['simulation']['box_size']
     gs = sim_settings['simulation']['grid_size']
 
-    gw = [
-        sim_settings['simulation']['box_size'][0] / gs[0],
-        sim_settings['simulation']['box_size'][1] / gs[1],
-        2 * np.pi / gs[2]
-    ]
+    gw = {
+        'x': bs['x'] / gs['x'],
+        'y': bs['y'] / gs['y'],
+        'z': bs['z'] / gs['z'],
+        'phi': 2 * np.pi / gs['phi'],
+        'theta': np.pi / gs['theta']
+    }
 
     return bs, gs, gw
 

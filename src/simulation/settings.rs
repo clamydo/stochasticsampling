@@ -23,9 +23,21 @@ pub struct Settings {
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
-pub type BoxSize = [f64; 2];
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct BoxSize {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
 /// Size of the discrete grid.
-pub type GridSize = [usize; 3];
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct GridSize {
+    pub x: usize,
+    pub y: usize,
+    pub z: usize,
+    pub phi: usize,
+    pub theta: usize,
+}
 
 
 /// Holds rotational and translational diffusion constants
@@ -56,15 +68,27 @@ pub struct Parameters {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Output {
     #[serde(default)]
-    pub distribution_every_timestep: Option<usize>,
+    pub distribution: Option<usize>,
+    #[serde(default = "default_final_snapshot")]
+    pub final_snapshot: bool,
     #[serde(default)]
-    pub flowfield_every_timestep: Option<usize>,
+    pub flowfield: Option<usize>,
     #[serde(default)]
-    pub particle_head: Option<usize>,
+    pub particles_head: Option<usize>,
     #[serde(default)]
-    pub particle_every_timestep: Option<usize>,
+    pub particles: Option<usize>,
+    #[serde(default = "default_initial_condition")]
+    pub initial_condition: bool,
     #[serde(default)]
-    pub snapshot_every_timestep: Option<usize>,
+    pub snapshot: Option<usize>,
+}
+
+fn default_final_snapshot() -> bool {
+    true
+}
+
+fn default_initial_condition() -> bool {
+    true
 }
 
 /// Holds simulation specific settings.
@@ -74,10 +98,11 @@ pub struct SimulationSettings {
     pub grid_size: GridSize,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub output: Output,
+    pub output_at_timestep: Output,
     pub timestep: f64,
     pub seed: [u64; 2],
 }
+
 
 // use enum_str macro to encode this variant into strings
 serde_enum_str!(OutputFormat {
@@ -115,8 +140,9 @@ fn read_from_file(filename: &str) -> Result<String> {
     let mut f = File::open(filename).chain_err(|| "Unable to open file.")?;
     let mut content = String::new();
 
-    f.read_to_string(&mut content)
-        .chain_err(|| "Unable to read file.")?;
+    f.read_to_string(&mut content).chain_err(
+        || "Unable to read file.",
+    )?;
 
     Ok(content)
 }
@@ -127,15 +153,49 @@ fn read_from_file(filename: &str) -> Result<String> {
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
+    let toml_string = read_from_file(param_file).chain_err(
+        || "Unable to read parameter file.",
+    )?;
 
-    let mut settings: Settings =
-        toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")?;
+    let mut settings: Settings = toml::from_str(&toml_string).chain_err(
+        || "Unable to parse parameter file.",
+    )?;
 
-    // save version to metadata
-    settings.environment.version = ::VERSION.to_string();
+    settings.environment.version = "".to_string();
+
+    check_settings(&settings)?;
 
     Ok(settings)
+}
+
+
+fn check_settings(s: &Settings) -> Result<()> {
+
+    // TODO Check settings for sanity. For example, particles_head <=
+    // number_of_particles
+    let bs = s.simulation.box_size;
+
+    if bs.x <= 0. || bs.y <= 0. || bs.z <= 0. {
+        bail!("Box size is invalid. Must be bigger than 0: {:?}", bs)
+    }
+
+    if s.simulation.output_at_timestep.particles_head.is_some() {
+        if s.simulation.number_of_particles <
+            s.simulation.output_at_timestep.particles_head.unwrap()
+        {
+            bail!("Cannot output more particles than available. `particles_head`
+                   must be smaller or equal to `number_of_particles`")
+        }
+    }
+
+    Ok(())
+}
+
+impl Settings {
+    pub fn set_version(&mut self, version: &str) {
+        // save version to metadata
+        self.environment.version = version.to_string();
+    }
 }
 
 
@@ -146,7 +206,8 @@ mod tests {
     #[test]
     fn read_settings() {
 
-        let settings = read_parameter_file("./test/parameter.toml").unwrap();
+        let mut settings = read_parameter_file("./test/parameter.toml").unwrap();
+        settings.set_version("version");
         let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
 
         assert_eq!(settings_default.environment.init_file, None);
@@ -156,27 +217,38 @@ mod tests {
         assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
         assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");
+        assert_eq!(settings.environment.version, "version");
         assert_eq!(settings.parameters.diffusion.rotational, 0.5);
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
-        assert_eq!(settings.simulation.box_size, [1., 1.]);
-        assert_eq!(settings.simulation.grid_size, [10, 10, 6]);
+        assert_eq!(settings.simulation.box_size, BoxSize{ x: 1., y: 2., z: 3. });
+        assert_eq!(settings.simulation.grid_size, GridSize{x: 11, y: 12, z: 13, phi: 6, theta: 7});
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.seed, [1, 1]);
 
-        assert_eq!(settings.simulation.output.distribution_every_timestep, Some(12));
-        assert_eq!(settings_default.simulation.output.distribution_every_timestep, None);
-        assert_eq!(settings.simulation.output.flowfield_every_timestep, Some(42));
-        assert_eq!(settings_default.simulation.output.flowfield_every_timestep, None);
-        assert_eq!(settings.simulation.output.particle_every_timestep, Some(100));
-        assert_eq!(settings_default.simulation.output.particle_every_timestep, None);
-        assert_eq!(settings.simulation.output.particle_head, Some(10));
-        assert_eq!(settings_default.simulation.output.particle_head, None);
-        assert_eq!(settings.simulation.output.snapshot_every_timestep, Some(666));
-        assert_eq!(settings_default.simulation.output.snapshot_every_timestep, None);
+        assert_eq!(settings.simulation.output_at_timestep.distribution, Some(12));
+        assert_eq!(settings_default.simulation.output_at_timestep.distribution, None);
+
+        assert_eq!(settings_default.simulation.output_at_timestep.final_snapshot, true);
+        assert_eq!(settings.simulation.output_at_timestep.final_snapshot, false);
+
+        assert_eq!(settings.simulation.output_at_timestep.flowfield, Some(42));
+        assert_eq!(settings_default.simulation.output_at_timestep.flowfield, None);
+
+        assert_eq!(settings.simulation.output_at_timestep.particles, Some(100));
+        assert_eq!(settings_default.simulation.output_at_timestep.particles, None);
+
+        assert_eq!(settings.simulation.output_at_timestep.particles_head, Some(10));
+        assert_eq!(settings_default.simulation.output_at_timestep.particles_head, None);
+
+        assert_eq!(settings_default.simulation.output_at_timestep.initial_condition, true);
+        assert_eq!(settings.simulation.output_at_timestep.initial_condition, false);
+
+        assert_eq!(settings.simulation.output_at_timestep.snapshot, Some(666));
+        assert_eq!(settings_default.simulation.output_at_timestep.snapshot, None);
     }
 }

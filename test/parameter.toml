@@ -3,20 +3,31 @@
     io_queue_size = 50
     output_format = "bincode"
     prefix = "foo"
+    version = "version"
 
 [simulation]
-    box_size = [ 1.0, 1.0 ]
-    grid_size = [ 10, 10, 6 ]
     number_of_particles = 100
     number_of_timesteps = 500
     timestep = 0.1
     seed = [ 1, 1 ]
-    [simulation.output]
-        distribution_every_timestep = 12
-        flowfield_every_timestep = 42
-        particle_every_timestep = 100
-        particle_head = 10
-        snapshot_every_timestep = 666
+    [simulation.box_size]
+        x = 1.0
+        y = 2.0
+        z = 3.0
+    [simulation.grid_size]
+        x = 11
+        y = 12
+        z = 13
+        phi = 6
+        theta = 7
+    [simulation.output_at_timestep]
+        distribution = 12
+        flowfield = 42
+        particles = 100
+        particles_head = 10
+        snapshot = 666
+        initial_condition = false
+        final_snapshot = false
 
 [parameters]
     magnetic_reorientation = 1.0

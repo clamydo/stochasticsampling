@@ -1,5 +1,5 @@
 use super::distribution::Distribution;
-use super::integrators::flowfield::FlowField;
+use super::integrators::flowfield::FlowField3D;
 use super::particle::Particle;
 
 /// Captures values that can be outputed during simulation.
@@ -7,7 +7,7 @@ use super::particle::Particle;
 #[derive(Debug, Default, Serialize)]
 pub struct OutputEntry {
     pub distribution: Option<Distribution>,
-    pub flow_field: Option<FlowField>,
+    pub flowfield: Option<FlowField3D>,
     pub particles: Option<Vec<Particle>>,
     pub timestep: usize,
 }
