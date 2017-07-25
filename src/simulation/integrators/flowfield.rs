@@ -113,7 +113,6 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
     let uz = u.subview(Axis(0), 2);
 
 
-    /// /////////////////////
     {
         // calculate dy uz
         let mut vx = res.subview_mut(Axis(0), 0);
@@ -160,8 +159,6 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
             s /= hz;
         }
     }
-    /// ////////////////
-    /// /////////////////////
     {
         let mut vy = res.subview_mut(Axis(0), 1);
         // calculate dz ux
@@ -208,8 +205,6 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
             s /= hx;
         }
     }
-    /// ////////////////
-    /// /////////////////////
     {
         let mut vz = res.subview_mut(Axis(0), 2);
         // calculate dx uy
@@ -256,8 +251,6 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
             s /= hy;
         }
     }
-    /// ////////////////
-
     res
 }
 
@@ -271,68 +264,148 @@ mod tests {
     use test_helper::equal_floats;
 
 
-//     #[test]
-//     fn test_vorticity() {
-//         unimplemented!();
-//         let bs = BoxSize {
-//             x: 50.,
-//             y: 50.,
-//             z: 0.,
-//         };
-//         let gs = GridSize {
-//             x: 50,
-//             y: 50,
-//             z: 0,
-//             phi: 1,
-//             theta: 1,
-//         };
-//         let gw = GridWidth::new(gs, bs);
-//
-//         let mut u: Array<f64, Ix4> = Array::linspace(1., 81., 81).into_shape((3, 3, 3, 3)).unwrap();
-//         u[[0, 1, 4, 2]] = 42.;
-//
-//         let v = vorticity3d(gw, u.view());
-//
-//         // let should = arr2(
-//         //     &[
-//         //         [-6., -8.5, -8.5, -8.5, -6.],
-//         //         [22.5, 4., 4., -12., 6.5],
-//         //         [6.5, 4., 4., 4., 6.5],
-//         //         [6.5, 4., 4., 4., 6.5],
-//         //         [-6., -8.5, -8.5, -8.5, -6.],
-//         //     ]
-//         // );
-//         //
-//         // println!("result: {}", v);
-//         // println!("expected: {}", should);
-//         //
-//         // for (a, b) in v.iter().zip(should.iter()) {
-//         //     assert!(equal_floats(*a, *b), "expected {}, got {}", b, a);
-//         // }
-//
-//     }
-//
-//     #[bench]
-//     fn bench_vorticity(b: &mut Bencher) {
-//         let bs = BoxSize {
-//             x: 400.,
-//             y: 400.,
-//             z: 400.,
-//         };
-//         let gs = GridSize {
-//             x: 400,
-//             y: 400,
-//             z: 400,
-//             phi: 1,
-//             theta: 1,
-//         };
-//         let gw = GridWidth::new(gs, bs);
-//
-//         let u: Array<f64, Ix4> = Array::linspace(1., 16000000., 16000000)
-//             .into_shape((3, 200, 200, 200))
-//             .unwrap();
-//
-//         b.iter(|| vorticity(gw, u.view()));
-//     }
-//
+    #[test]
+    fn test_vorticity2d() {
+        let bs = BoxSize {
+            x: 50.,
+            y: 50.,
+            z: 0.,
+        };
+        let gs = GridSize {
+            x: 50,
+            y: 50,
+            z: 0,
+            phi: 1,
+            theta: 0,
+        };
+        let gw = GridWidth::new(gs, bs);
+
+        let mut u: Array<f64, Ix3> = Array::linspace(1., 50., 50).into_shape((2, 5, 5)).unwrap();
+        u[[0, 1, 4]] = 42.;
+
+        let v = vorticity2d(gw, u.view());
+
+        let should = arr2(
+            &[
+                [-6., -8.5, -8.5, -8.5, -6.],
+                [22.5, 4., 4., -12., 6.5],
+                [6.5, 4., 4., 4., 6.5],
+                [6.5, 4., 4., 4., 6.5],
+                [-6., -8.5, -8.5, -8.5, -6.],
+            ],
+        );
+
+        println!("result: {}", v);
+        println!("expected: {}", should);
+
+        for (a, b) in v.iter().zip(should.iter()) {
+            assert!(equal_floats(*a, *b), "expected {}, got {}", b, a);
+        }
+
+    }
+
+    #[bench]
+    fn bench_vorticity(b: &mut Bencher) {
+        let bs = BoxSize {
+            x: 400.,
+            y: 400.,
+            z: 400.,
+        };
+        let gs = GridSize {
+            x: 400,
+            y: 400,
+            z: 400,
+            phi: 1,
+            theta: 1,
+        };
+        let gw = GridWidth::new(gs, bs);
+
+        let u: Array<f64, Ix3> = Array::linspace(1., 80000., 80000)
+            .into_shape((2, 200, 200))
+            .unwrap();
+
+        b.iter(|| vorticity2d(gw, u.view()));
+    }
+
+
+    #[test]
+    fn test_vorticity3d() {
+        use ndarray::arr3;
+
+        let bs = BoxSize {
+            x: 50.,
+            y: 50.,
+            z: 50.,
+        };
+        let gs = GridSize {
+            x: 50,
+            y: 50,
+            z: 50,
+            phi: 1,
+            theta: 1,
+        };
+        let gw = GridWidth::new(gs, bs);
+
+        let mut u: Array<f64, Ix4> = Array::linspace(1., 81., 81)
+            .into_shape((3, 3, 3, 3))
+            .unwrap();
+        u[[0, 1, 2, 2]] = 42.;
+
+        let v = vorticity3d(gw, u.view());
+
+        let mut should = Array::zeros((3, 3, 3, 3));
+
+        {
+            let mut sx = should.subview_mut(Axis(0), 0);
+            let x = arr3(
+                &[
+                    [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
+                    [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
+                    [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
+                ],
+            );
+            sx.assign(&x);
+        }
+
+        {
+            let mut sy = should.subview_mut(Axis(0), 1);
+            let y = arr3(
+                &[
+                    [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
+                    [[-9.5, -8., -9.5], [-9.5, -8., -9.5], [-21.5, 4., -9.5]],
+                    [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
+                ],
+            );
+            sy.assign(&y);
+        }
+
+        {
+            let mut sz = should.subview_mut(Axis(0), 2);
+            let z = arr3(
+                &[
+                    [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
+                    [[10.5, 10.5, 22.5], [6., 6., -6.], [10.5, 10.5, 10.5]],
+                    [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
+                ],
+            );
+            sz.assign(&z);
+        }
+
+
+        println!("result: {}", v);
+        println!("expected: {}", should);
+
+        for ((i, a), b) in v.indexed_iter().zip(should.iter()) {
+            assert!(
+                equal_floats(*a, *b),
+                "expected {}, got {} at index {:?}",
+                b,
+                a,
+                i
+            );
+        }
+
+    }
+
+
 }

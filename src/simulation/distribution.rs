@@ -147,14 +147,9 @@ impl Index<[i32; 5]> for Distribution {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{Array, Axis};
-    use ndarray_rand::RandomExt;
-    use rand::distributions::Range;
     use simulation::grid_width::GridWidth;
     use simulation::particle::Particle;
     use simulation::settings::{BoxSize, GridSize};
-    use std::f64::EPSILON;
-    use test::Bencher;
     use test_helper::equal_floats;
 
     #[test]

@@ -256,7 +256,7 @@ mod tests {
         let mut o = Orientation::new(0., 0.);
 
         for (i, e) in input.iter().zip(expect.iter()) {
-            o.orientation_from_orientation_vector(i);
+            o.from_vector_mut(i);
 
             assert!(
                 equal_floats(e[0], o.theta),
