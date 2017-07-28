@@ -4,8 +4,7 @@
 //! positions and orientations. Considered as a probabilistic sample of the
 //! probability distribution function (PDF), which is described by the
 //! Fokker-Planck equation, the particle configuration is used to sample the
-//! PDF. To close the integration scheme, the flow-field is calculated in terms
-//! of probabilstic moments (i.e. expectation values) of the PDF on a grid.
+//! PDF. To close the integration scheme, the flow-field is calculated in terms //! of probabilstic moments (i.e. expectation values) of the PDF on a grid.
 //!
 //! The integrator is implemented in dimensionless units, scaling out the
 //! self-propulsion speed of the particle and the average volue taken by a
@@ -70,13 +69,6 @@ impl Integrator {
         box_size: BoxSize,
         parameter: IntegrationParameter,
     ) -> Integrator {
-
-        if (grid_size.phi - 2) % 4 != 0 {
-            warn!(
-                "To have an orientation grid point in the direction of magnetic field, use a \
-                   grid size of 2 + 4 * n, with n an integer."
-            );
-        }
 
         let grid_width = GridWidth::new(grid_size, box_size);
 

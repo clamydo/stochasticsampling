@@ -1,6 +1,6 @@
 [root]
 name = "stochasticsampling"
-version = "0.3.0-rc17"
+version = "0.3.1"
 dependencies = [
  "bincode 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.25.1 (registry+https://github.com/rust-lang/crates.io-index)",

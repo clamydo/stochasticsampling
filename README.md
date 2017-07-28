@@ -3,7 +3,7 @@
 Implementation of a Monte-Carlo like statistical sampling method for a time integration of a Fokker-Planck equation, coupled to a hydrodynamic field.
 
 # Build prerequisits
-* rustc >= 1.16-nightly
+* rustc >= 1.21-nightly
 * FFTW3 3.x
 * libclang 3.x
 
@@ -13,10 +13,11 @@ Due to the use of serde and syntax extension in testing code, rust nightly is
 necessary at the moment.
 
 # Build
-If all prerequisits are fulfilled, just build with
+If all prerequisits are fulfilled, build with
 ```
 env RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
+in order to
 
 # Documentation
 Usage instructions can be found when
