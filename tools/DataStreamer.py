@@ -65,6 +65,20 @@ class Streamer(object):
         return sim_settings
 
 
+    def get_scaling(self, start=0, step=1, stop=None):
+        vmax = 0
+
+        for data in self[start:stop:step]:
+            dist = dist_to_concentration(data_to_dist(data, gs), gw)
+            m = np.max(dist)
+
+            if m > vmax:
+                vmax = m
+
+        return m
+
+
+
 # def filter_index(index):
 #     """ Naivly removes metadata blob, initial value blob and all blobs, that are
 #     smaller than the average blob size with three standard deviations. For some
@@ -77,11 +91,10 @@ class Streamer(object):
 #     return np.array(index[2:-1])[np.diff(index[2:]) > 0.5 * avg + 3 * std]
 
 
-def sim_output_gen(source_file, index, start=0, step=1, stop=None):
+def generator(source_file, index, start=0, step=1, stop=None):
     """Generator that yields simulation output"""
 
     with open(source_file, 'rb') as f:
-
         for i in index[start:stop:step]:
             f.seek(int(i))  # convert bit to byte position
             yield cbor.load(f).value
@@ -146,16 +159,17 @@ def get_bs_gs_gw(sim_settings):
     return bs, gs, gw
 
 
-def get_scaling(source_fn, start=0, step=1, stop=None):
-    sout = sim_output_gen(source_fn, index, start, step, stop)
+def get_scaling3d(source_fn, index, gw, start=0, step=1, stop=None):
+    sout = generator(source_fn, index, start, step, stop)
 
+    vmin = 0
     vmax = 0
 
     for data in sout:
-        dist = dist_to_concentration(data_to_dist(data, gs), gw)
+        dist = dist_to_concentration3d(data_to_dist(data), gw)
         m = np.max(dist)
 
         if m > vmax:
             vmax = m
 
-    return m
+    return vmin, vmax
