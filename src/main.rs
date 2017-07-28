@@ -137,7 +137,6 @@ fn run_simulation(
     show_progress: bool,
 ) -> Result<()> {
 
-    let n = settings.simulation.number_of_timesteps;
 
     if settings
         .simulation
@@ -163,7 +162,7 @@ fn run_simulation(
         )?;
     }
 
-    let mut pb = ProgressBar::new(n as u64);
+    let mut pb = ProgressBar::new(settings.simulation.number_of_timesteps as u64);
     pb.format("┫██░┣");
 
     // only show bar, if flag was present
@@ -176,6 +175,7 @@ fn run_simulation(
 
     // in case the simulation was resumed
     let timestep_start = simulation.get_timestep() + 1;
+    let n = settings.simulation.number_of_timesteps + timestep_start;
 
     // Run the simulation and send data to asynchronous to the IO-thread.
     for timestep in timestep_start..(n + 1) {
