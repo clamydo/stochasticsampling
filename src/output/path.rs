@@ -34,7 +34,7 @@ impl OutputPath {
 
 /// Returns an ID based on prefix, time, and version for simulation output
 fn create_output_id(prefix: &str) -> String {
-    // Need to introduce placeholder `.cbor`, since otherwise the patch version
+    // Need to introduce placeholder `.msgpack`, since otherwise the patch version
     // number is chopped of later, when using `.with_extension()` method later.
     let v = ::version().replace(".", "_");
     format!("{prefix}-{time}_v{version}",

@@ -1,6 +1,7 @@
 use bincode::{self, Infinite};
 use errors::*;
 use serde_cbor;
+use rmp_serde;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -28,8 +29,8 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
     match init_type {
         InitType::Stdin => {
             info!("Reading initial condition from standard input");
-            let p = serde_cbor::de::from_reader(io::stdin())
-                .chain_err(|| "Can't read given initial condition. Did you use CBOR format?")?;
+            let p = rmp_serde::from_read(io::stdin())
+                .chain_err(|| "Can't read given initial condition. Did you use MsgPack format?")?;
 
             simulation.init(p);
         }
@@ -53,6 +54,11 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                         "bincode" => {
                             let p = bincode::deserialize_from(&mut f, Infinite)
                             .chain_err(|| "Bincode, Cannot read given initial condition.")?;
+                            simulation.init(p);
+                        }
+                        "MsgPack" => {
+                            let p = rmp_serde::from_read(f)
+                            .chain_err(|| "MsgPack, Cannot read given initial condition.")?;
                             simulation.init(p);
                         }
                         _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),

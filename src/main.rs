@@ -11,6 +11,7 @@ extern crate error_chain;
 #[macro_use]
 extern crate log;
 extern crate pbr;
+extern crate rmp_serde;
 extern crate serde_cbor;
 extern crate stochasticsampling;
 extern crate time;

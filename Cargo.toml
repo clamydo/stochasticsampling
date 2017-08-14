@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 
@@ -25,6 +25,7 @@ pcg_rand = { path = "crates/external/pcg_rand"}
 quaternion = "0.3.0"
 rand = "0.3.15"
 rayon = "0.8.2"
+rmp-serde = "0.13.6"
 # rustfft = "2.0.0"
 serde = "1.0.10"
 serde_cbor = "0.6.1"
