@@ -2,6 +2,7 @@ use super::path::OutputPath;
 use bincode::{self, Infinite};
 use errors::*;
 use serde_cbor;
+use rmp_serde;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::mem::transmute;
@@ -108,6 +109,7 @@ fn prepare_output_file(path: &OutputPath, format: OutputFormat) -> Result<(File,
     let fileext = match format {
         OutputFormat::CBOR => "cbor",
         OutputFormat::Bincode => "bincode",
+        OutputFormat::MsgPack => "msgpack",
     };
 
     let filepath = path.with_extension(fileext);
@@ -181,6 +183,10 @@ fn dispatch(
                         bincode::serialize_into(&mut file, &v, Infinite)
                             .chain_err(|| "Cannot write simulation output (format: bincode).")?
                     }
+                    OutputFormat::MsgPack => {
+                        rmp_serde::encode::write_named(&mut file, &v)
+                            .chain_err(|| "Cannot write simulation output (format: MsgPack).")?
+                    }
                 }
             }
 
@@ -189,6 +195,7 @@ fn dispatch(
                 // Serialize settings as first object in file
                 match format {
                     OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),
+                    OutputFormat::MsgPack => rmp_serde::encode::write_named(&mut file, &v).unwrap(),
                     OutputFormat::Bincode => {
                         bincode::serialize_into(&mut file, &v, Infinite).unwrap()
                     }

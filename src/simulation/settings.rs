@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 10;
-const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::CBOR;
+const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::MsgPack;
 
 error_chain! {
     foreign_links {
@@ -108,6 +108,7 @@ pub struct SimulationSettings {
 serde_enum_str!(OutputFormat {
     CBOR("CBOR"),
     Bincode("bincode"),
+    MsgPack("MsgPack"),
 });
 
 /// Holds environment variables.
