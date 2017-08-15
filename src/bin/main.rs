@@ -133,7 +133,7 @@ fn run() -> Result<()> {
 /// Spawns output thread and run simulation.
 fn run_simulation(
     settings: &Settings,
-    mut simulation: &mut Simulation,
+    simulation: &mut Simulation,
     out: Worker,
     show_progress: bool,
 ) -> Result<()> {

@@ -199,7 +199,7 @@ impl Integrator {
             // Calculating the integral over the orientation. `norm` includes weights for
             // integration and normalisation of DFT
             for (s, mut o1) in stress.outer_iter().zip(stress_field.outer_iter_mut()) {
-                for (d, mut o2) in dist.outer_iter().zip(o1.iter_mut()) {
+                for (d, o2) in dist.outer_iter().zip(o1.iter_mut()) {
                     *o2 = Complex::from(s.dot(&d) * norm)
                 }
             }
