@@ -1,8 +1,9 @@
 use super::path::OutputPath;
 use bincode::{self, Infinite};
 use errors::*;
-use serde_cbor;
+use lzma::LzmaWriter;
 use rmp_serde;
+use serde_cbor;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::mem::transmute;
@@ -13,6 +14,7 @@ use stochasticsampling::simulation::Snapshot;
 use stochasticsampling::simulation::output::OutputEntry;
 use stochasticsampling::simulation::settings::{OutputFormat, Settings};
 
+const COMPRESSION: u32 = 1;
 
 /// Message type for the IO worker thread channel.
 // TODO find out, if settings can be taken by reference
@@ -44,9 +46,9 @@ impl Worker {
         // Create communication channel for thread
         let (tx, rx) = mpsc::sync_channel::<IOWorkerMsg>(io_queue_size);
 
-        let (file, output_file) = prepare_output_file(output_path, output_format)
-            .chain_err(|| "Cannot create output file.")?;
-
+        let (file, output_file) = prepare_output_file(output_path, output_format).chain_err(
+            || "Cannot create output file.",
+        )?;
 
         // clone, so it can be moved into thread closure
         // TODO find a more elegant solution
@@ -57,34 +59,32 @@ impl Worker {
         // states to disk.
         let io_worker = thread::spawn(move || dispatch(&rx, file, of, &op));
 
-        Ok(
-            Worker {
-                io_worker: io_worker,
-                tx: tx,
-                output_file: output_file,
-            }
-        )
+        Ok(Worker {
+            io_worker: io_worker,
+            tx: tx,
+            output_file: output_file,
+        })
     }
 
     pub fn write_metadata(&self, settings: Settings) -> Result<()> {
-        self.tx
-            .send(IOWorkerMsg::Settings(settings))
-            .chain_err(|| "Cannot write metadata to output file.")
+        self.tx.send(IOWorkerMsg::Settings(settings)).chain_err(
+            || "Cannot write metadata to output file.",
+        )
     }
 
     pub fn append(&self, output: OutputEntry) -> Result<()> {
         debug!("Some data was appended to the output queue.");
-        self.tx
-            .send(IOWorkerMsg::Output(output))
-            .chain_err(|| "Cannot append data to file.")?;
+        self.tx.send(IOWorkerMsg::Output(output)).chain_err(
+            || "Cannot append data to file.",
+        )?;
 
         Ok(())
     }
 
     pub fn write_snapshot(&self, snapshot: Snapshot) -> Result<()> {
-        self.tx
-            .send(IOWorkerMsg::Snapshot(snapshot))
-            .chain_err(|| "Cannot write snapshot.")?;
+        self.tx.send(IOWorkerMsg::Snapshot(snapshot)).chain_err(
+            || "Cannot write snapshot.",
+        )?;
 
         Ok(())
     }
@@ -114,8 +114,9 @@ fn prepare_output_file(path: &OutputPath, format: OutputFormat) -> Result<(File,
 
     let filepath = path.with_extension(fileext);
 
-    let file = File::create(&filepath)
-        .chain_err(|| format!("couldn't create output file '{}'.", filepath.display()))?;
+    let file = File::create(&filepath).chain_err(|| {
+        format!("couldn't create output file '{}'.", filepath.display())
+    })?;
 
     let ofile = OutputFile {
         path: filepath,
@@ -136,32 +137,49 @@ fn dispatch(
     let mut snapshot_counter = 0;
 
     let index_file_path = path.with_extension("index");
-    let mut index_file =
-        File::create(&index_file_path)
-            .chain_err(|| format!("Cannot create index file '{}'", index_file_path.display()))?;
+    let mut index_file = File::create(&index_file_path).chain_err(|| {
+        format!("Cannot create index file '{}'", index_file_path.display())
+    })?;
 
 
     loop {
         match rx.recv().unwrap() {
-            IOWorkerMsg::Quit => break,
+            IOWorkerMsg::Quit => {
+                debug!("Output queue closed.");
+                // file.finish().chain_err(
+                //     || "Cannot finalize compressed stream",
+                // )?;
+                break;
+            }
 
             IOWorkerMsg::Snapshot(s) => {
                 debug!("Writing snapshot.");
                 snapshot_counter += 1;
                 let filepath = path.with_extension(&format!("bincode.{}", snapshot_counter));
 
-                let mut snapshot_file =
-                    File::create(&filepath)
-                        .chain_err(
-                            || format!("Cannot create snapshot file '{}'.", filepath.display()),
-                        )?;
+                let snapshot_file = File::create(&filepath).chain_err(|| {
+                    format!("Cannot create snapshot file '{}'.", filepath.display())
+                })?;
 
-                bincode::serialize_into(&mut snapshot_file,
-                                                    &s,
-                                                    Infinite).chain_err(|| {
-                                                   format!("Cannot write snapshot with number {}",
-                                                           snapshot_counter)
-                                               })?
+                let mut snapshot_file = LzmaWriter::new_compressor(snapshot_file, COMPRESSION)
+                    .chain_err(|| {
+                        format!(
+                            "Cannot create LZMA compress for file '{}'.",
+                            filepath.display()
+                        )
+                    })?;
+
+                bincode::serialize_into(&mut snapshot_file, &s, Infinite)
+                    .chain_err(|| {
+                        format!("Cannot write snapshot with number {}", snapshot_counter)
+                    })?;
+
+                snapshot_file.finish().chain_err(|| {
+                    format!(
+                        "Unable to finalize compressed stream for snapshot number {}",
+                        snapshot_counter
+                    )
+                })?;
             }
 
             IOWorkerMsg::Output(v) => {
@@ -169,25 +187,36 @@ fn dispatch(
                 // write starting offset of blob into index file
                 let pos = file.seek(SeekFrom::Current(0)).unwrap();
                 let pos_le: [u8; 8] = unsafe { transmute(pos.to_le()) };
-                index_file
-                    .write_all(&pos_le)
-                    .chain_err(|| "Failed to write into index file.")?;
+                index_file.write_all(&pos_le).chain_err(
+                    || "Failed to write into index file.",
+                )?;
+
+                let mut writer = LzmaWriter::new_compressor(file, COMPRESSION).chain_err(
+                    || "Unable to create LZMA compressor for output file.",
+                )?;
 
                 // write all snapshots into one cbor file
                 match format {
                     OutputFormat::CBOR => {
-                        serde_cbor::ser::to_writer_sd(&mut file, &v)
-                            .chain_err(|| "Cannot write simulation output (format: CBOR).")?
+                        serde_cbor::ser::to_writer_sd(&mut writer, &v).chain_err(
+                            || "Cannot write simulation output (format: CBOR).",
+                        )?
                     }
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut file, &v, Infinite)
-                            .chain_err(|| "Cannot write simulation output (format: bincode).")?
+                        bincode::serialize_into(&mut writer, &v, Infinite).chain_err(
+                            || "Cannot write simulation output (format: bincode).",
+                        )?
                     }
                     OutputFormat::MsgPack => {
-                        rmp_serde::encode::write_named(&mut file, &v)
-                            .chain_err(|| "Cannot write simulation output (format: MsgPack).")?
+                        rmp_serde::encode::write_named(&mut writer, &v).chain_err(
+                            || "Cannot write simulation output (format: MsgPack).",
+                        )?
                     }
                 }
+
+                file = writer.finish().chain_err(
+                    || "Error flushing simulation output to disk",
+                )?;
             }
 
             IOWorkerMsg::Settings(v) => {

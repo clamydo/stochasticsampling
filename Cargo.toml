@@ -20,12 +20,13 @@ ndarray = { version = "0.10.0", features = ["serde-1"] }
 ndarray-parallel = "0.5.0"
 num = "0.1.40"
 pbr = "1.0.0"
-pcg_rand = { path = "crates/external/pcg_rand"}
+pcg_rand = { path = "crates/external/pcg_rand" }
 quaternion = "0.3.0"
 rand = "0.3.15"
 rayon = "0.8.2"
 rmp-serde = "0.13.6"
 # rustfft = "2.0.0"
+rust-lzma = { path = "crates/external/rust-lzma" }
 serde = "1.0.10"
 serde_cbor = "0.6.1"
 serde_derive = "1.0.10"
@@ -40,7 +41,7 @@ ndarray-rand = "0.6.0"
 vergen = "0.1.1"
 
 [workspace]
-members = ["crates/fftw3"]
+members = ["crates/fftw3", "crates/external/rust-lzma"]
 
 [profile.release]
 lto = true

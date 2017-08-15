@@ -12,6 +12,7 @@ extern crate error_chain;
 extern crate log;
 extern crate pbr;
 extern crate rmp_serde;
+extern crate lzma;
 extern crate serde_cbor;
 extern crate stochasticsampling;
 extern crate time;
