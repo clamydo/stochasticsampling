@@ -56,11 +56,7 @@ impl FFTPlan {
             );
         }
 
-        if plan.is_null() {
-            None
-        } else {
-            unsafe { Some(FFTPlan { plan: Unique::new(plan) }) }
-        }
+        Unique::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -90,11 +86,7 @@ impl FFTPlan {
             );
         }
 
-        if plan.is_null() {
-            None
-        } else {
-            unsafe { Some(FFTPlan { plan: Unique::new(plan) }) }
-        }
+        Unique::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan.
@@ -127,11 +119,7 @@ impl FFTPlan {
             );
         }
 
-        if plan.is_null() {
-            None
-        } else {
-            unsafe { Some(FFTPlan { plan: Unique::new(plan) }) }
-        }
+        Unique::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -162,11 +150,7 @@ impl FFTPlan {
             );
         }
 
-        if plan.is_null() {
-            None
-        } else {
-            unsafe { Some(FFTPlan { plan: Unique::new(plan) }) }
-        }
+        Unique::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -197,11 +181,7 @@ impl FFTPlan {
             );
         }
 
-        if plan.is_null() {
-            None
-        } else {
-            unsafe { Some(FFTPlan { plan: Unique::new(plan) }) }
-        }
+        Unique::new(plan).map(|p| FFTPlan { plan: p })
     }
 
 
