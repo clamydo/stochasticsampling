@@ -5,9 +5,8 @@ authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 
 [[bin]]
-doc = false
 name = "simulation"
-path = "src/main.rs"
+path = "src/bin/main.rs"
 
 [dependencies]
 bincode = "0.8.0"
