@@ -4,4 +4,4 @@
 [submodule "crates/external/rust-lzma"]
 	path = crates/external/rust-lzma
 	url = ../../fkoessel/rust-lzma.git
-	branch = return_writer
+	branch = patch
