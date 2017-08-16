@@ -104,12 +104,12 @@ pub struct SimulationSettings {
 }
 
 
-// use enum_str macro to encode this variant into strings
-serde_enum_str!(OutputFormat {
-    CBOR("CBOR"),
-    Bincode("bincode"),
-    MsgPack("MsgPack"),
-});
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum OutputFormat {
+    CBOR,
+    Bincode,
+    MsgPack
+}
 
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
