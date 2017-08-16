@@ -140,11 +140,7 @@ fn run_simulation(
 ) -> Result<()> {
 
 
-    if settings
-        .simulation
-        .output_at_timestep
-        .initial_condition
-    {
+    if settings.simulation.output_at_timestep.initial_condition {
         info!("Saving initial condition.");
         let mut initial = OutputEntry::default();
         initial.distribution = Some(simulation.get_distribution());
@@ -228,9 +224,10 @@ fn run_simulation(
 
         if entry.distribution.is_some() || entry.flowfield.is_some() || entry.particles.is_some() {
             debug!("Some output is appended to queue.");
-            out.append(entry).chain_err(
-                || "Unable to append simulation entry.",
-            )?;
+            match out.append(entry) {
+                Ok(_) => (),
+                Err(_) => return out.emergency_join(),
+            };
         }
 
         match settings.simulation.output_at_timestep.snapshot {

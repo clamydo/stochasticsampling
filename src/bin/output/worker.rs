@@ -93,6 +93,10 @@ impl Worker {
         &self.output_file.path
     }
 
+    pub fn emergency_join(self) -> Result<()> {
+        self.io_worker.join().expect("Could not join worker thread")
+    }
+
     pub fn quit(self) -> Result<()> {
         self.tx.send(IOWorkerMsg::Quit).unwrap();
 
@@ -144,13 +148,7 @@ fn dispatch(
 
     loop {
         match rx.recv().unwrap() {
-            IOWorkerMsg::Quit => {
-                debug!("Output queue closed.");
-                // file.finish().chain_err(
-                //     || "Cannot finalize compressed stream",
-                // )?;
-                break;
-            }
+            IOWorkerMsg::Quit => break,
 
             IOWorkerMsg::Snapshot(s) => {
                 debug!("Writing snapshot.");
@@ -232,6 +230,8 @@ fn dispatch(
             }
         }
     }
+
+    debug!("Output queue closed.");
 
     Ok(())
 }
