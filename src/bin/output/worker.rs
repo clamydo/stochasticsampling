@@ -111,9 +111,9 @@ impl Worker {
 /// Creates an output file. Already writes header for metadata.
 fn prepare_output_file(path: &OutputPath, format: OutputFormat) -> Result<(File, OutputFile)> {
     let fileext = match format {
-        OutputFormat::CBOR => "cbor",
-        OutputFormat::Bincode => "bincode",
-        OutputFormat::MsgPack => "msgpack",
+        OutputFormat::CBOR => "cbor.lzma",
+        OutputFormat::Bincode => "bincode.lzma",
+        OutputFormat::MsgPack => "msgpack.lzma",
     };
 
     let filepath = path.with_extension(fileext);
@@ -153,7 +153,7 @@ fn dispatch(
             IOWorkerMsg::Snapshot(s) => {
                 debug!("Writing snapshot.");
                 snapshot_counter += 1;
-                let filepath = path.with_extension(&format!("bincode.{}", snapshot_counter));
+                let filepath = path.with_extension(&format!("bincode.lzma.{}", snapshot_counter));
 
                 let snapshot_file = File::create(&filepath).chain_err(|| {
                     format!("Cannot create snapshot file '{}'.", filepath.display())
@@ -202,7 +202,7 @@ fn dispatch(
                     }
                     OutputFormat::Bincode => {
                         bincode::serialize_into(&mut writer, &v, Infinite).chain_err(
-                            || "Cannot write simulation output (format: bincode).",
+                            || "Cannot write simulation output (format: Bincode).",
                         )?
                     }
                     OutputFormat::MsgPack => {
