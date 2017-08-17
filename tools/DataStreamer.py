@@ -1,7 +1,9 @@
 import bitstring
-import cbor
 from io import SEEK_CUR
+import lzma
+import msgpack
 import numpy as np
+import os
 
 
 class Streamer(object):
@@ -12,10 +14,12 @@ class Streamer(object):
     def __init__(self, source_fn, index_fn=None, index=None):
         self.source_fn = source_fn
         if index is None:
-            if index_fn is None:
-                self.index = self.build_index()
-            else:
-                self.set_index_from_file(index_fn)
+            # if index_fn is None:
+            #     self.index = self.build_index()
+            # else:
+            #     self.set_index_from_file(index_fn)
+
+            self.set_index_from_file(index_fn)
         else:
             self.set_index(index)
         self.__file = open(source_fn, 'rb')
@@ -27,16 +31,22 @@ class Streamer(object):
         if isinstance(given, slice):
             data = []
 
-            for i in self.index[given.start:given.stop:given.step]:
+            for (i, s) in zip(self.index[given.start:given.stop:given.step],
+                              self.blob_size[given.start:given.stop:given.step]):
                 self.__file.seek(int(i))  # convert bit to byte position
-                data.append(cbor.load(self.__file).value)
+                # read blob
+                buf = self.__file.read(s)
+                buf = lzma.decompress(buf)
+                data.append(msgpack.unpackb(buf, encoding='utf-8'))
 
             return data
         else:
             self.__file.seek(int(self.index[given]))
-            return cbor.load(self.__file).value
+            buf = self.__file.read(self.blob_size[given])
+            buf = lzma.decompress(buf)
+            return msgpack.unpackb(buf, encoding='utf-8')
 
-    def build_index(self):
+    def build_index_cbor(self):
         """Builds up an index of CBOR objects by searching for CBORTag in file.
         Returns list of bit offset for the blobs.
         """
@@ -57,13 +67,14 @@ class Streamer(object):
 
     def set_index_from_file(self, file):
         self.index = np.fromfile(file, dtype=np.uint64)
+        self.blob_size = np.diff(
+            np.append(self.index, os.path.getsize(self.source_fn))
+        ).astype(np.uint64)
 
     def get_metadata(self):
         with open(self.source_fn, 'rb') as f:
-            sim_settings = cbor.load(f).value
-
-        return sim_settings
-
+            buf = f.read(self.index[0])
+            return msgpack.unpackb(buf, encoding='utf-8')
 
     def get_scaling(self, start=0, step=1, stop=None):
         vmax = 0
@@ -76,7 +87,6 @@ class Streamer(object):
                 vmax = m
 
         return m
-
 
 
 # def filter_index(index):
