@@ -4,7 +4,8 @@
 //! positions and orientations. Considered as a probabilistic sample of the
 //! probability distribution function (PDF), which is described by the
 //! Fokker-Planck equation, the particle configuration is used to sample the
-//! PDF. To close the integration scheme, the flow-field is calculated in terms //! of probabilstic moments (i.e. expectation values) of the PDF on a grid.
+//! PDF. To close the integration scheme, the flow-field is calculated in terms
+//! of probabilstic moments (i.e. expectation values) of the PDF on a grid.
 //!
 //! The integrator is implemented in dimensionless units, scaling out the
 //! self-propulsion speed of the particle and the average volue taken by a

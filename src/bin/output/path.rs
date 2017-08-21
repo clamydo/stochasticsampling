@@ -37,16 +37,18 @@ fn create_output_id(prefix: &str) -> String {
     // Need to introduce placeholder `.msgpack`, since otherwise the patch version
     // number is chopped of later, when using `.with_extension()` method later.
     let v = ::version().replace(".", "_");
-    format!("{prefix}-{time}_v{version}",
-            prefix = prefix,
-            time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
-            version = v)
+    format!(
+        "{prefix}-{time}_v{version}",
+        prefix = prefix,
+        time = &time::now().strftime("%Y-%m-%d_%H%M%S").unwrap().to_string(),
+        version = v
+    )
 }
 
 
 /// Creates own ouput directory in output path using id.
 fn create_output_dir(path: &Path) -> Result<()> {
-    DirBuilder::new()
-        .create(&path)
-        .chain_err(|| format!("Unable to create output directory '{}'", &path.display()))
+    DirBuilder::new().create(&path).chain_err(|| {
+        format!("Unable to create output directory '{}'", &path.display())
+    })
 }

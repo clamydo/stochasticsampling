@@ -46,16 +46,18 @@ mod tests {
         input.data[[6, 5]] = Complex::new(1., 0.);
         input.data[[6, 6]] = Complex::new(1., 0.);
 
-        let plan_forward = FFTPlan::new_c2c_2d(&mut input.data,
-                                            &mut fft.data,
-                                            fft::FFTDirection::Forward,
-                                            fft::FFTFlags::Measure)
-                .unwrap();
-        let plan_backward = FFTPlan::new_c2c_2d(&mut fft.data,
-                                             &mut ifft.data,
-                                             fft::FFTDirection::Backward,
-                                             fft::FFTFlags::Measure)
-                .unwrap();
+        let plan_forward = FFTPlan::new_c2c_2d(
+            &mut input.data,
+            &mut fft.data,
+            fft::FFTDirection::Forward,
+            fft::FFTFlags::Measure,
+        ).unwrap();
+        let plan_backward = FFTPlan::new_c2c_2d(
+            &mut fft.data,
+            &mut ifft.data,
+            fft::FFTDirection::Backward,
+            fft::FFTFlags::Measure,
+        ).unwrap();
 
         plan_forward.execute();
         plan_backward.execute();
@@ -69,15 +71,19 @@ mod tests {
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.
-            assert!(diff.re.abs() <= EPSILON,
-                    "Difference of real parts: {:e} should be smaller than machine EPSILON = {:e}",
-                    diff.re.abs(),
-                    EPSILON);
-            assert!(diff.im.abs() <= EPSILON,
-                    "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
+            assert!(
+                diff.re.abs() <= EPSILON,
+                "Difference of real parts: {:e} should be smaller than machine EPSILON = {:e}",
+                diff.re.abs(),
+                EPSILON
+            );
+            assert!(
+                diff.im.abs() <= EPSILON,
+                "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
                      = {:e}",
-                    diff.im.abs(),
-                    EPSILON);
+                diff.im.abs(),
+                EPSILON
+            );
         }
     }
 
@@ -106,16 +112,18 @@ mod tests {
         input.data[[6, 5, 0]] = Complex::new(1., 0.);
         input.data[[6, 6, 0]] = Complex::new(1., 0.);
 
-        let plan_forward = FFTPlan::new_c2c_3d(&mut input.data,
-                                            &mut fft.data,
-                                            fft::FFTDirection::Forward,
-                                            fft::FFTFlags::Measure)
-                .unwrap();
-        let plan_backward = FFTPlan::new_c2c_3d(&mut fft.data,
-                                             &mut ifft.data,
-                                             fft::FFTDirection::Backward,
-                                             fft::FFTFlags::Measure)
-                .unwrap();
+        let plan_forward = FFTPlan::new_c2c_3d(
+            &mut input.data,
+            &mut fft.data,
+            fft::FFTDirection::Forward,
+            fft::FFTFlags::Measure,
+        ).unwrap();
+        let plan_backward = FFTPlan::new_c2c_3d(
+            &mut fft.data,
+            &mut ifft.data,
+            fft::FFTDirection::Backward,
+            fft::FFTFlags::Measure,
+        ).unwrap();
 
         plan_forward.execute();
         plan_backward.execute();
@@ -129,15 +137,19 @@ mod tests {
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.
-            assert!(diff.re.abs() <= EPSILON,
-                    "Difference of real parts: {:e} should be smaller than machine EPSILON = {:e}",
-                    diff.re.abs(),
-                    EPSILON);
-            assert!(diff.im.abs() <= EPSILON,
-                    "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
+            assert!(
+                diff.re.abs() <= EPSILON,
+                "Difference of real parts: {:e} should be smaller than machine EPSILON = {:e}",
+                diff.re.abs(),
+                EPSILON
+            );
+            assert!(
+                diff.im.abs() <= EPSILON,
+                "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
                      = {:e}",
-                    diff.im.abs(),
-                    EPSILON);
+                diff.im.abs(),
+                EPSILON
+            );
 
         }
     }

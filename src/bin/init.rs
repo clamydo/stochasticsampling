@@ -1,7 +1,7 @@
 use bincode::{self, Infinite};
 use errors::*;
-use serde_cbor;
 use rmp_serde;
+use serde_cbor;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -29,8 +29,9 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
     match init_type {
         InitType::Stdin => {
             info!("Reading initial condition from standard input");
-            let p = rmp_serde::from_read(io::stdin())
-                .chain_err(|| "Can't read given initial condition. Did you use MsgPack format?")?;
+            let p = rmp_serde::from_read(io::stdin()).chain_err(
+                || "Can't read given initial condition. Did you use MsgPack format?",
+            )?;
 
             simulation.init(p);
         }
@@ -41,42 +42,51 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             };
 
             info!("Reading initial condition from {}", fname);
-            let mut f = File::open(fname).chain_err(|| format!("Unable to open input file '{}'.", fname))?;
+            let mut f = File::open(fname).chain_err(|| {
+                format!("Unable to open input file '{}'.", fname)
+            })?;
 
             match Path::new(&fname).extension() {
                 Some(ext) => {
                     match ext.to_str().unwrap() {
                         "cbor" => {
-                            let p = serde_cbor::de::from_reader(f)
-                            .chain_err(|| "CBOR, Cannot read given initial condition.")?;
+                            let p = serde_cbor::de::from_reader(f).chain_err(
+                                || "CBOR, Cannot read given initial condition.",
+                            )?;
                             simulation.init(p);
                         }
                         "bincode" => {
-                            let p = bincode::deserialize_from(&mut f, Infinite)
-                            .chain_err(|| "Bincode, Cannot read given initial condition.")?;
+                            let p = bincode::deserialize_from(&mut f, Infinite).chain_err(
+                                || "Bincode, Cannot read given initial condition.",
+                            )?;
                             simulation.init(p);
                         }
                         "MsgPack" => {
-                            let p = rmp_serde::from_read(f)
-                            .chain_err(|| "MsgPack, Cannot read given initial condition.")?;
+                            let p = rmp_serde::from_read(f).chain_err(
+                                || "MsgPack, Cannot read given initial condition.",
+                            )?;
                             simulation.init(p);
                         }
                         _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),
                     }
                 }
                 None => {
-                    bail!("Missing file extension for initial condition, '{}'.
+                    bail!(
+                        "Missing file extension for initial condition, '{}'.
                            Cannot determine filetype.",
-                          fname)
+                        fname
+                    )
                 }
             };
 
         }
         InitType::Random => {
             info!("Using isotropic initial condition.");
-            let p = Particle::randomly_placed_particles(settings.simulation.number_of_particles,
-                                                        settings.simulation.box_size,
-                                                        settings.simulation.seed);
+            let p = Particle::randomly_placed_particles(
+                settings.simulation.number_of_particles,
+                settings.simulation.box_size,
+                settings.simulation.seed,
+            );
 
             simulation.init(p);
         }
@@ -90,8 +100,9 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                 None => bail!("No input file provided in the parameterfile."),
             };
 
-            let s =  bincode::deserialize_from(&mut f, Infinite)
-                    .chain_err(|| "Cannot read given snapshot.")?;
+            let s = bincode::deserialize_from(&mut f, Infinite).chain_err(
+                || "Cannot read given snapshot.",
+            )?;
 
             simulation.resume(s);
         }

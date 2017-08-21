@@ -201,9 +201,8 @@ fn dispatch(
                         )?
                     }
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut writer, &v, Infinite).chain_err(
-                            || "Cannot write simulation output (format: Bincode).",
-                        )?
+                        bincode::serialize_into(&mut writer, &v, Infinite)
+                            .chain_err(|| "Cannot write simulation output (format: Bincode).")?
                     }
                     OutputFormat::MsgPack => {
                         rmp_serde::encode::write_named(&mut writer, &v).chain_err(
