@@ -1,4 +1,3 @@
-
 use super::mesh::mesh3d;
 use consts::TWOPI;
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
@@ -23,28 +22,25 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
     let ks: Vec<Array<Complex<f64>, Ix1>> = [grid_size.x, grid_size.y, grid_size.z]
         .iter()
         .zip([box_size.x, box_size.y, box_size.z].iter())
-        .map(
-            |(gs, bs)| {
-                let a = (gs / 2) as isize;
-                let b = if gs % 2 == 0 { gs / 2 } else { gs / 2 + 1 } as isize;
-                let step = TWOPI / bs;
+        .map(|(gs, bs)| {
+            let a = (gs / 2) as isize;
+            let b = if gs % 2 == 0 { gs / 2 } else { gs / 2 + 1 } as isize;
+            let step = TWOPI / bs;
 
-                let values: Array<Complex<f64>, Ix1> =
-                    Array::from_vec(
-                        (-(a as i64)..(b as i64))
-                            .into_iter()
-                            .map(|i| Complex::new((i as f64) * step, 0.))
-                            .collect()
-                    );
+            let values: Array<Complex<f64>, Ix1> = Array::from_vec(
+                (-(a as i64)..(b as i64))
+                    .into_iter()
+                    .map(|i| Complex::new((i as f64) * step, 0.))
+                    .collect(),
+            );
 
-                let mut k = Array::from_elem(*gs, Complex::new(0., 0.));
+            let mut k = Array::from_elem(*gs, Complex::new(0., 0.));
 
-                k.slice_mut(s![..b]).assign(&values.slice(s![a..]));
-                k.slice_mut(s![b..]).assign(&values.slice(s![..a]));
+            k.slice_mut(s![..b]).assign(&values.slice(s![a..]));
+            k.slice_mut(s![b..]).assign(&values.slice(s![..a]));
 
-                k
-            }
-        )
+            k
+        })
         .collect();
 
     ks
@@ -229,7 +225,7 @@ mod tests {
                     [0.5000000000000000, 0.3333333333333333],
                     [0.5000000000000000, 0.3333333333333333],
                 ],
-            ]
+            ],
         );
 
         println!("{}", inorm);

@@ -1,7 +1,7 @@
 [environment]
     init_file = "foo/bar.cbor"
     io_queue_size = 50
-    output_format = "bincode"
+    output_format = "Bincode"
     prefix = "foo"
     version = "version"
 

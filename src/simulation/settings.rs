@@ -104,12 +104,12 @@ pub struct SimulationSettings {
 }
 
 
-// use enum_str macro to encode this variant into strings
-serde_enum_str!(OutputFormat {
-    CBOR("CBOR"),
-    Bincode("bincode"),
-    MsgPack("MsgPack"),
-});
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum OutputFormat {
+    CBOR,
+    Bincode,
+    MsgPack,
+}
 
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -184,8 +184,10 @@ fn check_settings(s: &Settings) -> Result<()> {
         if s.simulation.number_of_particles <
             s.simulation.output_at_timestep.particles_head.unwrap()
         {
-            bail!("Cannot output more particles than available. `particles_head`
-                   must be smaller or equal to `number_of_particles`")
+            bail!(
+                "Cannot output more particles than available. `particles_head`
+                   must be smaller or equal to `number_of_particles`"
+            )
         }
     }
 
@@ -212,10 +214,19 @@ mod tests {
         let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
 
         assert_eq!(settings_default.environment.init_file, None);
-        assert_eq!(settings.environment.init_file, Some("foo/bar.cbor".to_string()));
-        assert_eq!(settings_default.environment.io_queue_size, DEFAULT_IO_QUEUE_SIZE);
+        assert_eq!(
+            settings.environment.init_file,
+            Some("foo/bar.cbor".to_string())
+        );
+        assert_eq!(
+            settings_default.environment.io_queue_size,
+            DEFAULT_IO_QUEUE_SIZE
+        );
         assert_eq!(settings.environment.io_queue_size, 50);
-        assert_eq!(settings_default.environment.output_format, DEFAULT_OUTPUT_FORMAT);
+        assert_eq!(
+            settings_default.environment.output_format,
+            DEFAULT_OUTPUT_FORMAT
+        );
         assert_eq!(settings.environment.output_format, OutputFormat::Bincode);
         assert_eq!(settings.environment.prefix, "foo");
         assert_eq!(settings.environment.version, "version");
@@ -224,32 +235,87 @@ mod tests {
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
-        assert_eq!(settings.simulation.box_size, BoxSize{ x: 1., y: 2., z: 3. });
-        assert_eq!(settings.simulation.grid_size, GridSize{x: 11, y: 12, z: 13, phi: 6, theta: 7});
+        assert_eq!(
+            settings.simulation.box_size,
+            BoxSize {
+                x: 1.,
+                y: 2.,
+                z: 3.,
+            }
+        );
+        assert_eq!(
+            settings.simulation.grid_size,
+            GridSize {
+                x: 11,
+                y: 12,
+                z: 13,
+                phi: 6,
+                theta: 7,
+            }
+        );
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
         assert_eq!(settings.simulation.seed, [1, 1]);
 
-        assert_eq!(settings.simulation.output_at_timestep.distribution, Some(12));
-        assert_eq!(settings_default.simulation.output_at_timestep.distribution, None);
+        assert_eq!(
+            settings.simulation.output_at_timestep.distribution,
+            Some(12)
+        );
+        assert_eq!(
+            settings_default.simulation.output_at_timestep.distribution,
+            None
+        );
 
-        assert_eq!(settings_default.simulation.output_at_timestep.final_snapshot, true);
+        assert_eq!(
+            settings_default
+                .simulation
+                .output_at_timestep
+                .final_snapshot,
+            true
+        );
         assert_eq!(settings.simulation.output_at_timestep.final_snapshot, false);
 
         assert_eq!(settings.simulation.output_at_timestep.flowfield, Some(42));
-        assert_eq!(settings_default.simulation.output_at_timestep.flowfield, None);
+        assert_eq!(
+            settings_default.simulation.output_at_timestep.flowfield,
+            None
+        );
 
         assert_eq!(settings.simulation.output_at_timestep.particles, Some(100));
-        assert_eq!(settings_default.simulation.output_at_timestep.particles, None);
+        assert_eq!(
+            settings_default.simulation.output_at_timestep.particles,
+            None
+        );
 
-        assert_eq!(settings.simulation.output_at_timestep.particles_head, Some(10));
-        assert_eq!(settings_default.simulation.output_at_timestep.particles_head, None);
+        assert_eq!(
+            settings.simulation.output_at_timestep.particles_head,
+            Some(10)
+        );
+        assert_eq!(
+            settings_default
+                .simulation
+                .output_at_timestep
+                .particles_head,
+            None
+        );
 
-        assert_eq!(settings_default.simulation.output_at_timestep.initial_condition, true);
-        assert_eq!(settings.simulation.output_at_timestep.initial_condition, false);
+        assert_eq!(
+            settings_default
+                .simulation
+                .output_at_timestep
+                .initial_condition,
+            true
+        );
+        assert_eq!(
+            settings.simulation.output_at_timestep.initial_condition,
+            false
+        );
 
         assert_eq!(settings.simulation.output_at_timestep.snapshot, Some(666));
-        assert_eq!(settings_default.simulation.output_at_timestep.snapshot, None);
+        assert_eq!(
+            settings_default.simulation.output_at_timestep.snapshot,
+            None
+        );
     }
 }
