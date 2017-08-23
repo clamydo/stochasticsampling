@@ -8,6 +8,7 @@ use std::path::Path;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::particle::Particle;
 use stochasticsampling::simulation::settings::Settings;
+use lzma::LzmaReader;
 
 
 /// Type of setting up initial condition.
@@ -42,7 +43,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             };
 
             info!("Reading initial condition from {}", fname);
-            let mut f = File::open(fname).chain_err(|| {
+            let f = File::open(fname).chain_err(|| {
                 format!("Unable to open input file '{}'.", fname)
             })?;
 
@@ -50,19 +51,28 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                 Some(ext) => {
                     match ext.to_str().unwrap() {
                         "cbor" => {
-                            let p = serde_cbor::de::from_reader(f).chain_err(
+                            let r = LzmaReader::new_decompressor(f).chain_err(
+                                || "LZMA reader cannot be created."
+                            )?;
+                            let p = serde_cbor::de::from_reader(r).chain_err(
                                 || "CBOR, Cannot read given initial condition.",
                             )?;
                             simulation.init(p);
                         }
                         "bincode" => {
-                            let p = bincode::deserialize_from(&mut f, Infinite).chain_err(
+                            let mut r = LzmaReader::new_decompressor(f).chain_err(
+                                || "LZMA reader cannot be created."
+                            )?;
+                            let p = bincode::deserialize_from(&mut r, Infinite).chain_err(
                                 || "Bincode, Cannot read given initial condition.",
                             )?;
                             simulation.init(p);
                         }
                         "MsgPack" => {
-                            let p = rmp_serde::from_read(f).chain_err(
+                            let r = LzmaReader::new_decompressor(f).chain_err(
+                                || "LZMA reader cannot be created."
+                            )?;
+                            let p = rmp_serde::from_read(r).chain_err(
                                 || "MsgPack, Cannot read given initial condition.",
                             )?;
                             simulation.init(p);
@@ -92,7 +102,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
         }
         InitType::Resume => {
             info!("Resuming snapshot.");
-            let mut f = match settings.environment.init_file {
+            let f = match settings.environment.init_file {
                 Some(ref fname) => {
                     info!("Reading snapshot from {}", *fname);
                     File::open(fname).chain_err(|| "Unable to open input file.")?
@@ -100,7 +110,11 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                 None => bail!("No input file provided in the parameterfile."),
             };
 
-            let s = bincode::deserialize_from(&mut f, Infinite).chain_err(
+            let mut r = LzmaReader::new_decompressor(f).chain_err(
+                || "Cannot create LZMA decompressor to read snapshot."
+            )?;
+
+            let s = bincode::deserialize_from(&mut r, Infinite).chain_err(
                 || "Cannot read given snapshot.",
             )?;
 
