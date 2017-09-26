@@ -231,11 +231,12 @@ impl Integrator {
         );
 
 
-        let sigmak = ((&stress_field * &self.k_mesh.view()).sum(Axis(1)) * &self.k_inorm.view()) *
-            Complex::new(0., 1.);
+        let sigmak = ((&stress_field * &self.k_mesh.view()).sum_axis(Axis(1)) *
+                          &self.k_inorm.view()) * Complex::new(0., 1.);
 
 
-        let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum(Axis(0)) * &self.k_inorm.view();
+        let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0)) *
+            &self.k_inorm.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
         let mut u = sigmak - &kksigmak.view();

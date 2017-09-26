@@ -46,6 +46,17 @@ class Streamer(object):
             buf = lzma.decompress(buf)
             return msgpack.unpackb(buf, encoding='utf-8')
 
+    def generator(self, start=0, step=1, stop=None):
+        """Generator that yields simulation output"""
+
+        for (i, s) in zip(self.index[start:stop:step],
+                          self.blob_size[start:stop:step]):
+            self.__file.seek(int(i))  # convert bit to byte position
+            # read blob
+            buf = self.__file.read(s)
+            buf = lzma.decompress(buf)
+            yield msgpack.unpackb(buf, encoding='utf-8')
+
     def build_index_cbor(self):
         """Builds up an index of CBOR objects by searching for CBORTag in file.
         Returns list of bit offset for the blobs.
@@ -64,12 +75,12 @@ class Streamer(object):
 
     def set_index(self, index):
         self.index = index
-
-    def set_index_from_file(self, file):
-        self.index = np.fromfile(file, dtype=np.uint64)
         self.blob_size = np.diff(
             np.append(self.index, os.path.getsize(self.source_fn))
         ).astype(np.uint64)
+
+    def set_index_from_file(self, file):
+        self.set_index(np.fromfile(file, dtype=np.uint64))
 
     def get_metadata(self):
         with open(self.source_fn, 'rb') as f:
@@ -99,15 +110,6 @@ class Streamer(object):
 #     """
 #     avg = np.average(np.diff(index[2:]))
 #     return np.array(index[2:-1])[np.diff(index[2:]) > 0.5 * avg + 3 * std]
-
-
-def generator(source_file, index, start=0, step=1, stop=None):
-    """Generator that yields simulation output"""
-
-    with open(source_file, 'rb') as f:
-        for i in index[start:stop:step]:
-            f.seek(int(i))  # convert bit to byte position
-            yield cbor.load(f).value
 
 
 def dist_to_concentration2d(dist, gw):
