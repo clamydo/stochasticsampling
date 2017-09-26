@@ -4,6 +4,7 @@ use consts::TWOPI;
 use pcg_rand::Pcg64;
 use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Range};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use simulation::settings::BoxSize;
 use std::f64::consts::PI;
 
@@ -79,7 +80,7 @@ impl Orientation {
 }
 
 /// Coordinates (including the orientation) of a particle in 2D.
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone)]
 pub struct Particle {
     /// spatial position
     pub position: Position,
@@ -131,6 +132,38 @@ pub fn pdf_sin(x: f64) -> f64 {
     (1. - x).acos()
 }
 
+impl Serialize for Particle {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        [
+            self.position.x,
+            self.position.y,
+            self.position.z,
+            self.orientation.theta,
+            self.orientation.phi,
+        ].serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Particle {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Deserialize::deserialize(deserializer).map(|(px, py, pz, ot, op)| {
+            Particle {
+                position: Position {
+                    x: px,
+                    y: py,
+                    z: pz,
+                },
+                orientation: Orientation { theta: ot, phi: op },
+            }
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {
