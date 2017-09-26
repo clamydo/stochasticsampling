@@ -63,7 +63,7 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
 pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<Complex<f64>, Ix3> {
     let squared = &k_mesh * &k_mesh;
 
-    let mut inorm = squared.sum(Axis(0)).map(|v| 1. / v);
+    let mut inorm = squared.sum_axis(Axis(0)).map(|v| 1. / v);
     inorm[[0, 0, 0]] = Complex::new(0., 0.);
 
     inorm
