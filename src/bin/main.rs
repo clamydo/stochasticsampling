@@ -17,13 +17,13 @@ extern crate serde_cbor;
 extern crate stochasticsampling;
 extern crate time;
 
-mod init;
-mod output;
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain!{}
 }
-
+mod init;
+mod output;
+mod timedisplay;
 
 use clap::App;
 use colored::*;
@@ -175,6 +175,9 @@ fn run_simulation(
     let timestep_start = simulation.get_timestep() + 1;
     let n = settings.simulation.number_of_timesteps + timestep_start;
 
+
+    let start_time = time::now();
+
     // Run the simulation and send data to asynchronous to the IO-thread.
     for timestep in timestep_start..(n + 1) {
         pb.inc();
@@ -257,5 +260,10 @@ fn run_simulation(
     out.quit()?;
 
     println!("DONE '{}'.", opath);
+
+    let stop_time = time::now();
+    let duration = stop_time - start_time;
+    println!("Elapsed time: {}", timedisplay::pretty_print_duration(duration));
+
     Ok(())
 }
