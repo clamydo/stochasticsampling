@@ -99,6 +99,9 @@ class Streamer(object):
 
         return m
 
+    def get_length(self):
+        return len(self.index)
+
 
 # def filter_index(index):
 #     """ Naivly removes metadata blob, initial value blob and all blobs, that are
