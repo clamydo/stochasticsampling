@@ -34,6 +34,7 @@ impl OutputPath {
         self.path.with_extension(ext)
     }
 
+    #[allow(dead_code)]
     pub fn get_id(&self) -> &str {
         &self.id
     }
