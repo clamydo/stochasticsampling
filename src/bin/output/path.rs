@@ -11,13 +11,17 @@ use time;
 #[derive(Clone)]
 pub struct OutputPath {
     path: PathBuf,
+    id: String,
 }
 
 impl OutputPath {
     pub fn new<'a>(root: &'a Path, prefix: &str) -> OutputPath {
         let id = create_output_id(prefix);
 
-        OutputPath { path: root.join(&id).join(&id) }
+        OutputPath {
+            path: root.join(&id).join(format!("{}.ext", id)),
+            id: id,
+        }
     }
 
     pub fn create(&self) -> Result<()> {
@@ -28,6 +32,10 @@ impl OutputPath {
     // Returns path with given file extension.
     pub fn with_extension(&self, ext: &str) -> PathBuf {
         self.path.with_extension(ext)
+    }
+
+    pub fn get_id(&self) -> &str {
+        &self.id
     }
 }
 
@@ -51,4 +59,22 @@ fn create_output_dir(path: &Path) -> Result<()> {
     DirBuilder::new().create(&path).chain_err(|| {
         format!("Unable to create output directory '{}'", &path.display())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_with_extension() {
+        let s = "prefix.with.dots".to_string();
+        let root = Path::new("/foo/bar");
+        let op = OutputPath::new(&root, &s);
+        let id = op.get_id();
+        assert_eq!(
+            op.with_extension("ext").to_str().unwrap(),
+            format!("{}/{}/{}.ext", root.display(), id, id)
+        );
+    }
+
 }
