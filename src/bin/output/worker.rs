@@ -111,9 +111,9 @@ impl Worker {
 /// Creates an output file. Already writes header for metadata.
 fn prepare_output_file(path: &OutputPath, format: OutputFormat) -> Result<(File, OutputFile)> {
     let fileext = match format {
-        OutputFormat::CBOR => "cbor.lzma",
-        OutputFormat::Bincode => "bincode.lzma",
-        OutputFormat::MsgPack => "msgpack.lzma",
+        OutputFormat::CBOR => "cbor-lzma",
+        OutputFormat::Bincode => "bincode-lzma",
+        OutputFormat::MsgPack => "msgpack-lzma",
     };
 
     let filepath = path.with_extension(fileext);
