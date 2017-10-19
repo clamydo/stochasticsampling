@@ -153,7 +153,14 @@ fn dispatch(
             IOWorkerMsg::Snapshot(s) => {
                 debug!("Writing snapshot.");
                 snapshot_counter += 1;
-                let filepath = path.with_extension(&format!("bincode.lzma.{}", snapshot_counter));
+
+                let fileext = match format {
+                    OutputFormat::CBOR => "cbor.lzma",
+                    OutputFormat::Bincode => "bincode.lzma",
+                    OutputFormat::MsgPack => "msgpack.lzma",
+                };
+
+                let filepath = path.with_extension(&format!("{}.{}", fileext, snapshot_counter));
 
                 let snapshot_file = File::create(&filepath).chain_err(|| {
                     format!("Cannot create snapshot file '{}'.", filepath.display())
