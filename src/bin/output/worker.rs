@@ -155,9 +155,9 @@ fn dispatch(
                 snapshot_counter += 1;
 
                 let fileext = match format {
-                    OutputFormat::CBOR => "cbor.lzma",
-                    OutputFormat::Bincode => "bincode.lzma",
-                    OutputFormat::MsgPack => "msgpack.lzma",
+                    OutputFormat::CBOR => "cbor-lzma",
+                    OutputFormat::Bincode => "bincode-lzma",
+                    OutputFormat::MsgPack => "msgpack-lzma",
                 };
 
                 let filepath = path.with_extension(&format!("{}.{}", fileext, snapshot_counter));

@@ -50,7 +50,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             match Path::new(&fname).extension() {
                 Some(ext) => {
                     match ext.to_str().unwrap() {
-                        "cbor" => {
+                        "cbor-lzma" => {
                             let r = LzmaReader::new_decompressor(f).chain_err(
                                 || "LZMA reader cannot be created."
                             )?;
@@ -59,7 +59,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                             )?;
                             simulation.init(p);
                         }
-                        "bincode" => {
+                        "bincode-lzma" => {
                             let mut r = LzmaReader::new_decompressor(f).chain_err(
                                 || "LZMA reader cannot be created."
                             )?;
@@ -68,7 +68,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                             )?;
                             simulation.init(p);
                         }
-                        "MsgPack" => {
+                        "msgpack-lzma" => {
                             let r = LzmaReader::new_decompressor(f).chain_err(
                                 || "LZMA reader cannot be created."
                             )?;
