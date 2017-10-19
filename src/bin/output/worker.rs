@@ -167,10 +167,35 @@ fn dispatch(
                         )
                     })?;
 
-                bincode::serialize_into(&mut snapshot_file, &s, Infinite)
-                    .chain_err(|| {
-                        format!("Cannot write snapshot with number {}", snapshot_counter)
-                    })?;
+                match format {
+                    OutputFormat::CBOR => {
+                        serde_cbor::ser::to_writer_sd(&mut snapshot_file, &s)
+                            .chain_err(|| {
+                                format!(
+                                    "Cannot write snapshot with number {} (CBOR)",
+                                    snapshot_counter
+                                )
+                            })?;
+                    }
+                    OutputFormat::Bincode => {
+                        bincode::serialize_into(&mut snapshot_file, &s, Infinite)
+                            .chain_err(|| {
+                                format!(
+                                    "Cannot write snapshot with number {} (Bincode)",
+                                    snapshot_counter
+                                )
+                            })?;
+                    }
+                    OutputFormat::MsgPack => {
+                        rmp_serde::encode::write_named(&mut snapshot_file, &s)
+                            .chain_err(|| {
+                                format!(
+                                    "Cannot write snapshot with number {} (MsgPack)",
+                                    snapshot_counter
+                                )
+                            })?;
+                    }
+                }
 
                 snapshot_file.finish().chain_err(|| {
                     format!(
