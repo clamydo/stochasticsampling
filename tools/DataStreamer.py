@@ -57,19 +57,6 @@ class Streamer(object):
             buf = lzma.decompress(buf)
             yield msgpack.unpackb(buf, encoding='utf-8')
 
-    def build_index_cbor(self):
-        """Builds up an index of CBOR objects by searching for CBORTag in file.
-        Returns list of bit offset for the blobs.
-        """
-        cbortag = bitstring.BitArray(b'\xd9\xd9\xf7')
-
-        filestream = bitstring.ConstBitStream(filename=self.source_fn)
-        index = list(filestream.findall(cbortag, bytealigned=True))
-        return np.array(index[1:]) / 8
-
-    def rebuild_index(self):
-        self.index = self.build_index()
-
     def get_index(self):
         return self.index
 
@@ -87,6 +74,21 @@ class Streamer(object):
             buf = f.read(self.index[0])
             return msgpack.unpackb(buf, encoding='utf-8')
 
+    def parameter_string(self):
+        sim_settings = self.get_metadata()
+        return (
+            r"$\kappa = {kappa}, \sigma_a = {sa}, \sigma_b = {sb}, b = {b}, d_t = {dt}, d_r = {dr}$",
+            {
+                'kappa': sim_settings['parameters']['magnetic_reorientation'] /
+                sim_settings['parameters']['diffusion']['rotational'],
+                'sa': sim_settings['parameters']['stress']['active'],
+                'sb': sim_settings['parameters']['stress']['magnetic'],
+                'b': sim_settings['parameters']['magnetic_reorientation'],
+                'dt': sim_settings['parameters']['diffusion']['translational'],
+                'dr': sim_settings['parameters']['diffusion']['rotational']
+            }
+        )
+
     def get_scaling(self, start=0, step=1, stop=None):
         vmax = 0
 
@@ -101,18 +103,6 @@ class Streamer(object):
 
     def get_length(self):
         return len(self.index)
-
-
-# def filter_index(index):
-#     """ Naivly removes metadata blob, initial value blob and all blobs, that are
-#     smaller than the average blob size with three standard deviations. For some
-#     reason, sometimes are false positives in the index...
-#     WARNING: For now, it also kicks out the last blob. Would need to take
-#     filesize into account.
-#     WARNING: Only works, if false tag is more at the end of the blob.
-#     """
-#     avg = np.average(np.diff(index[2:]))
-#     return np.array(index[2:-1])[np.diff(index[2:]) > 0.5 * avg + 3 * std]
 
 
 def dist_to_concentration2d(dist, gw):
@@ -141,8 +131,8 @@ def get_mean_orientation(dist, gw):
     """Takes distribution and returns mean orientation vector field"""
 
     phi = np.linspace(0, 2 * np.pi, gs['phi'], endpoint=False) + gw['phi'] / 2
-    theta = np.linspace(0, np.pi, gs['theta'], endpoint=False) + \
-        gw['theta'] / 2
+    theta = np.linspace(0, np.pi, gs['theta'],
+                        endpoint=False) + gw['theta'] / 2
 
     ph, th = np.meshgrid(phi, theta, indexing='ij')
 
@@ -155,6 +145,30 @@ def get_mean_orientation(dist, gw):
     vx = np.sum(dist * x, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
     vy = np.sum(dist * y, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
     vz = np.sum(dist * z, axis=(3, 4)) * gw['theta'] * gw['phi'] / n
+
+    return np.transpose(np.array([vx, vy, vz]), (1, 2, 3, 0))
+
+
+def get_mean_polarisation(dist, gw, gs):
+    """Takes distribution and returns mean orientation vector field. Caution: This can return NaN"""
+
+    phi = np.linspace(0, 2 * np.pi, gs['phi'], endpoint=False) + gw['phi'] / 2
+    theta = np.linspace(0, np.pi, gs['theta'],
+                        endpoint=False) + gw['theta'] / 2
+
+    ph, th = np.meshgrid(phi, theta, indexing='ij')
+
+    x = np.sin(th) * np.cos(ph)
+    y = np.sin(th) * np.sin(ph)
+    z = np.cos(th)
+
+    n = gs['x'] * gs['y'] * gs['z']
+
+    c = dist_to_concentration3d(dist, gw)
+
+    vx = np.sum(dist * x, axis=(3, 4)) * gw['theta'] * gw['phi'] / c
+    vy = np.sum(dist * y, axis=(3, 4)) * gw['theta'] * gw['phi'] / c
+    vz = np.sum(dist * z, axis=(3, 4)) * gw['theta'] * gw['phi'] / c
 
     return np.transpose(np.array([vx, vy, vz]), (1, 2, 3, 0))
 
