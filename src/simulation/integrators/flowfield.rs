@@ -83,8 +83,8 @@ pub fn vorticity2d(grid_width: GridWidth, u: ArrayView<f64, Ix3>) -> ScalarField
 }
 
 
-/// Implements the operation `dx uy - dy ux` on a given discretized flow field
-/// `u=(ux, uy)`.
+/// Calculates the vorticity on a given discretized flow field
+/// `u=(ux, uy, uz)`, curl of u.
 pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
@@ -252,6 +252,101 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
         }
     }
     res
+}
+
+/// Calculates cross product for (1, 1, nz) grid.
+///
+/// $v_x = \partial_y u_z - \partial_z u_y$
+/// $v_y = \partial_z u_x - \partial_x u_z$
+/// $v_z = \partial_x u_y - \partial_y u_x$
+///
+/// where $\partial_{x,y} = 0$. So
+///
+/// $v_x = - \partial_z u_y$
+/// $v_y = \partial_z u_x$
+/// $v_z = 0$
+///
+pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+    let sh = u.shape();
+    let sx = sh[1];
+    let sy = sh[2];
+    let sz = sh[3];
+
+    assert_eq!(sx, 1);
+    assert_eq!(sy, 1);
+
+    let mut res = Array::zeros((3, sx, sy, sz));
+
+    let hz = 2. * grid_width.z;
+
+    let ux = u.subview(Axis(0), 0);
+    let uy = u.subview(Axis(0), 1);
+
+    {
+        let mut vx = res.subview_mut(Axis(0), 0);
+        // calculate -dz uy, mind the switched signes
+        // bulk
+        {
+            let mut s = vx.slice_mut(s![.., .., 1..-1]);
+            s -= &uy.slice(s![.., .., 2..]);
+            s += &uy.slice(s![.., .., ..-2]);
+            s /= hz;
+        }
+        // borders
+        {
+            let mut s = vx.slice_mut(s![.., .., ..1]);
+            s -= &uy.slice(s![.., .., 1..2]);
+            s += &uy.slice(s![.., .., -1..]);
+            s /= hz;
+        }
+        {
+            let mut s = vx.slice_mut(s![.., .., -1..]);
+            s -= &uy.slice(s![.., .., ..1]);
+            s += &uy.slice(s![.., .., -2..-1]);
+            s /= hz;
+        }
+    }
+
+    {
+        let mut vy = res.subview_mut(Axis(0), 1);
+        // calculate dz ux
+        // bulk
+        {
+            let mut s = vy.slice_mut(s![.., .., 1..-1]);
+            s.assign(&ux.slice(s![.., .., 2..]));
+            s -= &ux.slice(s![.., .., ..-2]);
+            s /= hz;
+        }
+        // borders
+        {
+            let mut s = vy.slice_mut(s![.., .., ..1]);
+            s.assign(&ux.slice(s![.., .., 1..2]));
+            s -= &ux.slice(s![.., .., -1..]);
+            s /= hz;
+        }
+        {
+            let mut s = vy.slice_mut(s![.., .., -1..]);
+            s.assign(&ux.slice(s![.., .., ..1]));
+            s -= &ux.slice(s![.., .., -2..-1]);
+            s /= hz;
+        }
+    }
+
+    res
+}
+
+
+pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+    let sh = u.shape();
+    let sx = sh[1];
+    let sy = sh[2];
+    let sz = sh[3];
+
+    if sx == 1 && sy == 1 && sz > 1 {
+        vorticity3d_quasi1d(grid_width, u)
+    } else {
+        vorticity3d(grid_width, u)
+    }
 }
 
 #[cfg(test)]

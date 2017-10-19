@@ -23,7 +23,7 @@
 
 use super::fft_helper::{get_inverse_norm_squared, get_k_mesh};
 use super::flowfield::FlowField3D;
-use super::flowfield::vorticity3d;
+use super::flowfield::vorticity3d_dispatch;
 use consts::TWOPI;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
@@ -343,7 +343,7 @@ impl Integrator {
         let mut new_vector = rotational_diffusion_quat_mut(rv);
 
         let half_timestep = 0.5 * param.timestep;
-        // Get vorticity d/dx uy - d/dy ux
+        // Get vorticity
         let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
 
         // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
@@ -377,7 +377,7 @@ impl Integrator {
         flow_field: ArrayView<'a, f64, Ix4>,
     ) {
         // Calculate vorticity dx uy - dy ux
-        let vort = vorticity3d(self.grid_width, flow_field);
+        let vort = vorticity3d_dispatch(self.grid_width, flow_field);
 
         particles
             .par_iter_mut()
@@ -931,7 +931,7 @@ mod tests {
 
         let u = i.calculate_flow_field(&d);
 
-        let vort = vorticity3d(gw, u.view());
+        let vort = vorticity3d_dispatch(gw, u.view());
 
         let r = RandomVector {
             x: 0.1,
