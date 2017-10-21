@@ -172,8 +172,8 @@ impl Serialize for Particle {
             self.position.x,
             self.position.y,
             self.position.z,
-            self.orientation.theta,
             self.orientation.phi,
+            self.orientation.theta,
         ].serialize(serializer)
     }
 }
@@ -183,14 +183,14 @@ impl<'de> Deserialize<'de> for Particle {
     where
         D: Deserializer<'de>,
     {
-        Deserialize::deserialize(deserializer).map(|(px, py, pz, ot, op)| {
+        Deserialize::deserialize(deserializer).map(|(px, py, pz, op, ot)| {
             Particle {
                 position: Position {
                     x: px,
                     y: py,
                     z: pz,
                 },
-                orientation: Orientation { theta: ot, phi: op },
+                orientation: Orientation { phi: op, theta: ot },
             }
         })
     }
