@@ -102,8 +102,8 @@ impl Particle {
         self.orientation.pbc();
     }
 
-    /// Places n particles at random positions
-    pub fn randomly_placed_particles(n: usize, bs: BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+    /// Places n particles at random positions following an isotropic distribution
+    pub fn place_isotropic(n: usize, bs: BoxSize, seed: [u64; 2]) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
@@ -125,11 +125,42 @@ impl Particle {
 
         particles
     }
+
+    /// Places n particles according the the spatial homogeneous distribution
+    pub fn place_homogeneous(n: usize, kappa: f64, bs: BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+        let mut particles = Vec::with_capacity(n);
+
+        // initialise random particle position
+        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
+        let between = Range::new(0f64, 1.);
+
+
+        for _ in 0..n {
+            particles.push(Particle::new(
+                bs.x * between.ind_sample(&mut rng),
+                bs.y * between.ind_sample(&mut rng),
+                bs.z * between.ind_sample(&mut rng),
+                TWOPI * between.ind_sample(&mut rng),
+                pdf_homogeneous_fixpoint(kappa, between.ind_sample(&mut rng)),
+                bs,
+            ))
+        }
+
+        particles
+    }
+
 }
 
 
 pub fn pdf_sin(x: f64) -> f64 {
     (1. - x).acos()
+}
+
+/// Samples the polar angle of the spatial homogeneous distribution, given by
+/// $\sin(\theta) \psi(\kappa, \theta)$.
+/// Including the measure of spherical coordinates $\sin(\theta)$ is crucial.
+pub fn pdf_homogeneous_fixpoint(kappa: f64, x: f64) -> f64 {
+    f64::acos(f64::ln(f64::exp(kappa) - 2. * x * f64::sinh(kappa)) / kappa)
 }
 
 impl Serialize for Particle {
@@ -179,7 +210,7 @@ mod tests {
             z: 3.,
         };
 
-        let particles = Particle::randomly_placed_particles(1000, bs, [1, 1]);
+        let particles = Particle::place_isotropic(1000, bs, [1, 1]);
 
         for p in &particles {
             let Position { x, y, z } = p.position;

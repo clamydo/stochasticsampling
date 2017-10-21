@@ -186,7 +186,7 @@ mod tests {
         };
         let gw = GridWidth::new(grid_size, box_size);
         let n = 1000;
-        let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
+        let p = Particle::place_isotropic(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, gw);
 
         d.histogram_from(&p);
@@ -218,7 +218,7 @@ mod tests {
             theta: 2,
         };
         let n = 1000;
-        let p = Particle::randomly_placed_particles(n, box_size, [1, 1]);
+        let p = Particle::place_isotropic(n, box_size, [1, 1]);
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.sample_from(&p);

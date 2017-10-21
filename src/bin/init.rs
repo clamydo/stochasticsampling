@@ -1,5 +1,6 @@
 use bincode::{self, Infinite};
 use errors::*;
+use lzma::LzmaReader;
 use rmp_serde;
 use serde_cbor;
 use std::fs::File;
@@ -7,15 +8,14 @@ use std::io;
 use std::path::Path;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::particle::Particle;
-use stochasticsampling::simulation::settings::Settings;
-use lzma::LzmaReader;
+use stochasticsampling::simulation::settings::{InitDistribution, Settings};
 
 
 /// Type of setting up initial condition.
 pub enum InitType {
     Stdin,
     File,
-    Random,
+    Distribution,
     Resume,
 }
 
@@ -52,7 +52,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                     match ext.to_str().unwrap() {
                         "cbor-lzma" => {
                             let r = LzmaReader::new_decompressor(f).chain_err(
-                                || "LZMA reader cannot be created."
+                                || "LZMA reader cannot be created.",
                             )?;
                             let p = serde_cbor::de::from_reader(r).chain_err(
                                 || "CBOR, Cannot read given initial condition.",
@@ -61,7 +61,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                         }
                         "bincode-lzma" => {
                             let mut r = LzmaReader::new_decompressor(f).chain_err(
-                                || "LZMA reader cannot be created."
+                                || "LZMA reader cannot be created.",
                             )?;
                             let p = bincode::deserialize_from(&mut r, Infinite).chain_err(
                                 || "Bincode, Cannot read given initial condition.",
@@ -70,7 +70,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                         }
                         "msgpack-lzma" => {
                             let r = LzmaReader::new_decompressor(f).chain_err(
-                                || "LZMA reader cannot be created."
+                                || "LZMA reader cannot be created.",
                             )?;
                             let p = rmp_serde::from_read(r).chain_err(
                                 || "MsgPack, Cannot read given initial condition.",
@@ -90,13 +90,27 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             };
 
         }
-        InitType::Random => {
-            info!("Using isotropic initial condition.");
-            let p = Particle::randomly_placed_particles(
-                settings.simulation.number_of_particles,
-                settings.simulation.box_size,
-                settings.simulation.seed,
-            );
+        InitType::Distribution => {
+            let p = match settings.simulation.init_distribution {
+                InitDistribution::Isotropic => {
+                    info!("Using isotropic initial condition.");
+                    Particle::place_isotropic(
+                        settings.simulation.number_of_particles,
+                        settings.simulation.box_size,
+                        settings.simulation.seed,
+                    )
+                }
+                InitDistribution::Homogeneous => {
+                    info!("Using spatial homogeneous initial condition.");
+                    Particle::place_homogeneous(
+                        settings.simulation.number_of_particles,
+                        settings.parameters.magnetic_reorientation /
+                            settings.parameters.diffusion.rotational,
+                        settings.simulation.box_size,
+                        settings.simulation.seed,
+                    )
+                }
+            };
 
             simulation.init(p);
         }
@@ -111,7 +125,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             };
 
             let mut r = LzmaReader::new_decompressor(f).chain_err(
-                || "Cannot create LZMA decompressor to read snapshot."
+                || "Cannot create LZMA decompressor to read snapshot.",
             )?;
 
             let s = bincode::deserialize_from(&mut r, Infinite).chain_err(
