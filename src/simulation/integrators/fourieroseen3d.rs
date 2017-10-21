@@ -717,7 +717,7 @@ mod tests {
 
         let i = Integrator::new(gs, bs, int_param);
 
-        let p = Particle::randomly_placed_particles(10000, bs, [1, 1]);
+        let p = Particle::place_isotropic(10000, bs, [1, 1]);
 
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
         d.sample_from(&p);

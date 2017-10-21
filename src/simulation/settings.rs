@@ -6,6 +6,7 @@ use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 10;
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::MsgPack;
+const DEFAULT_INIT_TYPE: InitDistribution = InitDistribution::Isotropic;
 
 error_chain! {
     foreign_links {
@@ -91,16 +92,30 @@ fn default_initial_condition() -> bool {
     true
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum InitDistribution {
+    Isotropic,
+    Homogeneous,
+}
+
+
 /// Holds simulation specific settings.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
+    #[serde(default = "default_init_distribution")]
+    pub init_distribution: InitDistribution,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
     pub output_at_timestep: Output,
     pub timestep: f64,
     pub seed: [u64; 2],
+}
+
+/// Default init type
+fn default_init_distribution() -> InitDistribution {
+    DEFAULT_INIT_TYPE
 }
 
 
@@ -252,6 +267,14 @@ mod tests {
                 phi: 6,
                 theta: 7,
             }
+        );
+        assert_eq!(
+            settings.simulation.init_distribution,
+            InitDistribution::Homogeneous
+        );
+        assert_eq!(
+            settings_default.simulation.init_distribution,
+            InitDistribution::Isotropic
         );
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);

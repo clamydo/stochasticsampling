@@ -1,4 +1,3 @@
-import bitstring
 from io import SEEK_CUR
 import lzma
 import msgpack

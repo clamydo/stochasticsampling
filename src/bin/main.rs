@@ -93,7 +93,7 @@ fn run() -> Result<()> {
         if cli_matches.is_present("resume") {
             bail!("Cannot resume. Pleas provide snapshot in `init_file` field in parameter file.");
         }
-        InitType::Random
+        InitType::Distribution
     } else if cli_matches.is_present("resume") {
         InitType::Resume
     } else {
