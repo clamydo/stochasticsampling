@@ -2,6 +2,7 @@ use bincode::{self, Infinite};
 use errors::*;
 use lzma::LzmaReader;
 use rmp_serde;
+use serde::de::DeserializeOwned;
 use serde_cbor;
 use std::fs::File;
 use std::io;
@@ -17,6 +18,47 @@ pub enum InitType {
     File,
     Distribution,
     Resume,
+}
+
+fn read_from_file<T: DeserializeOwned>(fname: &Path) -> Result<T> {
+    let f = File::open(fname).chain_err(|| {
+        format!("Unable to open file '{}'.", fname.display())
+    })?;
+
+    let mut r = LzmaReader::new_decompressor(f).chain_err(
+        || "LZMA reader cannot be created.",
+    )?;
+
+    match Path::new(&fname).extension() {
+        Some(ext) => {
+            match ext.to_str().unwrap() {
+                "cbor-lzma" => {
+                    Ok(serde_cbor::de::from_reader(r).chain_err(
+                        || "CBOR, cannot decode given file.",
+                    )?)
+                }
+                "bincode-lzma" => {
+                    Ok(bincode::deserialize_from(&mut r, Infinite).chain_err(
+                        || "Bincode, cannot decode given file.",
+                    )?)
+                }
+                "msgpack-lzma" => {
+                    Ok(rmp_serde::from_read(r).chain_err(
+                        || "MsgPack, cannot decode given file.",
+                    )?)
+                }
+                _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),
+            }
+        }
+        None => {
+            bail!(
+                "Missing file extension for initial condition, '{}'.
+                           Cannot determine filetype.",
+                fname.display()
+            )
+        }
+    }
+
 }
 
 
@@ -43,51 +85,10 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             };
 
             info!("Reading initial condition from {}", fname);
-            let f = File::open(fname).chain_err(|| {
-                format!("Unable to open input file '{}'.", fname)
-            })?;
 
-            match Path::new(&fname).extension() {
-                Some(ext) => {
-                    match ext.to_str().unwrap() {
-                        "cbor-lzma" => {
-                            let r = LzmaReader::new_decompressor(f).chain_err(
-                                || "LZMA reader cannot be created.",
-                            )?;
-                            let p = serde_cbor::de::from_reader(r).chain_err(
-                                || "CBOR, Cannot read given initial condition.",
-                            )?;
-                            simulation.init(p);
-                        }
-                        "bincode-lzma" => {
-                            let mut r = LzmaReader::new_decompressor(f).chain_err(
-                                || "LZMA reader cannot be created.",
-                            )?;
-                            let p = bincode::deserialize_from(&mut r, Infinite).chain_err(
-                                || "Bincode, Cannot read given initial condition.",
-                            )?;
-                            simulation.init(p);
-                        }
-                        "msgpack-lzma" => {
-                            let r = LzmaReader::new_decompressor(f).chain_err(
-                                || "LZMA reader cannot be created.",
-                            )?;
-                            let p = rmp_serde::from_read(r).chain_err(
-                                || "MsgPack, Cannot read given initial condition.",
-                            )?;
-                            simulation.init(p);
-                        }
-                        _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),
-                    }
-                }
-                None => {
-                    bail!(
-                        "Missing file extension for initial condition, '{}'.
-                           Cannot determine filetype.",
-                        fname
-                    )
-                }
-            };
+            let path = Path::new(&fname);
+            let p = read_from_file(&path).chain_err(|| "Cannot read init file.")?;
+            simulation.init(p);
 
         }
         InitType::Distribution => {
@@ -116,22 +117,17 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
         }
         InitType::Resume => {
             info!("Resuming snapshot.");
-            let f = match settings.environment.init_file {
-                Some(ref fname) => {
-                    info!("Reading snapshot from {}", *fname);
-                    File::open(fname).chain_err(|| "Unable to open input file.")?
-                }
+            let fname = match settings.environment.init_file {
+                Some(ref v) => v,
                 None => bail!("No input file provided in the parameterfile."),
             };
 
-            let mut r = LzmaReader::new_decompressor(f).chain_err(
-                || "Cannot create LZMA decompressor to read snapshot.",
-            )?;
+            info!("Reading snapshot from {}", *fname);
+            let path = Path::new(&fname);
 
-            let s = bincode::deserialize_from(&mut r, Infinite).chain_err(
-                || "Cannot read given snapshot.",
+            let s = read_from_file(&path).chain_err(
+                || "Cannot read snapshot, resuming not possible.",
             )?;
-
             simulation.resume(s);
         }
     };
