@@ -22,6 +22,7 @@ class Streamer(object):
         else:
             self.set_index(index)
         self.__file = open(source_fn, 'rb')
+        self.metadata = None
 
     def __del__(self):
         self.__file.close()
@@ -69,9 +70,12 @@ class Streamer(object):
         self.set_index(np.fromfile(file, dtype=np.uint64))
 
     def get_metadata(self):
-        with open(self.source_fn, 'rb') as f:
-            buf = f.read(self.index[0])
-            return msgpack.unpackb(buf, encoding='utf-8')
+        if self.metadata is None:
+            with open(self.source_fn, 'rb') as f:
+                buf = f.read(self.index[0])
+                self.metadata = msgpack.unpackb(buf, encoding='utf-8')
+
+        return self.metadata
 
     def parameter_string(self):
         sim_settings = self.get_metadata()
@@ -103,12 +107,32 @@ class Streamer(object):
     def get_length(self):
         return len(self.index)
 
+    def get_coordinates(self):
+        bs, gs, gw = get_bs_gs_gw(self.get_metadata())
+
+        return {
+            'x': np.linspace(gw['x'] / 2, bs['x'] - gw['x'] / 2, gs['x']),
+            'y': np.linspace(gw['y'] / 2, bs['y'] - gw['y'] / 2, gs['y']),
+            'z': np.linspace(gw['z'] / 2, bs['z'] - gw['z'] / 2, gs['z']),
+            'phi': np.linspace(
+                gw['phi'] / 2, bs['phi'] - gw['phi'] / 2, gs['phi']),
+            'theta': np.linspace(
+                gw['theta'] / 2, bs['theta'] - gw['theta'] / 2, gs['theta'])
+        }
+
 
 def dist_to_concentration2d(dist, gw):
     """Takes an distribution array and returns a concentration
     field by naive integraton of orientation.
     """
     return np.sum(dist, axis=2) * gw['phi']
+
+
+def data_to_flowfield(data):
+    """ Return flow field with [component, x, y, z]. """
+    ff = data['flowfield']
+    ff = np.array(ff['data']).reshape(ff['dim'])
+    return ff
 
 
 def data_to_dist(data):
@@ -175,6 +199,9 @@ def get_mean_polarisation(dist, gw, gs):
 def get_bs_gs_gw(sim_settings):
     bs = sim_settings['simulation']['box_size']
     gs = sim_settings['simulation']['grid_size']
+
+    bs['phi'] = 2 * np.pi
+    bs['theta'] = np.pi
 
     gw = {
         'x': bs['x'] / gs['x'],
