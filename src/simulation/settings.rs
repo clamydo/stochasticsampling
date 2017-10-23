@@ -17,6 +17,7 @@ error_chain! {
 
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Settings {
     pub simulation: SimulationSettings,
     pub parameters: Parameters,
@@ -25,6 +26,7 @@ pub struct Settings {
 
 /// Size of the simulation box an arbitary physical dimensions.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct BoxSize {
     pub x: f64,
     pub y: f64,
@@ -32,6 +34,7 @@ pub struct BoxSize {
 }
 /// Size of the discrete grid.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct GridSize {
     pub x: usize,
     pub y: usize,
@@ -43,6 +46,7 @@ pub struct GridSize {
 
 /// Holds rotational and translational diffusion constants
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DiffusionConstants {
     pub translational: f64,
     pub rotational: f64,
@@ -50,6 +54,7 @@ pub struct DiffusionConstants {
 
 /// Holds prefactors for active and magnetic stress
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct StressPrefactors {
     pub active: f64,
     pub magnetic: f64,
@@ -57,6 +62,7 @@ pub struct StressPrefactors {
 
 /// Holds phyiscal parameters
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Parameters {
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
@@ -67,6 +73,7 @@ pub struct Parameters {
 
 /// Holds output configuration
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Output {
     #[serde(default)]
     pub distribution: Option<usize>,
@@ -101,6 +108,7 @@ pub enum InitDistribution {
 
 /// Holds simulation specific settings.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SimulationSettings {
     pub box_size: BoxSize,
     pub grid_size: GridSize,
@@ -128,6 +136,7 @@ pub enum OutputFormat {
 
 /// Holds environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EnvironmentSettings {
     #[serde(default)]
     pub init_file: Option<String>,
@@ -223,7 +232,6 @@ mod tests {
 
     #[test]
     fn read_settings() {
-
         let mut settings = read_parameter_file("./test/parameter.toml").unwrap();
         settings.set_version("version");
         let settings_default = read_parameter_file("./test/parameter_no_defaults.toml").unwrap();
@@ -340,5 +348,11 @@ mod tests {
             settings_default.simulation.output_at_timestep.snapshot,
             None
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_settings_unused_keys() {
+        read_parameter_file("./test/parameter_unused.toml").unwrap();
     }
 }
