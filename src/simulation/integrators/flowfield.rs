@@ -286,23 +286,33 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
         let mut vx = res.subview_mut(Axis(0), 0);
         // calculate -dz uy, mind the switched signes
         // bulk
+        // dz uy(z) = (uy(z + h) - u(z - h)) / 2h
+        //          [., 1, 2, 3, 4, .]
+        //      +[0, 1, 2, 3, 4, 5]
+        //            -[0, 1, 2, 3, 4, 5]
         {
+            // res[0, 1, 2, 3, 4, 5] -> res[1, 2, 3, 4]
             let mut s = vx.slice_mut(s![.., .., 1..-1]);
+            //   u[0, 1, 2, 3]
+            s.assign(&uy.slice(s![.., .., ..-2]));
+            // - u[2, 3, 4, 5]
             s -= &uy.slice(s![.., .., 2..]);
-            s += &uy.slice(s![.., .., ..-2]);
             s /= hz;
         }
         // borders
+        //          [0, ., ., ., ., 5]
+        //      +[0, 1, 2, 3, 4, 5, 0]
+        //         -[5, 0, 1, 2, 3, 4, 5]
         {
             let mut s = vx.slice_mut(s![.., .., ..1]);
+            s.assign(&uy.slice(s![.., .., -1..]));
             s -= &uy.slice(s![.., .., 1..2]);
-            s += &uy.slice(s![.., .., -1..]);
             s /= hz;
         }
         {
             let mut s = vx.slice_mut(s![.., .., -1..]);
+            s.assign(&uy.slice(s![.., .., -2..-1]));
             s -= &uy.slice(s![.., .., ..1]);
-            s += &uy.slice(s![.., .., -2..-1]);
             s /= hz;
         }
     }
