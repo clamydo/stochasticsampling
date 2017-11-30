@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "1.1.1"
+version = "1.1.2"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 
@@ -17,13 +17,13 @@ error-chain = "0.11.0"
 fftw3 = { path = "crates/fftw3" }
 log = "0.3.6"
 ndarray = { version = "0.10.0", features = ["serde-1"] }
-ndarray-parallel = "0.5.0"
+ndarray-parallel = "0.6.0"
 num = "0.1.40"
 pbr = "1.0.0"
 pcg_rand = { path = "crates/external/pcg_rand" }
 quaternion = "0.3.0"
 rand = "0.3.15"
-rayon = "0.8.2"
+rayon = "0.9.0"
 rmp-serde = "0.13.6"
 # rustfft = "2.0.0"
 rust-lzma = { path = "crates/external/rust-lzma" }
