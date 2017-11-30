@@ -160,7 +160,8 @@ fn dispatch(
                     OutputFormat::MsgPack => "msgpack-lzma",
                 };
 
-                let filepath = path.with_extension(&format!("{}.{}", snapshot_counter, fileext));
+                let filepath =
+                    path.with_extension(&format!("snapshot.{}.{}", snapshot_counter, fileext));
 
                 let snapshot_file = File::create(&filepath).chain_err(|| {
                     format!("Cannot create snapshot file '{}'.", filepath.display())
