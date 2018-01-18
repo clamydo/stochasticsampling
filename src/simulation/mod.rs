@@ -252,7 +252,10 @@ impl Simulation {
                         y: StandardNormal::rand(&mut rng).0,
                         z: StandardNormal::rand(&mut rng).0,
                         axis_angle: TWOPI * between.ind_sample(&mut rng),
-                        rotate_angle: rayleigh_pdf(rot_diff, between.ind_sample(&mut rng)),
+                        rotate_angle: rayleigh_pdf(
+                            rot_diff,
+                            between.ind_sample(&mut rng),
+                        ),
                     };
                 }
             });
