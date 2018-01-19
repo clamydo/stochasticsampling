@@ -150,8 +150,8 @@ def dist_to_concentration3d(dist, gw):
     return np.sum(dist, axis=(3, 4)) * gw['phi'] * gw['theta']
 
 
-def get_mean_orientation(dist, gw):
-    """Takes distribution and returns mean orientation vector field"""
+def get_mean_polarisation(dist, gw, gs):
+    """Takes distribution and returns expectation value for the polarisation field"""
 
     phi = np.linspace(0, 2 * np.pi, gs['phi'], endpoint=False) + gw['phi'] / 2
     theta = np.linspace(0, np.pi, gs['theta'],
@@ -172,8 +172,8 @@ def get_mean_orientation(dist, gw):
     return np.transpose(np.array([vx, vy, vz]), (1, 2, 3, 0))
 
 
-def get_mean_polarisation(dist, gw, gs):
-    """Takes distribution and returns mean orientation vector field. Caution: This can return NaN"""
+def get_mean_orientation(dist, gw, gs):
+    """Takes distribution and returns mean orientation per particle vector field. Caution: This can return NaN"""
 
     phi = np.linspace(0, 2 * np.pi, gs['phi'], endpoint=False) + gw['phi'] / 2
     theta = np.linspace(0, np.pi, gs['theta'],

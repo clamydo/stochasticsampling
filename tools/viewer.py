@@ -13,8 +13,10 @@ import DataStreamer
 import argparse
 import json
 from pathlib import Path
-from scipy.fftpack import fft2
+from scipy.fftpack import fftn
 from scipy import special
+import DataStreamer
+from DataStreamer import Streamer
 
 parser = argparse.ArgumentParser(description='Generate initial condition.')
 parser.add_argument('data',
@@ -47,24 +49,24 @@ print(json.dumps(sim_settings, indent=1))
 fig, axs = plt.subplots(2, 2)
 # plt.subplots_adjust(left=0.25, bottom=0.25)
 
-p = axs[1, 0].imshow(np.zeros((gs['x'], gs['y'])).T, origin='lower')
+p = axs[1, 0].imshow(np.zeros((gs['x'], gs['z'])).T, origin='lower')
 # fig.colorbar(p, ax=axs[1])
 
 v_x = np.linspace(gw['x'] / 2., bs['x'] - gw['x'] / 2, gs['x'])
-v_y = np.linspace(gw['y'] / 2., bs['y'] - gw['y'] / 2, gs['y'])
-v_X, v_Y = np.meshgrid(v_x, v_y)
+v_z = np.linspace(gw['y'] / 2., bs['z'] - gw['z'] / 2, gs['z'])
+v_X, v_Z = np.meshgrid(v_x, v_z)
 
 ang_x = np.linspace(gw['phi'] / 2, 2 * np.pi - gw['phi'] / 2, gs['phi'], endpoint=True)
 
-fft_plot = axs[0, 1].imshow(np.zeros((gs['x'], gs['y'])).T, origin='lower')
+fft_plot = axs[0, 1].imshow(np.zeros((gs['x'], gs['z'])).T, origin='lower')
 axs[0, 1].set_title('DFT')
 
 ang_dist_th_plot, = axs[0, 0].plot([], [])
 ang_dist_plot, = axs[0, 0].plot([], [], '.')
 axs[0, 0].set_title('angular distribution')
 
-quiv = axs[1, 1].quiver(v_X, v_Y,
-                        np.ones((gs['x'], gs['y'])), np.ones((gs['x'], gs['y'])),
+quiv = axs[1, 1].quiver(v_X, v_Z,
+                        np.ones((gs['x'], gs['z'])), np.ones((gs['x'], gs['z'])),
                         scale=None)
 
 axslice = plt.axes([0.25, 0.1, 0.5, 0.03], facecolor='lightgoldenrodyellow')
@@ -90,43 +92,45 @@ def psi(x, kappa):
 
 def update(val):
     i = int(val * (len(ds.index) - 2))
+    #i = int(val)
     data = ds[i]
-    d = DataStreamer.data_to_dist(data, gs)
-    c = DataStreamer.dist_to_concentration(d, gw)
+    d = DataStreamer.data_to_dist(data)
+    c = DataStreamer.dist_to_concentration3d(d, gw)
 
     update_title(i, data['timestep'])
 
-    dft = fft2(c)
-    mag = np.sqrt(dft.real**2 + dft.imag**2)
+    dft = fftn(c, axes=(0, 1, 2))
+    mag = np.abs(dft)
     mag = mag / mag[0, 0]
     mag[0, 0] = 0
 
-    fft_plot.set_data(mag.T)
+    fft_plot.set_data(mag[:, 0, :].T)
     fft_plot.autoscale()
 
-    th = psi(ang_x, kappa)
-    ang_dist_th_plot.set_data(ang_x, th)
-    ang_dist = np.mean(d, axis=(0, 1))
-    ang_dist_plot.set_data(ang_x, ang_dist)
-    axs[0, 0].set_xlim([0, 2 * np.pi])
-    axs[0, 0].set_ylim([0, max(np.max(ang_dist), np.max(th)) * 1.05])
-    axs[0, 0].set_aspect('auto')
+    # th = psi(ang_x, kappa)
+    # ang_dist_th_plot.set_data(ang_x, th)
+    # ang_dist = np.mean(d, axis=(0, 1))
+    # ang_dist_plot.set_data(ang_x, ang_dist)
+    # axs[0, 0].set_xlim([0, 2 * np.pi])
+    # axs[0, 0].set_ylim([0, max(np.max(ang_dist), np.max(th)) * 1.05])
+    # axs[0, 0].set_aspect('auto')
 
-    p.set_data(c.T)
+    mean_c = np.mean(c, axis=1)
+    p.set_data(mean_c.T)
     p.autoscale()
 
-    ff = data['flow_field']
+    ff = data['flowfield']
     if ff is None:
         axs[1, 1].set_title('no flowfield availabe')
-        quiv.set_UVC(np.ones((gs['x'], gs['y'])), np.ones((gs['x'], gs['y'])))
+        quiv.set_UVC(np.ones((gs['x'], gs['z'])), np.ones((gs['x'], gs['z'])))
     else:
+        ff = DataStreamer.data_to_flowfield(data)
         axs[1, 1].set_title('flowfield')
-        ff = np.array(ff['data']).reshape((2, gs['x'], gs['y']))
         # quiv.set_UVC(ff[0].T, ff[1].T)
         axs[1, 1].cla()
         x = np.arange(gs['x'])
-        y = np.arange(gs['y'])
-        axs[1, 1].streamplot(x, y, ff[0].T, ff[1].T)
+        z = np.arange(gs['z'])
+        axs[1, 1].streamplot(x, z, ff[0, :, 0, :].T, ff[1, :, 0, :].T)
 
     fig.canvas.draw_idle()
 
