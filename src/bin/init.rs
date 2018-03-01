@@ -1,4 +1,4 @@
-use bincode::{self, Infinite};
+use bincode;
 use errors::*;
 use lzma::LzmaReader;
 use rmp_serde;
@@ -38,7 +38,7 @@ fn read_from_file<T: DeserializeOwned>(fname: &Path) -> Result<T> {
                     )?)
                 }
                 "bincode-lzma" => {
-                    Ok(bincode::deserialize_from(&mut r, Infinite).chain_err(
+                    Ok(bincode::deserialize_from(&mut r).chain_err(
                         || "Bincode, cannot decode given file.",
                     )?)
                 }

@@ -1,5 +1,5 @@
 use super::path::OutputPath;
-use bincode::{self, Infinite};
+use bincode;
 use errors::*;
 use lzma::LzmaWriter;
 use rmp_serde;
@@ -186,7 +186,7 @@ fn dispatch(
                             })?;
                     }
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut snapshot_file, &s, Infinite)
+                        bincode::serialize_into(&mut snapshot_file, &s)
                             .chain_err(|| {
                                 format!(
                                     "Cannot write snapshot with number {} (Bincode)",
@@ -234,7 +234,7 @@ fn dispatch(
                         )?
                     }
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut writer, &v, Infinite)
+                        bincode::serialize_into(&mut writer, &v)
                             .chain_err(|| "Cannot write simulation output (format: Bincode).")?
                     }
                     OutputFormat::MsgPack => {
@@ -256,7 +256,7 @@ fn dispatch(
                     OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),
                     OutputFormat::MsgPack => rmp_serde::encode::write_named(&mut file, &v).unwrap(),
                     OutputFormat::Bincode => {
-                        bincode::serialize_into(&mut file, &v, Infinite).unwrap()
+                        bincode::serialize_into(&mut file, &v).unwrap()
                     }
                 }
             }

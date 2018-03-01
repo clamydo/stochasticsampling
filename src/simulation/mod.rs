@@ -93,9 +93,10 @@ impl Simulation {
             .and_then(|s| usize::from_str(&s).ok())
             .expect("No environment variable 'RAYON_NUM_THREADS' set.");
 
-        let rayon_conf = rayon::Configuration::new();
-        let rayon_conf = rayon_conf.num_threads(num_threads);
-        rayon::initialize(rayon_conf).unwrap();
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build_global()
+            .unwrap();
 
         let rng = (0..num_threads)
             .into_iter()
