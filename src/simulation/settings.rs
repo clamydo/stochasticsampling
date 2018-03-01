@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use toml;
 
-const DEFAULT_IO_QUEUE_SIZE: usize = 10;
+const DEFAULT_IO_QUEUE_SIZE: usize = 1;
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::MsgPack;
 const DEFAULT_INIT_TYPE: InitDistribution = InitDistribution::Isotropic;
 
