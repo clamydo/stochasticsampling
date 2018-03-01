@@ -1,5 +1,5 @@
 #![feature(custom_derive)]
-#![feature(unique)]
+#![feature(unique,ptr_internals)]
 
 #[cfg(test)]
 #[macro_use]
