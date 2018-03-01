@@ -14,7 +14,6 @@ error_chain! {
     }
 }
 
-
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -43,7 +42,6 @@ pub struct GridSize {
     pub theta: usize,
 }
 
-
 /// Holds rotational and translational diffusion constants
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -69,7 +67,6 @@ pub struct Parameters {
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
 }
-
 
 /// Holds output configuration
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -105,7 +102,6 @@ pub enum InitDistribution {
     Homogeneous,
 }
 
-
 /// Holds simulation specific settings.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -125,7 +121,6 @@ pub struct SimulationSettings {
 fn default_init_distribution() -> InitDistribution {
     DEFAULT_INIT_TYPE
 }
-
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum OutputFormat {
@@ -159,32 +154,26 @@ fn default_output_format() -> OutputFormat {
     DEFAULT_OUTPUT_FORMAT
 }
 
-
 /// Reads the content of a file `filename` into an string and return it.
 fn read_from_file(filename: &str) -> Result<String> {
     let mut f = File::open(filename).chain_err(|| "Unable to open file.")?;
     let mut content = String::new();
 
-    f.read_to_string(&mut content).chain_err(
-        || "Unable to read file.",
-    )?;
+    f.read_to_string(&mut content)
+        .chain_err(|| "Unable to read file.")?;
 
     Ok(content)
 }
-
 
 /// Reads content of a file `param_file`, that should point to a valid TOML
 /// file, and Parsers it.
 /// Then returns the deserialized data in form of a Settings struct.
 pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     // read .toml file into string
-    let toml_string = read_from_file(param_file).chain_err(
-        || "Unable to read parameter file.",
-    )?;
+    let toml_string = read_from_file(param_file).chain_err(|| "Unable to read parameter file.")?;
 
-    let mut settings: Settings = toml::from_str(&toml_string).chain_err(
-        || "Unable to parse parameter file.",
-    )?;
+    let mut settings: Settings =
+        toml::from_str(&toml_string).chain_err(|| "Unable to parse parameter file.")?;
 
     settings.environment.version = "".to_string();
 
@@ -193,9 +182,7 @@ pub fn read_parameter_file(param_file: &str) -> Result<Settings> {
     Ok(settings)
 }
 
-
 fn check_settings(s: &Settings) -> Result<()> {
-
     // TODO Check settings for sanity. For example, particles_head <=
     // number_of_particles
     let bs = s.simulation.box_size;
@@ -205,8 +192,8 @@ fn check_settings(s: &Settings) -> Result<()> {
     }
 
     if s.simulation.output_at_timestep.particles_head.is_some() {
-        if s.simulation.number_of_particles <
-            s.simulation.output_at_timestep.particles_head.unwrap()
+        if s.simulation.number_of_particles
+            < s.simulation.output_at_timestep.particles_head.unwrap()
         {
             bail!(
                 "Cannot output more particles than available. `particles_head`
@@ -224,7 +211,6 @@ impl Settings {
         self.environment.version = version.to_string();
     }
 }
-
 
 #[cfg(test)]
 mod tests {

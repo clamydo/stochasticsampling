@@ -9,7 +9,6 @@ pub type FlowField3D = Array<f64, Ix4>;
 pub type VectorField3D = Array<f64, Ix4>;
 pub type ScalarField3D = Array<f64, Ix3>;
 
-
 /// Implements the operation `dx uy - dy ux` on a given discretized flow field
 /// `u=(ux, uy)`.
 pub fn vorticity2d(grid_width: GridWidth, u: ArrayView<f64, Ix3>) -> ScalarField2D {
@@ -82,7 +81,6 @@ pub fn vorticity2d(grid_width: GridWidth, u: ArrayView<f64, Ix3>) -> ScalarField
     res
 }
 
-
 /// Calculates the vorticity on a given discretized flow field
 /// `u=(ux, uy, uz)`, curl of u.
 pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
@@ -111,7 +109,6 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
     let ux = u.subview(Axis(0), 0);
     let uy = u.subview(Axis(0), 1);
     let uz = u.subview(Axis(0), 2);
-
 
     {
         // calculate dy uz
@@ -345,7 +342,6 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
     res
 }
 
-
 pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
@@ -368,7 +364,6 @@ mod tests {
     use test::Bencher;
     use test_helper::equal_floats;
 
-
     #[test]
     fn test_vorticity2d() {
         let bs = BoxSize {
@@ -390,15 +385,13 @@ mod tests {
 
         let v = vorticity2d(gw, u.view());
 
-        let should = arr2(
-            &[
-                [-6., -8.5, -8.5, -8.5, -6.],
-                [22.5, 4., 4., -12., 6.5],
-                [6.5, 4., 4., 4., 6.5],
-                [6.5, 4., 4., 4., 6.5],
-                [-6., -8.5, -8.5, -8.5, -6.],
-            ],
-        );
+        let should = arr2(&[
+            [-6., -8.5, -8.5, -8.5, -6.],
+            [22.5, 4., 4., -12., 6.5],
+            [6.5, 4., 4., 4., 6.5],
+            [6.5, 4., 4., 4., 6.5],
+            [-6., -8.5, -8.5, -8.5, -6.],
+        ]);
 
         println!("result: {}", v);
         println!("expected: {}", should);
@@ -406,7 +399,6 @@ mod tests {
         for (a, b) in v.iter().zip(should.iter()) {
             assert!(equal_floats(*a, *b), "expected {}, got {}", b, a);
         }
-
     }
 
     #[bench]
@@ -431,7 +423,6 @@ mod tests {
 
         b.iter(|| vorticity2d(gw, u.view()));
     }
-
 
     #[test]
     fn test_vorticity3d() {
@@ -462,40 +453,33 @@ mod tests {
 
         {
             let mut sx = should.subview_mut(Axis(0), 0);
-            let x = arr3(
-                &[
-                    [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
-                    [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
-                    [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
-                ],
-            );
+            let x = arr3(&[
+                [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
+                [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
+                [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
+            ]);
             sx.assign(&x);
         }
 
         {
             let mut sy = should.subview_mut(Axis(0), 1);
-            let y = arr3(
-                &[
-                    [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
-                    [[-9.5, -8., -9.5], [-9.5, -8., -9.5], [-21.5, 4., -9.5]],
-                    [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
-                ],
-            );
+            let y = arr3(&[
+                [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
+                [[-9.5, -8., -9.5], [-9.5, -8., -9.5], [-21.5, 4., -9.5]],
+                [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
+            ]);
             sy.assign(&y);
         }
 
         {
             let mut sz = should.subview_mut(Axis(0), 2);
-            let z = arr3(
-                &[
-                    [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
-                    [[10.5, 10.5, 22.5], [6., 6., -6.], [10.5, 10.5, 10.5]],
-                    [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
-                ],
-            );
+            let z = arr3(&[
+                [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
+                [[10.5, 10.5, 22.5], [6., 6., -6.], [10.5, 10.5, 10.5]],
+                [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
+            ]);
             sz.assign(&z);
         }
-
 
         println!("result: {}", v);
         println!("expected: {}", should);
@@ -509,8 +493,6 @@ mod tests {
                 i
             );
         }
-
     }
-
 
 }

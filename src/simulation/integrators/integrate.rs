@@ -6,10 +6,12 @@ use ndarray::{ArrayView, Axis, Ix1};
 pub fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
     let len = samples.dim();
 
-    assert!(len % 2 == 0,
-            "Periodic Simpson's rule only works for even number of sample points, since the \
-             first point in the integration interval is also the last. Please specify an even \
-             number of grid cells.");
+    assert!(
+        len % 2 == 0,
+        "Periodic Simpson's rule only works for even number of sample points, since the \
+         first point in the integration interval is also the last. Please specify an even \
+         number of grid cells."
+    );
 
     unsafe {
         let mut s = samples.uget(0) + samples.uget(0);
@@ -24,12 +26,10 @@ pub fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
     }
 }
 
-
 /// Implements most straight forward step-sum integration method
 pub fn integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
     (&samples * h).sum(Axis(0))[()]
 }
-
 
 #[cfg(test)]
 mod test {
@@ -44,30 +44,33 @@ mod test {
         let f = Array::range(0., PI, h).map(|x| x.sin());
         let integral = periodic_simpson_integrate(f.view(), h);
 
-        assert!(equal_floats(integral, 2.000000010824505),
-                "h: {}, result: {}",
-                h,
-                integral);
-
+        assert!(
+            equal_floats(integral, 2.000000010824505),
+            "h: {}, result: {}",
+            h,
+            integral
+        );
 
         let h = PI / 100.;
         let f = Array::range(0., 2. * PI, h).map(|x| x.sin());
         let integral = periodic_simpson_integrate(f.view(), h);
 
-        assert!(equal_floats(integral, 0.000000000000000034878684980086324),
-                "expected: {}, result: {}",
-                0.,
-                integral);
-
+        assert!(
+            equal_floats(integral, 0.000000000000000034878684980086324),
+            "expected: {}, result: {}",
+            0.,
+            integral
+        );
 
         let h = 4. / 100.;
         let f = Array::range(0., 4., h).map(|x| x * x);
         let integral = periodic_simpson_integrate(f.view(), h);
-        assert!(equal_floats(integral, 21.120000000000001),
-                "expected: {}, result: {}",
-                21.12,
-                integral);
-
+        assert!(
+            equal_floats(integral, 21.120000000000001),
+            "expected: {}, result: {}",
+            21.12,
+            integral
+        );
 
         // let h = 2. * PI / 102.;
         // let mut f = Array::zeros((102));

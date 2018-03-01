@@ -4,7 +4,6 @@ use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
 use num::Complex;
 use simulation::settings::{BoxSize, GridSize};
 
-
 /// Returns a sampling of k values along all grid axes in FFTW standard form.
 /// In this case 3D.
 ///
@@ -46,7 +45,6 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
     ks
 }
 
-
 /// Returns a meshgrid of k values for FFT.
 ///
 /// The first axis denotes the components of the k-vector:
@@ -55,7 +53,6 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
     let ks = get_k_sampling(grid_size, box_size);
     mesh3d::<Complex<f64>>(&ks)
 }
-
 
 /// Returns scalar field of inversed norm squared of k-vector-values.
 ///
@@ -69,14 +66,11 @@ pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<C
     inorm
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use ndarray::arr3;
     use test_helper::equal_floats;
-
 
     #[test]
     fn test_get_k_sampling() {
@@ -127,7 +121,6 @@ mod tests {
             assert!(equal_floats(v.re, *e), "{} != {}", v.re, *e);
         }
     }
-
 
     #[test]
     fn test_get_k_mesh() {
@@ -203,37 +196,34 @@ mod tests {
 
         let inorm = get_inverse_norm_squared(mesh.view());
 
-        let expect = arr3(
-            &[
-                [
-                    [0.0, 1.000000000000000],
-                    [1.000000000000000, 0.5000000000000000],
-                    [1.000000000000000, 0.5000000000000000],
-                ],
-                [
-                    [1.000000000000000, 0.5000000000000000],
-                    [0.5000000000000000, 0.3333333333333333],
-                    [0.5000000000000000, 0.3333333333333333],
-                ],
-                [
-                    [0.2500000000000000, 0.2000000000000000],
-                    [0.2000000000000000, 0.1666666666666667],
-                    [0.2000000000000000, 0.1666666666666667],
-                ],
-                [
-                    [1.000000000000000, 0.5000000000000000],
-                    [0.5000000000000000, 0.3333333333333333],
-                    [0.5000000000000000, 0.3333333333333333],
-                ],
+        let expect = arr3(&[
+            [
+                [0.0, 1.000000000000000],
+                [1.000000000000000, 0.5000000000000000],
+                [1.000000000000000, 0.5000000000000000],
             ],
-        );
+            [
+                [1.000000000000000, 0.5000000000000000],
+                [0.5000000000000000, 0.3333333333333333],
+                [0.5000000000000000, 0.3333333333333333],
+            ],
+            [
+                [0.2500000000000000, 0.2000000000000000],
+                [0.2000000000000000, 0.1666666666666667],
+                [0.2000000000000000, 0.1666666666666667],
+            ],
+            [
+                [1.000000000000000, 0.5000000000000000],
+                [0.5000000000000000, 0.3333333333333333],
+                [0.5000000000000000, 0.3333333333333333],
+            ],
+        ]);
 
         println!("{}", inorm);
 
         for (v, e) in inorm.iter().zip(expect.iter()) {
             assert!(equal_floats(v.re, *e), "{} != {}", v.re, *e);
         }
-
     }
 
 }

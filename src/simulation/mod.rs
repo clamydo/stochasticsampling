@@ -2,8 +2,8 @@
 //! the simulation.
 
 pub mod distribution;
-pub mod integrators;
 pub mod grid_width;
+pub mod integrators;
 pub mod output;
 pub mod particle;
 pub mod settings;
@@ -253,10 +253,7 @@ impl Simulation {
                         y: StandardNormal::rand(&mut rng).0,
                         z: StandardNormal::rand(&mut rng).0,
                         axis_angle: TWOPI * between.ind_sample(&mut rng),
-                        rotate_angle: rayleigh_pdf(
-                            rot_diff,
-                            between.ind_sample(&mut rng),
-                        ),
+                        rotate_angle: rayleigh_pdf(rot_diff, between.ind_sample(&mut rng)),
                     };
                 }
             });
