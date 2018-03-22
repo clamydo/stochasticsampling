@@ -47,6 +47,7 @@ pub struct IntegrationParameter {
     pub timestep: f64,
     pub trans_diffusion: f64,
     pub magnetic_reorientation: f64,
+    pub poiseuille_flow_strength: f64,
 }
 
 /// Holds precomuted values
@@ -295,6 +296,12 @@ impl Integrator {
         // orientation vector of `n`
         let vector = [sin_theta * cos_phi, sin_theta * sin_phi, cos_theta];
 
+        let poiseuille_flow_direction = if param.poiseuille_flow_strength.abs() > 0. && p.position.x < self.box_size.x / 2. {
+            -1.0
+        } else {
+            1.0
+        };
+
         // Evolve particle position.
         p.position.x += (flow_x + vector[0]) * param.timestep + param.trans_diffusion * rv.x;
         p.position.y += (flow_y + vector[1]) * param.timestep + param.trans_diffusion * rv.y;
@@ -343,7 +350,8 @@ impl Integrator {
         p.orientation.from_vector_mut(&new_vector);
 
         // influence of magnetic field pointing in z-direction
-        p.orientation.theta -= param.magnetic_reorientation * sin_theta * param.timestep;
+        //
+        p.orientation.theta -= poiseuille_flow_direction * param.magnetic_reorientation * sin_theta * param.timestep;
 
         // IMPORTANT: apply periodic boundary condition
         p.pbc(self.box_size);
@@ -600,7 +608,7 @@ mod tests {
         use std::fs::File;
 
         let mut f = File::open("test/flowfield/ff_test.bincode").unwrap();
-        let cache_ff: FlowField3D = bincode::deserialize_from(&mut f, ::bincode::Infinite).unwrap();
+        let cache_ff: FlowField3D = bincode::deserialize_from(&mut f).unwrap();
 
         let bs = BoxSize {
             x: 11.,

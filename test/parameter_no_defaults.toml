@@ -20,6 +20,7 @@
 
 [parameters]
     magnetic_reorientation = 1.0
+    poiseuille_flow_strength = 12.3
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0

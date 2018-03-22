@@ -10,7 +10,7 @@ pub mod settings;
 
 use self::distribution::Distribution;
 use self::grid_width::GridWidth;
-use self::integrators::flowfield::FlowField3D;
+use self::integrators::flowfield::{create_poiseuille_flow_quasi2d, FlowField3D};
 use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator, RandomVector};
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
@@ -28,6 +28,7 @@ use std::str::FromStr;
 
 struct ValueCache {
     rot_diff: f64,
+    poiseuille_flow: FlowField3D,
 }
 
 /// Main data structure representing the simulation.
@@ -81,6 +82,7 @@ impl Simulation {
             rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             stress: scaled_stress_prefactors,
             magnetic_reorientation: param.magnetic_reorientation,
+            poiseuille_flow_strength: param.poiseuille_flow_strength,
         };
 
         let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
@@ -131,6 +133,12 @@ impl Simulation {
             state: state,
             vcache: ValueCache {
                 rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+                poiseuille_flow: create_poiseuille_flow_quasi2d(
+                    sim.grid_size,
+                    GridWidth::new(sim.grid_size, sim.box_size),
+                    sim.box_size,
+                    param.poiseuille_flow_strength,
+                ),
             },
         }
     }
@@ -235,6 +243,7 @@ impl Simulation {
         // Calculate flow field from distribution.
         self.state.flow_field = self.integrator
             .calculate_flow_field(&self.state.distribution);
+        self.state.flow_field += &(self.vcache.poiseuille_flow);
 
         let between = Range::new(0f64, 1.);
 

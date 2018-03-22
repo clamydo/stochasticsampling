@@ -66,6 +66,7 @@ pub struct Parameters {
     pub stress: StressPrefactors,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
+    pub poiseuille_flow_strength: f64,
 }
 
 /// Holds output configuration
@@ -244,6 +245,7 @@ mod tests {
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
+        assert_eq!(settings.parameters.poiseuille_flow_strength, 12.3);
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {
