@@ -110,7 +110,6 @@ impl Particle {
         let mut rng: Pcg64 = SeedableRng::from_seed(seed);
         let between = Range::new(0f64, 1.);
 
-
         for _ in 0..n {
             particles.push(Particle::new(
                 bs.x * between.ind_sample(&mut rng),
@@ -134,7 +133,6 @@ impl Particle {
         let mut rng: Pcg64 = SeedableRng::from_seed(seed);
         let between = Range::new(0f64, 1.);
 
-
         for _ in 0..n {
             particles.push(Particle::new(
                 bs.x * between.ind_sample(&mut rng),
@@ -148,9 +146,7 @@ impl Particle {
 
         particles
     }
-
 }
-
 
 pub fn pdf_sin(x: f64) -> f64 {
     (1. - x).acos()
@@ -183,15 +179,13 @@ impl<'de> Deserialize<'de> for Particle {
     where
         D: Deserializer<'de>,
     {
-        Deserialize::deserialize(deserializer).map(|(px, py, pz, op, ot)| {
-            Particle {
-                position: Position {
-                    x: px,
-                    y: py,
-                    z: pz,
-                },
-                orientation: Orientation { phi: op, theta: ot },
-            }
+        Deserialize::deserialize(deserializer).map(|(px, py, pz, op, ot)| Particle {
+            position: Position {
+                x: px,
+                y: py,
+                z: pz,
+            },
+            orientation: Orientation { phi: op, theta: ot },
         })
     }
 }
@@ -223,7 +217,6 @@ mod tests {
 
     #[test]
     fn test_modulo() {
-
         let input = [
             [2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI],
             [-4.440892098500626e-16, 2. * ::std::f64::consts::PI],
@@ -245,7 +238,6 @@ mod tests {
 
     #[test]
     fn test_ang_pbc() {
-
         let input = [[1., 0.], [1., PI], [1., -0.1], [1., PI + 0.1]];
         let expect = [
             [1., 0.],

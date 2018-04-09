@@ -6,7 +6,6 @@ use super::settings::GridSize;
 use ndarray::{Array, Ix, Ix5};
 use std::ops::Index;
 
-
 /// Holds a normalised sampled distribution function on a grid, assuming the
 /// sampling points to be centered in a grid cell. This means, that the value
 /// at position `x_j` (for `j=0,...,N-1`, on a grid with `N` cells and `x_0 =
@@ -26,7 +25,6 @@ type GridCoordinate = [Ix; 5];
 impl Distribution {
     /// Returns a zero initialised instance of Distribution.
     pub fn new(grid: GridSize, grid_width: GridWidth) -> Distribution {
-
         let grid = [grid.x, grid.y, grid.z, grid.phi, grid.theta];
 
         Distribution {
@@ -53,8 +51,8 @@ impl Distribution {
     /// excluding the right border.
     pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
         debug_assert!(
-            p.position.x >= 0. && p.position.y >= 0. && p.position.z >= 0. &&
-                p.orientation.phi >= 0. && p.orientation.theta >= 0.,
+            p.position.x >= 0. && p.position.y >= 0. && p.position.z >= 0.
+                && p.orientation.phi >= 0. && p.orientation.theta >= 0.,
             "Got negative position or orientation {:?}",
             p
         );
@@ -69,8 +67,8 @@ impl Distribution {
         let gy = (p.position.y / self.grid_width.y).floor() as Ix;
         let gz = (p.position.z / self.grid_width.z).floor() as Ix;
         let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
-        let gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix %
-            self.dist.dim().4;
+        let gtheta =
+            (p.orientation.theta / self.grid_width.theta).floor() as Ix % self.dist.dim().4;
 
         // trust in positions are in bound of PBC
         [gx, gy, gz, gphi, gtheta]
@@ -120,7 +118,6 @@ impl Distribution {
     }
 }
 
-
 /// Implement index operator that wraps around for periodic boundaries.
 impl Index<[i32; 5]> for Distribution {
     type Output = f64;
@@ -142,7 +139,6 @@ impl Index<[i32; 5]> for Distribution {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -316,13 +312,11 @@ mod tests {
             [25, 25, 0, 9, 0],
         ];
 
-
         for (i, o) in input.iter().zip(result.iter()) {
             let p = Particle::new(i[0], i[1], i[2], i[3], i[4], box_size);
 
             check(i, o, p, grid_size, box_size);
         }
-
     }
 
     #[test]
@@ -342,7 +336,6 @@ mod tests {
         let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
 
         d.dist[[1, 2, 0, 1, 0]] = 42.;
-
 
         assert_eq!(d[[1, 2, 0, 1, 0]], 42.);
         assert_eq!(d[[-1, 2, 0, 1, 0]], 42.);

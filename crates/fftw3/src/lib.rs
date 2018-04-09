@@ -1,16 +1,16 @@
 #![feature(custom_derive)]
-#![feature(unique)]
+#![feature(unique, ptr_internals)]
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
-extern crate num;
 extern crate ndarray;
+extern crate num;
 
+pub mod fft;
 mod fftw3_ffi;
 pub mod fftw_ndarray;
-pub mod fft;
 
 #[cfg(test)]
 mod tests {
@@ -80,7 +80,7 @@ mod tests {
             assert!(
                 diff.im.abs() <= EPSILON,
                 "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
-                     = {:e}",
+                 = {:e}",
                 diff.im.abs(),
                 EPSILON
             );
@@ -146,11 +146,10 @@ mod tests {
             assert!(
                 diff.im.abs() <= EPSILON,
                 "Difference of imaginary parts: {:e} should be smaller than machine EPSILON \
-                     = {:e}",
+                 = {:e}",
                 diff.im.abs(),
                 EPSILON
             );
-
         }
     }
 }

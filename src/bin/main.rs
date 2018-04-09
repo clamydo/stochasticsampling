@@ -10,9 +10,9 @@ extern crate env_logger;
 extern crate error_chain;
 #[macro_use]
 extern crate log;
+extern crate lzma;
 extern crate pbr;
 extern crate rmp_serde;
-extern crate lzma;
 extern crate serde;
 extern crate serde_cbor;
 extern crate stochasticsampling;
@@ -37,7 +37,6 @@ use std::path::Path;
 use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::output::OutputEntry;
 use stochasticsampling::simulation::settings::{self, Settings};
-
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
@@ -70,7 +69,6 @@ fn main() {
     ::std::process::exit(0);
 }
 
-
 /// Main function
 fn run() -> Result<()> {
     // Parse command line
@@ -101,17 +99,16 @@ fn run() -> Result<()> {
         InitType::File
     };
 
-
     let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
     let path = OutputPath::new(output_dir, &settings.environment.prefix);
 
-    let mut simulation = init::init_simulation(&settings, init_type).chain_err(
-        || "Error during initialization of simulation.",
-    )?;
+    let mut simulation = init::init_simulation(&settings, init_type)
+        .chain_err(|| "Error during initialization of simulation.")?;
 
     let show_progress = cli_matches.is_present("progress_bar");
 
-    path.create().chain_err(|| "Cannot create output directory")?;
+    path.create()
+        .chain_err(|| "Cannot create output directory")?;
 
     let worker = Worker::new(
         settings.environment.io_queue_size,
@@ -119,9 +116,9 @@ fn run() -> Result<()> {
         settings.environment.output_format,
     ).chain_err(|| "Unable to create output thread.")?;
 
-    worker.write_metadata(settings.clone()).chain_err(
-        || "Unable to write metadata to output.",
-    )?;
+    worker
+        .write_metadata(settings.clone())
+        .chain_err(|| "Unable to write metadata to output.")?;
 
     Ok(run_simulation(
         &settings,
@@ -131,7 +128,6 @@ fn run() -> Result<()> {
     )?)
 }
 
-
 /// Spawns output thread and run simulation.
 fn run_simulation(
     settings: &Settings,
@@ -139,8 +135,6 @@ fn run_simulation(
     out: Worker,
     show_progress: bool,
 ) -> Result<()> {
-
-
     if settings.simulation.output_at_timestep.initial_condition {
         info!("Saving initial condition.");
         let mut initial = OutputEntry::default();
@@ -156,9 +150,8 @@ fn run_simulation(
             None
         };
 
-        out.append(initial).chain_err(
-            || "Unable to append initial condition.",
-        )?;
+        out.append(initial)
+            .chain_err(|| "Unable to append initial condition.")?;
     }
 
     let mut pb = ProgressBar::new(settings.simulation.number_of_timesteps as u64);
@@ -176,7 +169,6 @@ fn run_simulation(
     let timestep_start = simulation.get_timestep() + 1;
     let n = settings.simulation.number_of_timesteps + timestep_start;
 
-
     let start_time = time::now();
 
     // Run the simulation and send data to asynchronous to the IO-thread.
@@ -192,24 +184,31 @@ fn run_simulation(
                 .simulation
                 .output_at_timestep
                 .distribution
-                .and_then(|x| if timestep % x == 0 {
-                    info!("Timestep {}: Save distribution...", timestep);
-                    Some(simulation.get_distribution())
-                } else {
-                    None
+                .and_then(|x| {
+                    if timestep % x == 0 {
+                        info!("Timestep {}: Save distribution...", timestep);
+                        Some(simulation.get_distribution())
+                    } else {
+                        None
+                    }
                 }),
-            flowfield: settings.simulation.output_at_timestep.flowfield.and_then(
-                |x| {
+            flowfield: settings
+                .simulation
+                .output_at_timestep
+                .flowfield
+                .and_then(|x| {
                     if timestep % x == 0 {
                         info!("Timestep {}: Save flow-field...", timestep);
                         Some(simulation.get_flow_field())
                     } else {
                         None
                     }
-                },
-            ),
-            particles: settings.simulation.output_at_timestep.particles.and_then(
-                |x| {
+                }),
+            particles: settings
+                .simulation
+                .output_at_timestep
+                .particles
+                .and_then(|x| {
                     if timestep % x == 0 {
                         info!("Timestep {}: Save particles...", timestep);
                         settings
@@ -221,8 +220,7 @@ fn run_simulation(
                     } else {
                         None
                     }
-                },
-            ),
+                }),
             timestep: timestep,
         };
 
@@ -250,9 +248,8 @@ fn run_simulation(
 
     if settings.simulation.output_at_timestep.final_snapshot {
         let snapshot = simulation.get_snapshot();
-        out.write_snapshot(snapshot).chain_err(
-            || "Error writing last snapshot.",
-        )?;
+        out.write_snapshot(snapshot)
+            .chain_err(|| "Error writing last snapshot.")?;
     }
 
     print!("Writing buffer to disk… ");
@@ -264,7 +261,10 @@ fn run_simulation(
 
     let stop_time = time::now();
     let duration = stop_time - start_time;
-    println!("Elapsed time: {}", timedisplay::pretty_print_duration(duration));
+    println!(
+        "Elapsed time: {}",
+        timedisplay::pretty_print_duration(duration)
+    );
 
     Ok(())
 }

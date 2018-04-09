@@ -15,7 +15,6 @@ pub fn pretty_print_duration(d: Duration) -> String {
     )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -23,15 +22,15 @@ mod tests {
     #[test]
     fn test_pretty_print_duration() {
         // all vaues in seconds
-        let d = Duration::days(5) + Duration::hours(14) + Duration::minutes(57) +
-            Duration::seconds(14);
+        let d =
+            Duration::days(5) + Duration::hours(14) + Duration::minutes(57) + Duration::seconds(14);
         assert_eq!(
             "5 days 14 hours 57 minutes 14 seconds",
             pretty_print_duration(d)
         );
 
-        let d = Duration::days(0) + Duration::hours(25) + Duration::minutes(57) +
-            Duration::seconds(14);
+        let d =
+            Duration::days(0) + Duration::hours(25) + Duration::minutes(57) + Duration::seconds(14);
         assert_eq!(
             "1 days 1 hours 57 minutes 14 seconds",
             pretty_print_duration(d)

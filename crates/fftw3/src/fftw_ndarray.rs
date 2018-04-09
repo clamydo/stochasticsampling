@@ -1,4 +1,3 @@
-
 use ndarray::{ArrayViewMut, Ix2, Ix3};
 use num::Complex;
 use std::mem;
@@ -11,14 +10,13 @@ pub struct FFTData2D<'a> {
     pub data: ArrayViewMut<'a, Complex<f64>, Ix2>,
 }
 
-
 impl<'a> FFTData2D<'a> {
     /// Return a new FFTData2 instance. Only considers the first
     pub fn new(shape: Ix2) -> FFTData2D<'a> {
         let data;
         unsafe {
-            let ptr = ::fftw3_ffi::fftw_malloc(shape[0] * shape[1] *
-                                               mem::size_of::<Complex<f64>>());
+            let ptr =
+                ::fftw3_ffi::fftw_malloc(shape[0] * shape[1] * mem::size_of::<Complex<f64>>());
             data = ArrayViewMut::from_shape_ptr(shape, ptr as *mut Complex<f64>);
         }
 
@@ -33,7 +31,6 @@ impl<'a> Drop for FFTData2D<'a> {
     }
 }
 
-
 /// FFTW3 allocated `ArrayView` for 3D data.
 ///
 /// The memory is allocated by FFTW3 in order to align it properly. This is
@@ -42,14 +39,14 @@ pub struct FFTData3D<'a> {
     pub data: ArrayViewMut<'a, Complex<f64>, Ix3>,
 }
 
-
 impl<'a> FFTData3D<'a> {
     /// Return a new FFTData2 instance. Only considers the first
     pub fn new(shape: Ix3) -> FFTData3D<'a> {
         let data;
         unsafe {
-            let ptr = ::fftw3_ffi::fftw_malloc(shape[0] * shape[1] * shape[2] *
-                                               mem::size_of::<Complex<f64>>());
+            let ptr = ::fftw3_ffi::fftw_malloc(
+                shape[0] * shape[1] * shape[2] * mem::size_of::<Complex<f64>>(),
+            );
             data = ArrayViewMut::from_shape_ptr(shape, ptr as *mut Complex<f64>);
         }
 

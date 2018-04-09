@@ -40,7 +40,6 @@ impl OutputPath {
     }
 }
 
-
 /// Returns an ID based on prefix, time, and version for simulation output
 fn create_output_id(prefix: &str) -> String {
     // Need to introduce placeholder `.msgpack`, since otherwise the patch version
@@ -54,12 +53,11 @@ fn create_output_id(prefix: &str) -> String {
     )
 }
 
-
 /// Creates own ouput directory in output path using id.
 fn create_output_dir(path: &Path) -> Result<()> {
-    DirBuilder::new().create(&path).chain_err(|| {
-        format!("Unable to create output directory '{}'", &path.display())
-    })
+    DirBuilder::new()
+        .create(&path)
+        .chain_err(|| format!("Unable to create output directory '{}'", &path.display()))
 }
 
 #[cfg(test)]

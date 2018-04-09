@@ -39,7 +39,6 @@ use simulation::settings::{BoxSize, GridSize, StressPrefactors};
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-
 /// Holds parameter needed for time step
 #[derive(Debug, Clone, Copy)]
 pub struct IntegrationParameter {
@@ -70,7 +69,6 @@ impl Integrator {
         box_size: BoxSize,
         parameter: IntegrationParameter,
     ) -> Integrator {
-
         let grid_width = GridWidth::new(grid_size, box_size);
 
         let mesh = get_k_mesh(grid_size, box_size);
@@ -101,9 +99,7 @@ impl Integrator {
             fft_plan_stress: Arc::new(plan_stress),
             fft_plan_flowfield: Arc::new(plan_ff),
         }
-
     }
-
 
     /// Calculates approximation of discretized stress kernel, to be used in
     /// the expectation value to obtain the stress tensor.
@@ -112,7 +108,6 @@ impl Integrator {
         grid_width: GridWidth,
         stress: StressPrefactors,
     ) -> Array<f64, Ix4> {
-
         let mut s = Array::<f64, _>::zeros((3, 3, grid_size.phi, grid_size.theta));
         // Calculate discrete angles, considering the cell centered sample points of
         // the distribution
@@ -123,7 +118,6 @@ impl Integrator {
 
         let a = stress.active;
         let b = stress.magnetic;
-
 
         for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
             for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
@@ -146,7 +140,6 @@ impl Integrator {
 
         s
     }
-
 
     /// Calculate flow field by convolving the Green's function of the stokes
     /// equation (Oseen tensor) with the stress field divergence (force
@@ -171,7 +164,6 @@ impl Integrator {
             gw: &GridWidth,
             plan: &Arc<FFTPlan>,
         ) -> Array<Complex<f64>, Ix5> {
-
             let dist_sh = dist.dim();
             let stress_sh = kernel.dim();
 
@@ -209,11 +201,10 @@ impl Integrator {
                 .into_shape((n_stress, dist_sh.0, dist_sh.1, dist_sh.2))
                 .unwrap();
 
-            stress_field.outer_iter_mut().into_par_iter().for_each(
-                |mut v| {
-                    plan.reexecute3d(&mut v)
-                },
-            );
+            stress_field
+                .outer_iter_mut()
+                .into_par_iter()
+                .for_each(|mut v| plan.reexecute3d(&mut v));
 
             stress_field
                 .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
@@ -230,24 +221,21 @@ impl Integrator {
             &self.fft_plan_stress.clone(),
         );
 
+        let sigmak = ((&stress_field * &self.k_mesh.view()).sum_axis(Axis(1))
+            * &self.k_inorm.view()) * Complex::new(0., 1.);
 
-        let sigmak = ((&stress_field * &self.k_mesh.view()).sum_axis(Axis(1)) *
-                          &self.k_inorm.view()) * Complex::new(0., 1.);
-
-
-        let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0)) *
-            &self.k_inorm.view();
+        let ksigmak =
+            (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0)) * &self.k_inorm.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
         let mut u = sigmak - &kksigmak.view();
 
-        u.outer_iter_mut().into_par_iter().for_each(|mut v| {
-            self.fft_plan_flowfield.reexecute3d(&mut v)
-        });
+        u.outer_iter_mut()
+            .into_par_iter()
+            .for_each(|mut v| self.fft_plan_flowfield.reexecute3d(&mut v));
 
         u.map(|v| v.re)
     }
-
 
     /// Updates a test particle configuration according to the given parameters.
     ///
@@ -269,7 +257,6 @@ impl Integrator {
         flow_field: &ArrayView<f64, Ix4>,
         vort: &ArrayView<f64, Ix4>,
     ) {
-
         debug_assert!(
             0. <= p.position.x && p.position.x < self.box_size.x,
             "x: {}",
@@ -293,7 +280,6 @@ impl Integrator {
         debug_assert!(0 <= ix && ix < self.grid_size.x as isize, "ix: {}", ix);
         debug_assert!(0 <= iy && iy < self.grid_size.y as isize, "iy: {}", iy);
         debug_assert!(0 <= iz && iz < self.grid_size.z as isize, "iz: {}", iz);
-
 
         let flow_x = flow_field[[0, ix as usize, iy as usize, iz as usize]];
         let flow_y = flow_field[[1, ix as usize, iy as usize, iz as usize]];
@@ -347,12 +333,12 @@ impl Integrator {
         let vort = vort.slice(s![.., ix..(ix + 1), iy..(iy + 1), iz..(iz + 1)]);
 
         // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
-        new_vector[0] += half_timestep *
-            (vort[[1, 0, 0, 0]] * vector[2] - vort[[2, 0, 0, 0]] * vector[1]);
-        new_vector[1] += half_timestep *
-            (vort[[2, 0, 0, 0]] * vector[0] - vort[[0, 0, 0, 0]] * vector[2]);
-        new_vector[2] += half_timestep *
-            (vort[[0, 0, 0, 0]] * vector[1] - vort[[1, 0, 0, 0]] * vector[0]);
+        new_vector[0] +=
+            half_timestep * (vort[[1, 0, 0, 0]] * vector[2] - vort[[2, 0, 0, 0]] * vector[1]);
+        new_vector[1] +=
+            half_timestep * (vort[[2, 0, 0, 0]] * vector[0] - vort[[0, 0, 0, 0]] * vector[2]);
+        new_vector[2] +=
+            half_timestep * (vort[[0, 0, 0, 0]] * vector[1] - vort[[1, 0, 0, 0]] * vector[0]);
 
         p.orientation.from_vector_mut(&new_vector);
 
@@ -368,7 +354,6 @@ impl Integrator {
         debug_assert!(p.orientation.phi.is_finite());
         debug_assert!(p.orientation.theta.is_finite());
     }
-
 
     pub fn evolve_particles_inplace<'a>(
         &self,
@@ -396,7 +381,6 @@ pub struct RandomVector {
     pub axis_angle: f64,
     pub rotate_angle: f64,
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -442,35 +426,27 @@ mod tests {
 
         let i = Integrator::new(gs, bs, int_param);
 
-        let should00 = arr2(
-            &[
-                [-0.3333333333333333, 0., 0.],
-                [0., 0.1666666666666667, -0.2071067811865475],
-                [0., 1.207106781186547, 0.1666666666666667],
-            ],
-        );
-        let should01 = arr2(
-            &[
-                [-0.3333333333333333, 0., 0.],
-                [0., 0.1666666666666667, 0.2071067811865475],
-                [0., -1.207106781186547, 0.1666666666666667],
-            ],
-        );
-        let should10 = arr2(
-            &[
-                [-0.3333333333333333, 0., 0.],
-                [0., 0.1666666666666667, -1.207106781186547],
-                [0., 0.2071067811865475, 0.1666666666666667],
-            ],
-        );
+        let should00 = arr2(&[
+            [-0.3333333333333333, 0., 0.],
+            [0., 0.1666666666666667, -0.2071067811865475],
+            [0., 1.207106781186547, 0.1666666666666667],
+        ]);
+        let should01 = arr2(&[
+            [-0.3333333333333333, 0., 0.],
+            [0., 0.1666666666666667, 0.2071067811865475],
+            [0., -1.207106781186547, 0.1666666666666667],
+        ]);
+        let should10 = arr2(&[
+            [-0.3333333333333333, 0., 0.],
+            [0., 0.1666666666666667, -1.207106781186547],
+            [0., 0.2071067811865475, 0.1666666666666667],
+        ]);
 
-        let should11 = arr2(
-            &[
-                [-0.3333333333333333, 0., 0.],
-                [0., 0.1666666666666667, 1.207106781186547],
-                [0., -0.2071067811865475, 0.1666666666666667],
-            ],
-        );
+        let should11 = arr2(&[
+            [-0.3333333333333333, 0., 0.],
+            [0., 0.1666666666666667, 1.207106781186547],
+            [0., -0.2071067811865475, 0.1666666666666667],
+        ]);
 
         fn round(a: f64, digit: i32) -> f64 {
             (a * 2f64.powi(digit)).round() * 2f64.powi(-digit)
@@ -489,7 +465,6 @@ mod tests {
         }
 
         assert_eq!(i.stress_kernel.dim(), (3, 3, 2, 2));
-
 
         println!("00");
         check(
@@ -527,7 +502,6 @@ mod tests {
                 .into_shape((3, 3))
                 .unwrap(),
         );
-
     }
     // #[test]
     // fn test_stress_expectation_value() {
@@ -622,9 +596,8 @@ mod tests {
     // Is for some reason not deterministic. Probably FFTW3 does select different
     // algorithms from time to time.
     fn test_calculate_flow_field_against_cache() {
-        use std::fs::File;
         use bincode;
-
+        use std::fs::File;
 
         let mut f = File::open("test/flowfield/ff_test.bincode").unwrap();
         let cache_ff: FlowField3D = bincode::deserialize_from(&mut f, ::bincode::Infinite).unwrap();
@@ -663,7 +636,7 @@ mod tests {
                 0.0,
                 ::std::f64::consts::PI / 2.,
                 ::std::f64::consts::PI / 2.,
-                bs
+                bs,
             ),
         ];
         let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
@@ -723,7 +696,9 @@ mod tests {
         d.sample_from(&p);
         d.dist *= bs.x * bs.y * bs.z;
 
-        b.iter(|| { ::test::black_box(i.calculate_flow_field(&d)); })
+        b.iter(|| {
+            ::test::black_box(i.calculate_flow_field(&d));
+        })
     }
 
     // #[test]
@@ -941,8 +916,6 @@ mod tests {
             rotate_angle: 0.1,
         };
 
-        b.iter(|| {
-            i.evolve_particle_inplace(&mut p, &r, &u.view(), &vort.view())
-        });
+        b.iter(|| i.evolve_particle_inplace(&mut p, &r, &u.view(), &vort.view()));
     }
 }

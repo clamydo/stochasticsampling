@@ -9,16 +9,17 @@
 #![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
-extern crate test;
-#[cfg(test)]
-extern crate quickcheck;
+extern crate bincode;
 #[cfg(test)]
 extern crate ndarray_rand;
 #[cfg(test)]
-extern crate bincode;
+extern crate quickcheck;
+#[cfg(test)]
+extern crate test;
 
 #[macro_use]
 extern crate error_chain;
+extern crate extprim;
 extern crate fftw3;
 #[macro_use(s)]
 extern crate ndarray;
@@ -33,7 +34,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate toml;
-
 
 pub mod consts;
 pub mod simulation;

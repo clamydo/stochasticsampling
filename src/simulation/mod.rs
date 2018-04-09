@@ -2,8 +2,8 @@
 //! the simulation.
 
 pub mod distribution;
-pub mod integrators;
 pub mod grid_width;
+pub mod integrators;
 pub mod output;
 pub mod particle;
 pub mod settings;
@@ -15,11 +15,16 @@ use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator, Random
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use consts::TWOPI;
+use extprim;
 use ndarray::Array;
 use pcg_rand::Pcg64;
 use rand::{Rand, SeedableRng};
 use rand::distributions::{IndependentSample, Range};
 use rand::distributions::normal::StandardNormal;
+use rayon;
+use rayon::prelude::*;
+use std::env;
+use std::str::FromStr;
 
 struct ValueCache {
     rot_diff: f64,
@@ -33,18 +38,16 @@ pub struct Simulation {
     vcache: ValueCache,
 }
 
-
 /// Holds the current state of the simulation.
 struct SimulationState {
     distribution: Distribution,
     flow_field: FlowField3D,
     particles: Vec<Particle>,
     random_samples: Vec<RandomVector>,
-    rng: Pcg64,
+    rng: Vec<Pcg64>,
     /// count timesteps
     timestep: usize,
 }
-
 
 /// Seed of PCG PRNG
 type Pcg64Seed = [u64; 4];
@@ -53,11 +56,10 @@ type Pcg64Seed = [u64; 4];
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     particles: Vec<Particle>,
-    rng_seed: Pcg64Seed,
+    rng_seed: Vec<Pcg64Seed>,
     /// current timestep number
     timestep: usize,
 }
-
 
 impl Simulation {
     /// Return a new simulation data structure, holding the state of the
@@ -83,9 +85,23 @@ impl Simulation {
 
         let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
 
-
         // normal distribution with variance timestep
         let seed = [sim.seed[0], sim.seed[1]];
+
+        let num_threads = env::var("RAYON_NUM_THREADS")
+            .ok()
+            .and_then(|s| usize::from_str(&s).ok())
+            .expect("No environment variable 'RAYON_NUM_THREADS' set.");
+
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build_global()
+            .unwrap();
+
+        let rng = (0..num_threads)
+            .into_iter()
+            .map(|i| SeedableRng::from_seed([seed[0] + i as u64, seed[1] + i as u64]))
+            .collect();
 
         // initialize state with zeros
         let state = SimulationState {
@@ -105,7 +121,7 @@ impl Simulation {
                 };
                 sim.number_of_particles
             ],
-            rng: SeedableRng::from_seed(seed),
+            rng: rng,
             timestep: 0,
         };
 
@@ -124,11 +140,10 @@ impl Simulation {
         assert!(
             particles.len() == self.settings.simulation.number_of_particles,
             "Given initial condition has not the same number of particles ({}) as given in \
-                 the parameter file ({}).",
+             the parameter file ({}).",
             particles.len(),
             self.settings.simulation.number_of_particles
         );
-
 
         let bs = self.settings.simulation.box_size;
 
@@ -151,11 +166,10 @@ impl Simulation {
         // Do a first sampling, so that the initial condition can also be obtained
         self.state.distribution.sample_from(&self.state.particles);
 
-        self.state.distribution.dist *= self.settings.simulation.box_size.x *
-            self.settings.simulation.box_size.y *
-            self.settings.simulation.box_size.z;
+        self.state.distribution.dist *= self.settings.simulation.box_size.x
+            * self.settings.simulation.box_size.y
+            * self.settings.simulation.box_size.z;
     }
-
 
     /// Resumes from a given snapshot
     pub fn resume(&mut self, snapshot: Snapshot) {
@@ -163,17 +177,22 @@ impl Simulation {
 
         // Reset timestep
         self.state.timestep = snapshot.timestep;
-        self.state.rng.reseed(snapshot.rng_seed);
+        for (r, s) in self.state.rng.iter_mut().zip(snapshot.rng_seed) {
+            r.reseed(s);
+        }
     }
 
     /// Returns a fill Snapshot
     pub fn get_snapshot(&self) -> Snapshot {
-        let seed = self.state.rng.extract_seed();
+        let seed: Vec<[extprim::u128::u128; 2]> =
+            self.state.rng.iter().map(|r| r.extract_seed()).collect();
 
         Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
-            rng_seed: [seed[0].lo, seed[0].hi, seed[1].lo, seed[1].hi],
+            rng_seed: seed.iter()
+                .map(|s| [s[0].lo, s[0].hi, s[1].lo, s[1].hi])
+                .collect(),
             timestep: self.state.timestep,
         }
     }
@@ -204,36 +223,54 @@ impl Simulation {
         self.state.timestep
     }
 
-
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
-        self.state.distribution.dist *= self.settings.simulation.box_size.x *
-            self.settings.simulation.box_size.y *
-            self.settings.simulation.box_size.z;
+        self.state.distribution.dist *= self.settings.simulation.box_size.x
+            * self.settings.simulation.box_size.y
+            * self.settings.simulation.box_size.z;
 
         // Calculate flow field from distribution.
-        self.state.flow_field = self.integrator.calculate_flow_field(
-            &self.state.distribution,
-        );
+        self.state.flow_field = self.integrator
+            .calculate_flow_field(&self.state.distribution);
 
         let between = Range::new(0f64, 1.);
 
-        // Generate all needed random numbers here. Makes parallelization easier.
-        for r in &mut self.state.random_samples {
-            *r = RandomVector {
-                x: StandardNormal::rand(&mut self.state.rng).0,
-                y: StandardNormal::rand(&mut self.state.rng).0,
-                z: StandardNormal::rand(&mut self.state.rng).0,
-                axis_angle: TWOPI * between.ind_sample(&mut self.state.rng),
-                rotate_angle: rayleigh_pdf(
-                    self.vcache.rot_diff,
-                    between.ind_sample(&mut self.state.rng),
-                ),
-            };
-        }
+        let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
+
+        let rot_diff = self.vcache.rot_diff;
+
+        self.state
+            .random_samples
+            .par_chunks_mut(chunksize)
+            .zip(self.state.rng.par_iter_mut())
+            .for_each(|(c, mut rng)| {
+                for r in c.iter_mut() {
+                    *r = RandomVector {
+                        x: StandardNormal::rand(&mut rng).0,
+                        y: StandardNormal::rand(&mut rng).0,
+                        z: StandardNormal::rand(&mut rng).0,
+                        axis_angle: TWOPI * between.ind_sample(&mut rng),
+                        rotate_angle: rayleigh_pdf(rot_diff, between.ind_sample(&mut rng)),
+                    };
+                }
+            });
+
+        // // Generate all needed random numbers here. Makes parallelization easier.
+        // for r in &mut self.state.random_samples {
+        //     *r = RandomVector {
+        //         x: StandardNormal::rand(&mut self.state.rng).0,
+        //         y: StandardNormal::rand(&mut self.state.rng).0,
+        //         z: StandardNormal::rand(&mut self.state.rng).0,
+        //         axis_angle: TWOPI * between.ind_sample(&mut self.state.rng),
+        //         rotate_angle: rayleigh_pdf(
+        //             self.vcache.rot_diff,
+        //             between.ind_sample(&mut self.state.rng),
+        //         ),
+        //     };
+        // }
 
         // Update particle positions
         self.integrator.evolve_particles_inplace(
@@ -247,7 +284,6 @@ impl Simulation {
         self.state.timestep
     }
 }
-
 
 fn rayleigh_pdf(sigma: f64, x: f64) -> f64 {
     sigma * f64::sqrt(-2. * f64::ln(1. - x))

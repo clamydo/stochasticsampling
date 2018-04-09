@@ -5,7 +5,6 @@ use std::ptr::Unique;
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 
-
 /// Wrapper to manage the state of an FFTW3 plan.
 pub struct FFTPlan {
     plan: Unique<::fftw3_ffi::fftw_plan_s>,
@@ -38,7 +37,6 @@ impl FFTPlan {
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
-
         let (n0, n1) = ina.dim();
         let inp = ina.as_ptr() as *mut FFTWComplex;
         let outp = outa.as_ptr() as *mut FFTWComplex;
@@ -70,7 +68,6 @@ impl FFTPlan {
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
-
         let (n0, n1) = arr.dim();
         let p = arr.as_ptr() as *mut FFTWComplex;
 
@@ -100,7 +97,6 @@ impl FFTPlan {
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
-
         let (n0, n1, n2) = ina.dim();
         let inp = ina.as_ptr() as *mut FFTWComplex;
         let outp = outa.as_ptr() as *mut FFTWComplex;
@@ -133,7 +129,6 @@ impl FFTPlan {
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
-
         let (n0, n1, n2) = arr.dim();
         let p = arr.as_ptr() as *mut FFTWComplex;
 
@@ -164,7 +159,6 @@ impl FFTPlan {
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
-
         let dim = arr.dim();
         let p = arr.as_ptr() as *mut FFTWComplex;
 
@@ -183,7 +177,6 @@ impl FFTPlan {
 
         Unique::new(plan).map(|p| FFTPlan { plan: p })
     }
-
 
     /// Execute FFTW# plan for associated given input and output.
     pub fn execute(&self) {
