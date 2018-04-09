@@ -600,7 +600,7 @@ mod tests {
         use std::fs::File;
 
         let mut f = File::open("test/flowfield/ff_test.bincode").unwrap();
-        let cache_ff: FlowField3D = bincode::deserialize_from(&mut f, ::bincode::Infinite).unwrap();
+        let cache_ff: FlowField3D = bincode::deserialize_from(&mut f).unwrap();
 
         let bs = BoxSize {
             x: 11.,
