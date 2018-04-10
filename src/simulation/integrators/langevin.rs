@@ -21,23 +21,14 @@
 //! field is now calculated using contributions of every other cell but the
 //! cell itself.
 
-use super::fft_helper::{get_inverse_norm_squared, get_k_mesh};
-use super::flowfield::FlowField3D;
-use super::flowfield::vorticity3d_dispatch;
-use consts::TWOPI;
-use fftw3::fft;
-use fftw3::fft::FFTPlan;
-use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, IxDyn};
+use simulation::vector_analysis::vorticity::vorticity3d_dispatch;
+use ndarray::{ArrayView, Ix4};
 use ndarray_parallel::prelude::*;
-use num::Complex;
 use quaternion;
 use rayon::prelude::*;
-use simulation::distribution::Distribution;
-use simulation::grid_width::GridWidth;
+use simulation::mesh::grid_width::GridWidth;
 use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize, StressPrefactors};
-use std::f64::consts::PI;
-use std::sync::Arc;
 
 /// Holds parameter needed for time step
 #[derive(Debug, Clone, Copy)]
@@ -54,12 +45,7 @@ pub struct Integrator {
     box_size: BoxSize,
     grid_size: GridSize,
     grid_width: GridWidth,
-    k_inorm: Array<Complex<f64>, Ix3>,
-    k_mesh: Array<Complex<f64>, Ix4>,
-    stress_kernel: Array<f64, Ix4>,
     parameter: IntegrationParameter,
-    fft_plan_stress: Arc<FFTPlan>,
-    fft_plan_flowfield: Arc<FFTPlan>,
 }
 
 impl Integrator {
@@ -71,171 +57,15 @@ impl Integrator {
     ) -> Integrator {
         let grid_width = GridWidth::new(grid_size, box_size);
 
-        let mesh = get_k_mesh(grid_size, box_size);
-
-        let mut dummy: Array<Complex<f64>, IxDyn> =
-            Array::default(IxDyn(&[grid_size.x, grid_size.y, grid_size.z]));
-        let plan_stress = FFTPlan::new_c2c_inplace_3d_dyn(
-            &mut dummy.view_mut(),
-            fft::FFTDirection::Forward,
-            fft::FFTFlags::Measure,
-        ).unwrap();
-
-        let mut dummy = Array::default([grid_size.x, grid_size.y, grid_size.z]);
-        let plan_ff = FFTPlan::new_c2c_inplace_3d(
-            &mut dummy.view_mut(),
-            fft::FFTDirection::Backward,
-            fft::FFTFlags::Measure,
-        ).unwrap();
-
         Integrator {
             box_size: box_size,
             grid_size: grid_size,
             grid_width: grid_width,
-            k_inorm: get_inverse_norm_squared(mesh.view()),
-            k_mesh: mesh,
             parameter: parameter,
-            stress_kernel: Integrator::calc_stress_kernel(grid_size, grid_width, parameter.stress),
-            fft_plan_stress: Arc::new(plan_stress),
-            fft_plan_flowfield: Arc::new(plan_ff),
         }
     }
 
-    /// Calculates approximation of discretized stress kernel, to be used in
-    /// the expectation value to obtain the stress tensor.
-    fn calc_stress_kernel(
-        grid_size: GridSize,
-        grid_width: GridWidth,
-        stress: StressPrefactors,
-    ) -> Array<f64, Ix4> {
-        let mut s = Array::<f64, _>::zeros((3, 3, grid_size.phi, grid_size.theta));
-        // Calculate discrete angles, considering the cell centered sample points of
-        // the distribution
-        let gw_half_phi = grid_width.phi / 2.;
-        let gw_half_theta = grid_width.theta / 2.;
-        let angles_phi = Array::linspace(0. + gw_half_phi, TWOPI - gw_half_phi, grid_size.phi);
-        let angles_theta = Array::linspace(0. + gw_half_theta, PI - gw_half_theta, grid_size.theta);
 
-        let a = stress.active;
-        let b = stress.magnetic;
-
-        for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
-            for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
-                e[[0, 0]] = a * (-(1. / 3.) + phi.cos() * phi.cos() * theta.sin() * theta.sin());
-                e[[0, 1]] = phi.cos() * theta.sin() * (b + a * theta.sin() * phi.sin());
-                e[[0, 2]] = a * theta.cos() * phi.cos() * theta.sin();
-
-                e[[1, 0]] = phi.cos() * theta.sin() * (-b + a * theta.sin() * phi.sin());
-                e[[1, 1]] = a * (-(1. / 3.) + theta.sin() * theta.sin() * phi.sin() * phi.sin());
-                e[[1, 2]] = theta.cos() * (-b + a * theta.sin() * phi.sin());
-
-                e[[2, 0]] = a * theta.cos() * phi.cos() * theta.sin();
-                e[[2, 1]] = theta.cos() * (b + a * theta.sin() * phi.sin());
-                e[[2, 2]] = a * (-(1. / 3.) + theta.cos() * theta.cos());
-
-                // Already taken care of by the modified cell average in the distribution code
-                // e *= theta.sin();
-            }
-        }
-
-        s
-    }
-
-    /// Calculate flow field by convolving the Green's function of the stokes
-    /// equation (Oseen tensor) with the stress field divergence (force
-    /// density).
-    ///
-    /// Given the continuous Fourier coefficient `F[f][k]`` of a function `f`,
-    /// a periodicity `T` and a sampling `f_n = f(dx n)` with step width `dx`,
-    /// the DFT of `f_n` is given by
-    /// ```latex
-    ///     DFT[f_n] = N 2 pi / T F[f][2 pi / T k]
-    /// ```
-    /// Which means,
-    /// ```latex
-    ///     f_n = IDFT[DFT[f_n]]
-    ///     = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
-    /// ```
-    pub fn calculate_flow_field(&self, dist: &Distribution) -> FlowField3D {
-        fn fft_stress(
-            kernel: &ArrayView<f64, Ix4>,
-            dist: &ArrayView<f64, Ix5>,
-            gs: &GridSize,
-            gw: &GridWidth,
-            plan: &Arc<FFTPlan>,
-        ) -> Array<Complex<f64>, Ix5> {
-            let dist_sh = dist.dim();
-            let stress_sh = kernel.dim();
-
-            let n_angle = dist_sh.3 * dist_sh.4;
-            let n_stress = stress_sh.0 * stress_sh.1;
-            let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
-
-            // Put axis in order, so that components fields are continuous in memory,
-            // so it can be passed to FFTW easily
-            let stress = kernel.into_shape([n_stress, n_angle]).unwrap();
-
-            let dist = dist.into_shape([n_dist, n_angle]).unwrap();
-
-            let len = n_stress * n_dist;
-            let mut uninit = Vec::with_capacity(len);
-            unsafe {
-                uninit.set_len(len);
-            }
-
-            let mut stress_field = Array::from_vec(uninit)
-                .into_shape((n_stress, n_dist))
-                .unwrap();
-
-            let norm = gw.phi * gw.theta / (gs.x as f64 * gs.y as f64 * gs.z as f64);
-
-            // Calculating the integral over the orientation. `norm` includes weights for
-            // integration and normalisation of DFT
-            for (s, mut o1) in stress.outer_iter().zip(stress_field.outer_iter_mut()) {
-                for (d, o2) in dist.outer_iter().zip(o1.iter_mut()) {
-                    *o2 = Complex::from(s.dot(&d) * norm)
-                }
-            }
-
-            let mut stress_field = stress_field
-                .into_shape((n_stress, dist_sh.0, dist_sh.1, dist_sh.2))
-                .unwrap();
-
-            stress_field
-                .outer_iter_mut()
-                .into_par_iter()
-                .for_each(|mut v| plan.reexecute3d(&mut v));
-
-            stress_field
-                .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
-                .unwrap()
-        }
-
-        let d = dist.dist.view();
-
-        let stress_field = fft_stress(
-            &self.stress_kernel.view(),
-            &d,
-            &self.grid_size,
-            &self.grid_width,
-            &self.fft_plan_stress.clone(),
-        );
-
-        let sigmak = ((&stress_field * &self.k_mesh.view()).sum_axis(Axis(1))
-            * &self.k_inorm.view()) * Complex::new(0., 1.);
-
-        let ksigmak =
-            (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0)) * &self.k_inorm.view();
-        let kksigmak = &self.k_mesh.view() * &ksigmak.view();
-
-        let mut u = sigmak - &kksigmak.view();
-
-        u.outer_iter_mut()
-            .into_par_iter()
-            .for_each(|mut v| self.fft_plan_flowfield.reexecute3d(&mut v));
-
-        u.map(|v| v.re)
-    }
 
     /// Updates a test particle configuration according to the given parameters.
     ///

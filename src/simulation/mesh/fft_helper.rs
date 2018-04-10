@@ -1,4 +1,4 @@
-use super::mesh::mesh3d;
+use super::mesh3d;
 use consts::TWOPI;
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
 use num::Complex;

@@ -1,9 +1,9 @@
 //! A representation for the probability distribution function.
 
-use super::grid_width::GridWidth;
-use super::particle::Particle;
-use super::settings::GridSize;
 use ndarray::{Array, Ix, Ix5};
+use simulation::mesh::grid_width::GridWidth;
+use simulation::particle::Particle;
+use simulation::settings::{BoxSize, GridSize};
 use std::ops::Index;
 
 /// Holds a normalised sampled distribution function on a grid, assuming the
@@ -18,24 +18,45 @@ pub struct Distribution {
     pub dist: Array<f64, Ix5>,
     /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
+    box_size: BoxSize,
+    grid_size: GridSize,
 }
 
 type GridCoordinate = [Ix; 5];
 
 impl Distribution {
     /// Returns a zero initialised instance of Distribution.
-    pub fn new(grid: GridSize, grid_width: GridWidth) -> Distribution {
-        let grid = [grid.x, grid.y, grid.z, grid.phi, grid.theta];
+    pub fn new(grid_size: GridSize, box_size: BoxSize) -> Distribution {
+        let grid = [
+            grid_size.x,
+            grid_size.y,
+            grid_size.z,
+            grid_size.phi,
+            grid_size.theta,
+        ];
+        let grid_width = GridWidth::new(grid_size, box_size);
 
         Distribution {
             dist: Array::default(grid),
             grid_width: grid_width,
+            box_size: box_size,
+            grid_size: grid_size,
         }
     }
 
     /// Returns the width of on cell for every axis
     pub fn get_grid_width(&self) -> GridWidth {
         self.grid_width
+    }
+
+    /// Returns the box dimensions
+    pub fn get_box_size(&self) -> BoxSize {
+        self.box_size
+    }
+
+    /// Returns grid size
+    pub fn get_grid_size(&self) -> GridSize {
+        self.grid_size
     }
 
     pub fn dim(&self) -> (Ix, Ix, Ix, Ix, Ix) {

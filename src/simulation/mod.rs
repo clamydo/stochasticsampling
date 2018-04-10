@@ -2,25 +2,27 @@
 //! the simulation.
 
 pub mod distribution;
-pub mod grid_width;
+pub mod flowfield;
 pub mod integrators;
+pub mod mesh;
 pub mod output;
 pub mod particle;
 pub mod settings;
+pub mod vector_analysis;
 
 use self::distribution::Distribution;
-use self::grid_width::GridWidth;
-use self::integrators::flowfield::FlowField3D;
-use self::integrators::fourieroseen3d::{IntegrationParameter, Integrator, RandomVector};
+use self::flowfield::FlowField3D;
+use self::flowfield::spectral_solver::SpectralSolver;
+use self::integrators::langevin::{IntegrationParameter, Integrator, RandomVector};
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use consts::TWOPI;
 use extprim;
 use ndarray::Array;
 use pcg_rand::Pcg64;
-use rand::{Rand, SeedableRng};
-use rand::distributions::{IndependentSample, Range};
 use rand::distributions::normal::StandardNormal;
+use rand::distributions::{IndependentSample, Range};
+use rand::{Rand, SeedableRng};
 use rayon;
 use rayon::prelude::*;
 use std::env;
@@ -33,6 +35,7 @@ struct ValueCache {
 /// Main data structure representing the simulation.
 pub struct Simulation {
     integrator: Integrator,
+    spectral_solver: SpectralSolver,
     settings: Settings,
     state: SimulationState,
     vcache: ValueCache,
@@ -85,6 +88,9 @@ impl Simulation {
 
         let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
 
+        let spectral_solver =
+            SpectralSolver::new(sim.grid_size, sim.box_size, scaled_stress_prefactors);
+
         // normal distribution with variance timestep
         let seed = [sim.seed[0], sim.seed[1]];
 
@@ -105,10 +111,7 @@ impl Simulation {
 
         // initialize state with zeros
         let state = SimulationState {
-            distribution: Distribution::new(
-                sim.grid_size,
-                GridWidth::new(sim.grid_size, sim.box_size),
-            ),
+            distribution: Distribution::new(sim.grid_size, sim.box_size),
             flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
             random_samples: vec![
@@ -127,6 +130,7 @@ impl Simulation {
 
         Simulation {
             integrator: integrator,
+            spectral_solver: spectral_solver,
             settings: settings,
             state: state,
             vcache: ValueCache {
@@ -233,8 +237,8 @@ impl Simulation {
             * self.settings.simulation.box_size.z;
 
         // Calculate flow field from distribution.
-        self.state.flow_field = self.integrator
-            .calculate_flow_field(&self.state.distribution);
+        self.state.flow_field = self.spectral_solver
+            .solve_flow_field(&self.state.distribution);
 
         let between = Range::new(0f64, 1.);
 

@@ -2,7 +2,6 @@ use ndarray::{ArrayView, Axis, Ix1};
 
 /// Implements Simpon's Rule integration on an array, representing sampled
 /// points of a periodic function.
-#[allow(dead_code)]
 pub fn periodic_simpson_integrate(samples: ArrayView<f64, Ix1>, h: f64) -> f64 {
     let len = samples.dim();
 
