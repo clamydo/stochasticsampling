@@ -24,6 +24,7 @@ pub fn stress_kernel(
     let a = stress.active;
     let b = stress.magnetic;
 
+    // TODO: Split up for different contribution to ease adding terms or modifing them
     for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
         for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
             e[[0, 0]] = a * (-(1. / 3.) + phi.cos() * phi.cos() * theta.sin() * theta.sin());
