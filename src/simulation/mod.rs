@@ -82,7 +82,6 @@ impl Simulation {
             // see documentation of `integrator.evolve_particle_inplace` for a rational
             trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
             rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
-            stress: scaled_stress_prefactors,
             magnetic_reorientation: param.magnetic_reorientation,
         };
 

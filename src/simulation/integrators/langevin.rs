@@ -32,7 +32,7 @@ use quaternion;
 use rayon::prelude::*;
 use simulation::mesh::grid_width::GridWidth;
 use simulation::particle::Particle;
-use simulation::settings::{BoxSize, GridSize, StressPrefactors};
+use simulation::settings::{BoxSize, GridSize};
 use simulation::vector_analysis::vorticity::vorticity3d_dispatch;
 
 fn vec_mut_add(a: &mut [f64; 3], b: &[f64; 3]) {
@@ -45,7 +45,6 @@ fn vec_mut_add(a: &mut [f64; 3], b: &[f64; 3]) {
 #[derive(Debug, Clone, Copy)]
 pub struct IntegrationParameter {
     pub rot_diffusion: f64,
-    pub stress: StressPrefactors,
     pub timestep: f64,
     pub trans_diffusion: f64,
     pub magnetic_reorientation: f64,
