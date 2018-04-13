@@ -7,9 +7,9 @@ use serde_cbor;
 use std::fs::File;
 use std::io;
 use std::path::Path;
-use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::particle::Particle;
 use stochasticsampling::simulation::settings::{InitDistribution, Settings};
+use stochasticsampling::simulation::Simulation;
 
 /// Type of setting up initial condition.
 pub enum InitType {
