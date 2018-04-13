@@ -35,6 +35,15 @@ use simulation::particle::Particle;
 use simulation::settings::{BoxSize, GridSize};
 use simulation::vector_analysis::vorticity::vorticity3d_dispatch;
 
+#[derive(Clone, Copy)]
+pub struct RandomVector {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub axis_angle: f64,
+    pub rotate_angle: f64,
+}
+
 fn vec_mut_add(a: &mut [f64; 3], b: &[f64; 3]) {
     a[0] += b[0];
     a[1] += b[1];
@@ -97,12 +106,13 @@ impl Integrator {
 
         // retreive flow in cell which contains the particle
         let idx = get_cell_index(&p, &self.grid_width);
-        let (flow_x, flow_y, flow_z) = flow_at_cell(flow_field, idx);
+        let flow = flow_at_cell(flow_field, idx);
 
         // precompute trigonometric functions
         let cs = cos_sin_orientation(&p);
 
-        // orientation vector of `n`, switch to cartesian coordinates to ease some computations
+        // orientation vector of `n`, switch to cartesian coordinates to ease some
+        // computations
         let vector = [
             cs.sin_theta * cs.cos_phi,
             cs.sin_theta * cs.sin_phi,
@@ -111,9 +121,9 @@ impl Integrator {
 
         // Evolve particle position.
         // convection + self-propulsion + diffusion
-        p.position.x += (flow_x + vector[0]) * param.timestep + param.trans_diffusion * rv.x;
-        p.position.y += (flow_y + vector[1]) * param.timestep + param.trans_diffusion * rv.y;
-        p.position.z += (flow_z + vector[2]) * param.timestep + param.trans_diffusion * rv.z;
+        p.position.x += (flow[0] + vector[0]) * param.timestep + param.trans_diffusion * rv.x;
+        p.position.y += (flow[1] + vector[1]) * param.timestep + param.trans_diffusion * rv.y;
+        p.position.z += (flow[2] + vector[2]) * param.timestep + param.trans_diffusion * rv.z;
 
         // rotational diffusion
         let mut new_vector = rotational_diffusion_quat_mut(&vector, &cs, rv);
@@ -177,12 +187,14 @@ fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize)
     (ix, iy, iz)
 }
 
-fn flow_at_cell(flow_field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> (f64, f64, f64) {
-    let flow_x = flow_field[[0, idx.0, idx.1, idx.2]];
-    let flow_y = flow_field[[1, idx.0, idx.1, idx.2]];
-    let flow_z = flow_field[[2, idx.0, idx.1, idx.2]];
-
-    (flow_x, flow_y, flow_z)
+fn flow_at_cell(flow_field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> [f64; 3] {
+    unsafe {
+        [
+            *flow_field.uget((0, idx.0, idx.1, idx.2)),
+            *flow_field.uget((1, idx.0, idx.1, idx.2)),
+            *flow_field.uget((2, idx.0, idx.1, idx.2)),
+        ]
+    }
 }
 
 struct CosSinOrientation {
@@ -226,18 +238,15 @@ fn jeffrey(
 ) -> [f64; 3] {
     let half_timestep = 0.5 * timestep;
     // Get vorticity
-    let vort = vort.slice(s![
-        ..,
-        idx.0..(idx.0 + 1),
-        idx.1..(idx.1 + 1),
-        idx.1..(idx.1 + 1)
-    ]);
+    let vort_x = unsafe { vort.uget((0, idx.0, idx.1, idx.2)) };
+    let vort_y = unsafe { vort.uget((1, idx.0, idx.1, idx.2)) };
+    let vort_z = unsafe { vort.uget((2, idx.0, idx.1, idx.2)) };
 
     // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
     [
-        half_timestep * (vort[[1, 0, 0, 0]] * vector[2] - vort[[2, 0, 0, 0]] * vector[1]),
-        half_timestep * (vort[[2, 0, 0, 0]] * vector[0] - vort[[0, 0, 0, 0]] * vector[2]),
-        half_timestep * (vort[[0, 0, 0, 0]] * vector[1] - vort[[1, 0, 0, 0]] * vector[0]),
+        half_timestep * (vort_y * vector[2] - vort_z * vector[1]),
+        half_timestep * (vort_z * vector[0] - vort_x * vector[2]),
+        half_timestep * (vort_x * vector[1] - vort_y * vector[0]),
     ]
 }
 
@@ -248,13 +257,4 @@ fn cos_sin_orientation(p: &Particle) -> CosSinOrientation {
         cos_theta: p.orientation.theta.cos(),
         sin_theta: p.orientation.theta.sin(),
     }
-}
-
-#[derive(Clone, Copy)]
-pub struct RandomVector {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub axis_angle: f64,
-    pub rotate_angle: f64,
 }
