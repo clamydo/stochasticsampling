@@ -281,10 +281,9 @@ pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Ve
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{Array, arr2};
+    use ndarray::Array;
     use simulation::mesh::grid_width::GridWidth;
     use simulation::settings::{BoxSize, GridSize};
-    use test::Bencher;
     use test_helper::equal_floats;
 
     #[test]
