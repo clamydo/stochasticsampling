@@ -11,8 +11,8 @@ pub mod settings;
 pub mod vector_analysis;
 
 use self::distribution::Distribution;
-use self::flowfield::FlowField3D;
 use self::flowfield::spectral_solver::SpectralSolver;
+use self::flowfield::FlowField3D;
 use self::integrators::langevin::{IntegrationParameter, Integrator, RandomVector};
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};

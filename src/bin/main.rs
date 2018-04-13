@@ -34,9 +34,9 @@ use output::path::OutputPath;
 use output::worker::Worker;
 use pbr::ProgressBar;
 use std::path::Path;
-use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::output::OutputEntry;
 use stochasticsampling::simulation::settings::{self, Settings};
+use stochasticsampling::simulation::Simulation;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 include!(concat!(env!("OUT_DIR"), "/version.rs"));

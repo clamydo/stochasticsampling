@@ -1,9 +1,9 @@
-use ndarray::{Array, ArrayView, Axis, Ix4, Ix5};
-use num::Complex;
 use consts::TWOPI;
+use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix4, Ix5};
+use num::Complex;
+use simulation::distribution::Distribution;
 use simulation::mesh::grid_width::GridWidth;
 use simulation::settings::{GridSize, StressPrefactors};
-use simulation::distribution::Distribution;
 use std::f64::consts::PI;
 
 /// Calculates approximation of discretized stress kernel, to be used in
@@ -24,7 +24,8 @@ pub fn stress_kernel(
     let a = stress.active;
     let b = stress.magnetic;
 
-    // TODO: Split up for different contribution to ease adding terms or modifing them
+    // TODO: Split up for different contribution to ease adding terms or modifing
+    // them
     for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
         for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
             e[[0, 0]] = a * (-(1. / 3.) + phi.cos() * phi.cos() * theta.sin() * theta.sin());
@@ -47,12 +48,13 @@ pub fn stress_kernel(
     s
 }
 
-/// Given a kernel and a distributon function return angular expectation value
-/// of stress.
-pub fn average_stress(
+/// It consumes `stress_field` and updates it given a stress kernel `kernel`
+/// and a distribution `dist`. It returns the updated stress field.
+pub fn average_stress<'a>(
+    stress_field: ArrayViewMut<'a, Complex<f64>, Ix5>,
     kernel: &ArrayView<f64, Ix4>,
     dist: &Distribution,
-) -> Array<Complex<f64>, Ix5> {
+) -> ArrayViewMut<'a, Complex<f64>, Ix5> {
     let dist_sh = dist.dim();
     let stress_sh = kernel.dim();
 
@@ -69,15 +71,16 @@ pub fn average_stress(
 
     let dist = dist.dist.view().into_shape([n_dist, n_angle]).unwrap();
 
-    let len = n_stress * n_dist;
-    let mut uninit = Vec::with_capacity(len);
-    unsafe {
-        uninit.set_len(len);
-    }
-
-    let mut stress_field = Array::from_vec(uninit)
-        .into_shape((n_stress, n_dist))
-        .unwrap();
+    // let len = n_stress * n_dist;
+    // let mut uninit = Vec::with_capacity(len);
+    // unsafe {
+    //     uninit.set_len(len);
+    // }
+    //
+    // let mut stress_field = Array::from_vec(uninit)
+    //     .into_shape((n_stress, n_dist))
+    //     .unwrap();
+    let mut stress_field = stress_field.into_shape((n_stress, n_dist)).unwrap();
 
     let norm = gw.phi * gw.theta / (gs.x as f64 * gs.y as f64 * gs.z as f64);
 
