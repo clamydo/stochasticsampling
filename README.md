@@ -48,3 +48,18 @@ with open('output.msgpack.lzma', 'rb') as f:
     msgpack.unpackb(buffer, encoding='utf-8')
 
 ```
+# Profiling
+One way to optain a runtime profile is using perf:
+```
+env RAYON_NUM_THREADS=1 perf record --call-graph=lbr <simulation>
+```
+or
+```
+env RAYON_NUM_THREADS=1 perf record -F 99 -b --call-graph=dwarf <simulation>
+```
+Using `frame-pointer` is not reliable since the are often omitted in builds (as are they in `opt-level >= 2` in rust). `lbr` is faster, but only available on Intel Haswell CPUs and later. On Skylake it is limited to a call depth of 16. `dwarf` results in rich information, but produces quiet heavy profiles. It might be necessary to reduce the sampling rate, for example `-F 99`, in `perf`.
+
+In case `flamegraph` tools are installed, a flamegraph can be produces from the perf profile with
+```
+perf script | stackcollapse-perf | flamegraph > flame.svg
+```
