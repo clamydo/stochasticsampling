@@ -1,12 +1,17 @@
+// Move unit test into own file
+#[cfg(test)]
+#[path = "./stress_test.rs"]
+mod langevin_test;
+
 use consts::TWOPI;
-use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix4, Ix5};
+use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix2, Ix4, Ix5};
 use num::Complex;
 use simulation::distribution::Distribution;
 use simulation::mesh::grid_width::GridWidth;
 use simulation::settings::{GridSize, StressPrefactors};
 use std::f64::consts::PI;
 
-/// Calculates approximation of discretized stress kernel, to be used in
+/// Calculates approximation of discretized stress kernel, to be used in ///
 /// the expectation value to obtain the stress tensor.
 pub fn stress_kernel(
     grid_size: GridSize,
@@ -28,22 +33,52 @@ pub fn stress_kernel(
     // them
     for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
         for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
-            e[[0, 0]] = a * (-(1. / 3.) + phi.cos() * phi.cos() * theta.sin() * theta.sin());
-            e[[0, 1]] = phi.cos() * theta.sin() * (b + a * theta.sin() * phi.sin());
-            e[[0, 2]] = a * theta.cos() * phi.cos() * theta.sin();
+            let s = stress_active(*phi, *theta) * a + stress_magnetic(*phi, *theta) * b;
 
-            e[[1, 0]] = phi.cos() * theta.sin() * (-b + a * theta.sin() * phi.sin());
-            e[[1, 1]] = a * (-(1. / 3.) + theta.sin() * theta.sin() * phi.sin() * phi.sin());
-            e[[1, 2]] = theta.cos() * (-b + a * theta.sin() * phi.sin());
-
-            e[[2, 0]] = a * theta.cos() * phi.cos() * theta.sin();
-            e[[2, 1]] = theta.cos() * (b + a * theta.sin() * phi.sin());
-            e[[2, 2]] = a * (-(1. / 3.) + theta.cos() * theta.cos());
+            e.assign(&s);
 
             // Already taken care of by the modified cell average in the distribution code
             // e *= theta.sin();
         }
     }
+
+    s
+}
+
+/// Calculate active stress tensor for polar angles `phi` and `theta`.
+fn stress_active(phi: f64, theta: f64) -> Array<f64, Ix2> {
+    let mut s = Array::zeros((3, 3));
+
+    s[[0, 0]] = -(1. / 3.) + phi.cos() * phi.cos() * theta.sin() * theta.sin();
+    s[[0, 1]] = phi.cos() * theta.sin() * theta.sin() * phi.sin();
+    s[[0, 2]] = theta.cos() * phi.cos() * theta.sin();
+
+    s[[1, 0]] = phi.cos() * theta.sin() * theta.sin() * phi.sin();
+    s[[1, 1]] = -(1. / 3.) + theta.sin() * theta.sin() * phi.sin() * phi.sin();
+    s[[1, 2]] = theta.cos() * theta.sin() * phi.sin();
+
+    s[[2, 0]] = theta.cos() * phi.cos() * theta.sin();
+    s[[2, 1]] = theta.cos() * theta.sin() * phi.sin();
+    s[[2, 2]] = -(1. / 3.) + theta.cos() * theta.cos();
+
+    s
+}
+
+/// Calculate magnetic stress tensor for polar angles `phi` and `theta`.
+fn stress_magnetic(phi: f64, theta: f64) -> Array<f64, Ix2> {
+    let mut s = Array::zeros((3, 3));
+
+    s[[0, 0]] = 0.;
+    s[[0, 1]] = phi.cos() * theta.sin();
+    s[[0, 2]] = 0.;
+
+    s[[1, 0]] = (-1.) * phi.cos() * theta.sin();
+    s[[1, 1]] = 0.;
+    s[[1, 2]] = (-1.) * theta.cos();
+
+    s[[2, 0]] = 0.;
+    s[[2, 1]] = theta.cos();
+    s[[2, 2]] = 0.;
 
     s
 }

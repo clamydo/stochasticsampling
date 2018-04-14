@@ -118,93 +118,6 @@ use test::Bencher;
 //     );
 // }
 
-// #[test]
-// fn test_stress_expectation_value() {
-//
-//     let bs = BoxSize {
-//         x: 1.,
-//         y: 1.,
-//         z: 1.,
-//     };
-//     let gs = GridSize {
-//         x: 1,
-//         y: 1,
-//         z: 1,
-//         phi: 6,
-//     };
-//
-//     let gw = GridWidth::new(gs, bs);
-//
-//     let s = StressPrefactors {
-//         active: 1.,
-//         magnetic: 0.,
-//     };
-//
-//     let int_param = IntegrationParameter {
-//         timestep: 0.0,
-//         trans_diffusion: 0.0,
-//         rot_diffusion: 0.0,
-//         stress: s,
-//         magnetic_reorientation: 0.0,
-//     };
-//
-//     let i = Integrator::new(gs, bs, int_param);
-//
-//     let test_it = |d: &Distribution, expect: ArrayView<f64, Ix2>, case| {
-//         println!("Distribution {}", d.dist);
-//
-//         let dist_sh = d.dim();
-//         let stress_sh = i.stress_kernel.dim();
-//
-// // Put axis in order, so that components fields are continuous in
-// memory,
-//         // so it can be passed to FFTW easily
-//         let stress = &i.stress_kernel
-//             .view()
-//             .into_shape((stress_sh.0, stress_sh.1, 1, 1, dist_sh.2))
-//             .unwrap();
-//         let stress = stress
-// .broadcast((stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1,
-// dist_sh.2))
-//             .unwrap();
-//
-//         let stress_field = (&stress * &d.dist.view()).map_axis(Axis(4), |v| {
-//             // Complex::from(periodic_simpson_integrate(v, h))
-//             Complex::from(integrate(v, gw.phi))
-//         });
-//
-//
-//         let is = stress_field.slice(s![.., .., ..1, ..1]);
-//         println!("stress {}", is.into_shape([3, 3]).unwrap());
-//
-//         for (i, e) in is.iter().zip(expect.iter()) {
-//             assert!(equal_floats(i.re, *e), "{}: {} != {}", case, i.re, *e);
-//         }
-//     };
-//
-//     let p = vec![Particle::new(0.0, 0.0, 1.5707963267948966, bs)];
-//     let mut d1 = Distribution::new(gs, gw);
-//     d1.sample_from(&p);
-//
-//     let mut d2 = Distribution::new(gs, gw);
-// d2.dist = Array::from_elem([gs.x, gs.y, gs.phi], 1. / gw.phi / gs.phi as
-// f64);
-//
-//
-//     let expect1 = arr2(
-//         &[
-//             [-0.49999999999999994, 0., 0.],
-//             [0., 0.5, 0.],
-//             [0., 0., -0.49999999999999994],
-//         ],
-//     );
-//     let expect2 = arr2(
-//         &[[0., 0., 0.], [0., 0., 0.], [0., 0., -0.49999999999999994]],
-//     );
-//
-//     test_it(&d1, expect1.view(), "1");
-//     test_it(&d2, expect2.view(), "2");
-// }
 
 // #[test]
 // fn test_evolve_particles_inplace() {
@@ -324,7 +237,7 @@ fn bench_evolve_particle_inplace(b: &mut Bencher) {
     let mut d = Distribution::new(gs, bs);
     d.sample_from(&vec![p]);
 
-    let spectral_solver = SpectralSolver::new(gs, bs, s);
+    let mut spectral_solver = SpectralSolver::new(gs, bs, s);
     let u = spectral_solver.solve_flow_field(&d);
 
     let vort = vorticity3d_dispatch(gw, u.view());
