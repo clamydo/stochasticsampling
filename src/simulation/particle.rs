@@ -2,8 +2,8 @@
 
 use consts::TWOPI;
 use pcg_rand::Pcg64;
-use rand::SeedableRng;
 use rand::distributions::{IndependentSample, Range};
+use rand::SeedableRng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use simulation::settings::BoxSize;
 use std::f64::consts::PI;
@@ -11,9 +11,11 @@ use std::f64::consts::PI;
 const PIHALF: f64 = PI / 2.;
 
 pub fn modulo(f: f64, m: f64) -> f64 {
-    ((f % m) + m) % m
+    f.mod_euc(m)
 }
 
+// TODO replace with f64.mod_euc() from nightly std,
+// #[feature(euclidean_division)]
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
     let theta = modulo(theta, TWOPI);
     if theta > PI {
@@ -46,6 +48,9 @@ impl Position {
     }
 }
 
+#[derive(Debug)]
+pub struct OrientationVector(pub [f64; 3]);
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Orientation {
     pub phi: f64,
@@ -67,7 +72,8 @@ impl Orientation {
         self.theta = theta;
     }
 
-    pub fn from_vector_mut(&mut self, v: &[f64; 3]) {
+    pub fn from_vector_mut(&mut self, v: &OrientationVector) {
+        let OrientationVector(v) = v;
         let rxy = (v[0] * v[0] + v[1] * v[1]).sqrt();
 
         // transform back to spherical coordinate
@@ -76,6 +82,37 @@ impl Orientation {
 
         debug_assert!(self.theta.is_finite());
         debug_assert!(self.theta.is_finite());
+    }
+
+    pub fn to_vector(&self) -> OrientationVector {
+        let cs = CosSinOrientation::from_orientation(self);
+        cs.to_orientation_vecor()
+    }
+}
+
+pub struct CosSinOrientation {
+    pub cos_phi: f64,
+    pub sin_phi: f64,
+    pub cos_theta: f64,
+    pub sin_theta: f64,
+}
+
+impl CosSinOrientation {
+    pub fn from_orientation(o: &Orientation) -> CosSinOrientation {
+        CosSinOrientation {
+            cos_phi: o.phi.cos(),
+            sin_phi: o.phi.sin(),
+            cos_theta: o.theta.cos(),
+            sin_theta: o.theta.sin(),
+        }
+    }
+
+    pub fn to_orientation_vecor(&self) -> OrientationVector {
+        OrientationVector([
+            self.sin_theta * self.cos_phi,
+            self.sin_theta * self.sin_phi,
+            self.cos_theta,
+        ])
     }
 }
 
@@ -102,7 +139,8 @@ impl Particle {
         self.orientation.pbc();
     }
 
-    /// Places n particles at random positions following an isotropic distribution
+    /// Places n particles at random positions following an isotropic
+    /// distribution
     pub fn place_isotropic(n: usize, bs: BoxSize, seed: [u64; 2]) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
@@ -159,6 +197,7 @@ pub fn pdf_homogeneous_fixpoint(kappa: f64, x: f64) -> f64 {
     f64::acos(f64::ln(f64::exp(kappa) - 2. * x * f64::sinh(kappa)) / kappa)
 }
 
+/// Serialize particle as continuous array instead of struct
 impl Serialize for Particle {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -174,6 +213,8 @@ impl Serialize for Particle {
     }
 }
 
+/// Deserialize particle from continuous array with [x, y, z, phi, theta]
+/// entries
 impl<'de> Deserialize<'de> for Particle {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -219,14 +260,30 @@ mod tests {
     fn test_modulo() {
         let input = [
             [2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI],
-            [-4.440892098500626e-16, 2. * ::std::f64::consts::PI],
+            [-::std::f64::EPSILON, 2. * ::std::f64::consts::PI],
+            [
+                2. * ::std::f64::consts::PI + ::std::f64::EPSILON,
+                2. * ::std::f64::consts::PI,
+            ],
+            [7., 4.],
+            [7., -4.],
+            [-7., 4.],
+            [-7., -4.],
         ];
-        let output = [0., 0.];
+        let output = [
+            0.,
+            2. * ::std::f64::consts::PI - ::std::f64::EPSILON,
+            0.,
+            3.,
+            3.,
+            1.,
+            1.,
+        ];
 
         for (i, o) in input.iter().zip(output.iter()) {
             let a = modulo(i[0], i[1]);
             assert!(
-                a == *o,
+                equal_floats(a, *o),
                 "in: {} mod {}, out: {}, expected: {}",
                 i[0],
                 i[1],
@@ -312,7 +369,7 @@ mod tests {
         let mut o = Orientation::new(0., 0.);
 
         for (i, e) in input.iter().zip(expect.iter()) {
-            o.from_vector_mut(i);
+            o.from_vector_mut(&OrientationVector(*i));
 
             assert!(
                 equal_floats(e[0], o.theta),
