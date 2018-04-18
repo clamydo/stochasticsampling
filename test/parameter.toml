@@ -31,6 +31,8 @@
 
 [parameters]
     magnetic_reorientation = 1.0
+    [parameter.magnetic_dipole]
+        magnetic_moment = 5.0
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0
