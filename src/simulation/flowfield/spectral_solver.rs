@@ -14,7 +14,7 @@ use std::sync::Arc;
 pub struct SpectralSolver {
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
-    k_inorm: Array<Complex<f64>, Ix3>,
+    k_invnormsquared: Array<Complex<f64>, Ix3>,
     k_mesh: Array<Complex<f64>, Ix4>,
     stress_kernel: Array<f64, Ix4>,
     stress_field: Array<Complex<f64>, Ix5>,
@@ -45,7 +45,7 @@ impl SpectralSolver {
         ).unwrap();
 
         SpectralSolver {
-            k_inorm: get_inverse_norm_squared(mesh.view()),
+            k_invnormsquared: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
             stress_kernel: stress_kernel(grid_size, grid_width, parameter),
             fft_plan_forward: Arc::new(plan_stress),
@@ -92,13 +92,13 @@ impl SpectralSolver {
             .into_shape([stress_sh.0, stress_sh.1, dist_sh.0, dist_sh.1, dist_sh.2])
             .unwrap();
 
-        // calculate gradient of average stress field in Fourier space
+        // calculate divergence of average stress field in Fourier space
         let sigmak = ((&stress_field * &self.k_mesh.view()).sum_axis(Axis(1))
-            * &self.k_inorm.view()) * Complex::new(0., 1.);
+            * &self.k_invnormsquared.view()) * Complex::new(0., 1.);
 
         // convolve with free Green's function (Oseen tensor)
-        let ksigmak =
-            (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0)) * &self.k_inorm.view();
+        let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0))
+            * &self.k_invnormsquared.view();
         let kksigmak = &self.k_mesh.view() * &ksigmak.view();
 
         let mut u = sigmak - &kksigmak.view();

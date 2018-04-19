@@ -29,8 +29,6 @@ pub fn stress_kernel(
     let a = stress.active;
     let b = stress.magnetic;
 
-    // TODO: Split up for different contribution to ease adding terms or modifing
-    // them
     for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
         for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
             let s = stress_active(*phi, *theta) * a + stress_magnetic(*phi, *theta) * b;
@@ -117,6 +115,7 @@ pub fn average_stress<'a>(
     //     .unwrap();
     let mut stress_field = stress_field.into_shape((n_stress, n_dist)).unwrap();
 
+    // integration measures and FFT normalization
     let norm = gw.phi * gw.theta / (gs.x as f64 * gs.y as f64 * gs.z as f64);
 
     // Calculating the integral over the orientation. `norm` includes weights for
