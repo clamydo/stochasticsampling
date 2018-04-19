@@ -54,6 +54,19 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
     mesh3d::<Complex<f64>>(&ks)
 }
 
+/// Returns a normalized meshgrid of k values for FFT, except for zero which is zero.
+///
+/// The first axis denotes the components of the k-vector:
+///     `res[c, i, j, m] -> k_c[i, j, m]`
+pub fn get_norm_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix4> {
+    let ks = get_k_sampling(grid_size, box_size);
+    let mesh = mesh3d::<Complex<f64>>(&ks);
+
+    let k2inv = get_inverse_norm_squared(mesh.view());
+
+    &mesh * &k2inv
+}
+
 /// Returns scalar field of inversed norm squared of k-vector-values.
 ///
 /// The inverse norm of k=0 is set to zero, i.e. 1/(k=0)^2 == 0
