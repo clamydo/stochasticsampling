@@ -10,18 +10,12 @@ use std::f64::consts::PI;
 
 const PIHALF: f64 = PI / 2.;
 
-pub fn modulo(f: f64, m: f64) -> f64 {
-    f.mod_euc(m)
-}
-
-// TODO replace with f64.mod_euc() from nightly std,
-// #[feature(euclidean_division)]
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
-    let theta = modulo(theta, TWOPI);
+    let theta = theta.mod_euc(TWOPI);
     if theta > PI {
-        (modulo(phi + PI, TWOPI), TWOPI - theta)
+        ((phi + PI).mod_euc(TWOPI), TWOPI - theta)
     } else {
-        (modulo(phi, TWOPI), theta)
+        (phi.mod_euc(TWOPI), theta)
     }
 }
 
@@ -35,16 +29,16 @@ pub struct Position {
 impl Position {
     pub fn new(x: f64, y: f64, z: f64, bs: BoxSize) -> Position {
         Position {
-            x: modulo(x, bs.x),
-            y: modulo(y, bs.y),
-            z: modulo(z, bs.z),
+            x: x.mod_euc(bs.x),
+            y: y.mod_euc(bs.y),
+            z: z.mod_euc(bs.z),
         }
     }
 
     pub fn pbc(&mut self, bs: BoxSize) {
-        self.x = modulo(self.x, bs.x);
-        self.y = modulo(self.y, bs.y);
-        self.z = modulo(self.z, bs.z);
+        self.x = self.x.mod_euc(bs.x);
+        self.y = self.y.mod_euc(bs.y);
+        self.z = self.z.mod_euc(bs.z);
     }
 }
 
@@ -281,7 +275,7 @@ mod tests {
         ];
 
         for (i, o) in input.iter().zip(output.iter()) {
-            let a = modulo(i[0], i[1]);
+            let a = i[0].mod_euc(i[1]);
             assert!(
                 equal_floats(a, *o),
                 "in: {} mod {}, out: {}, expected: {}",
