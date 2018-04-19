@@ -6,7 +6,7 @@
 extern crate quickcheck;
 
 extern crate ndarray;
-extern crate num;
+extern crate num_complex;
 
 pub mod fft;
 mod fftw3_ffi;
@@ -18,7 +18,7 @@ mod tests {
     use fft::FFTPlan;
     use fftw_ndarray::{FFTData2D, FFTData3D};
     use ndarray;
-    use num::Complex;
+    use num_complex::Complex;
     use std::f64::EPSILON;
 
     /// Transforming for and back should be an identity operation (except for

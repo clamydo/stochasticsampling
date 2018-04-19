@@ -1,5 +1,5 @@
 use ndarray::{ArrayViewMut, Ix2, Ix3};
-use num::Complex;
+use num_complex::Complex;
 use std::mem;
 
 /// FFTW3 allocated `ArrayView` for 2D data.

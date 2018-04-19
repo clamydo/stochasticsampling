@@ -1,5 +1,5 @@
 use ndarray::{ArrayViewMut, Ix2, Ix3, IxDyn};
-use num::Complex;
+use num_complex::Complex;
 use std;
 use std::ptr::Unique;
 

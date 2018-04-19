@@ -2,7 +2,7 @@ use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use ndarray::{Array, Axis, Ix3, Ix4, Ix5};
 use ndarray_parallel::prelude::*;
-use num::Complex;
+use num_complex::Complex;
 use simulation::distribution::Distribution;
 use simulation::flowfield::stress::{average_stress, stress_kernel};
 use simulation::flowfield::FlowField3D;

@@ -24,7 +24,7 @@ extern crate fftw3;
 #[macro_use(s)]
 extern crate ndarray;
 extern crate ndarray_parallel;
-extern crate num;
+extern crate num_complex;
 extern crate pcg_rand;
 extern crate quaternion;
 extern crate rand;

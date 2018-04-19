@@ -18,7 +18,7 @@ fftw3 = { path = "crates/fftw3" }
 log = "0.3.6"
 ndarray = { version = "0.11.0", features = ["serde-1"] }
 ndarray-parallel = "0.8.0"
-num = "0.1.40"
+num-complex = "0.1"
 pbr = "1.0.0"
 pcg_rand = { path = "crates/external/pcg_rand" }
 quaternion = "0.3.0"
