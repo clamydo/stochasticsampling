@@ -31,7 +31,7 @@ use ndarray_parallel::prelude::*;
 use quaternion;
 use rayon::prelude::*;
 use simulation::mesh::grid_width::GridWidth;
-use simulation::particle::Particle;
+use simulation::particle::{CosSinOrientation, OrientationVector, Particle};
 use simulation::settings::{BoxSize, GridSize};
 use simulation::vector_analysis::vorticity::vorticity3d_dispatch;
 
@@ -109,15 +109,11 @@ impl Integrator {
         let flow = flow_at_cell(flow_field, idx);
 
         // precompute trigonometric functions
-        let cs = cos_sin_orientation(&p);
+        let cs = CosSinOrientation::from_orientation(&p.orientation);
 
         // orientation vector of `n`, switch to cartesian coordinates to ease some
         // computations
-        let vector = [
-            cs.sin_theta * cs.cos_phi,
-            cs.sin_theta * cs.sin_phi,
-            cs.cos_theta,
-        ];
+        let OrientationVector(vector) = cs.to_orientation_vecor();
 
         // Evolve particle position.
         // convection + self-propulsion + diffusion
@@ -133,7 +129,8 @@ impl Integrator {
         vec_mut_add(&mut new_vector, &jef);
 
         // update particles orientation
-        p.orientation.from_vector_mut(&new_vector);
+        p.orientation
+            .from_vector_mut(&OrientationVector(new_vector));
 
         // influence of magnetic field pointing in z-direction
         p.orientation.theta -= param.magnetic_reorientation * cs.sin_theta * param.timestep;
@@ -197,13 +194,6 @@ fn flow_at_cell(flow_field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) ->
     }
 }
 
-struct CosSinOrientation {
-    cos_phi: f64,
-    sin_phi: f64,
-    cos_theta: f64,
-    sin_theta: f64,
-}
-
 fn rotational_diffusion_quat_mut(
     vector: &[f64; 3],
     cs: &CosSinOrientation,
@@ -248,13 +238,4 @@ fn jeffrey(
         half_timestep * (vort_z * vector[0] - vort_x * vector[2]),
         half_timestep * (vort_x * vector[1] - vort_y * vector[0]),
     ]
-}
-
-fn cos_sin_orientation(p: &Particle) -> CosSinOrientation {
-    CosSinOrientation {
-        cos_phi: p.orientation.phi.cos(),
-        sin_phi: p.orientation.phi.sin(),
-        cos_theta: p.orientation.theta.cos(),
-        sin_theta: p.orientation.theta.sin(),
-    }
 }
