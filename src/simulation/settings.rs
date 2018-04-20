@@ -76,6 +76,7 @@ pub struct Parameters {
     /// Magnetic moment of one particle including magnetic field constant `\mu_0`
     /// WARNING: at the moment independend variable
     pub magnetic_dipole: MagneticDipolePrefactors,
+    pub drag: f64,
 }
 
 /// Holds output configuration
@@ -255,6 +256,7 @@ mod tests {
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
         assert_eq!(settings.parameters.magnetic_dipole.magnetic_moment, 5.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
+        assert_eq!(settings.parameters.drag, 123.4);
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {

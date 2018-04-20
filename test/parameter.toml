@@ -30,8 +30,9 @@
         final_snapshot = false
 
 [parameters]
+    drag = 123.4
     magnetic_reorientation = 1.0
-    [parameter.magnetic_dipole]
+    [parameters.magnetic_dipole]
         magnetic_moment = 5.0
     [parameters.diffusion]
         rotational = 0.5
