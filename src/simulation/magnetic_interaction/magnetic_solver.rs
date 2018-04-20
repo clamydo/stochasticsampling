@@ -15,6 +15,8 @@ use simulation::polarization::director::DirectorField;
 use simulation::settings::{BoxSize, GridSize, MagneticDipolePrefactors};
 use std::sync::Arc;
 
+pub type MagneticField = Array<Complex<f64>, Ix4>;
+
 pub struct MagneticSolver {
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
@@ -63,7 +65,7 @@ impl MagneticSolver {
     }
 
     /// Calculates the fourier transform of the mean magnetic field.
-    /// CAUTION: In order to prevent reallocation the magnetiv field is saved
+    /// CAUTION: In order to prevent reallocation the magnetic field is saved
     /// in the DirectorField. Which is complete and utter non-sense. But
     /// more efficient. Sorry for that. There is surely a better way to
     /// deal with that.
@@ -93,7 +95,6 @@ impl MagneticSolver {
     }
 
     /// Returns vector gradient of magnetic field.
-    /// TODO avoid allocation, return only view
     fn update_gradient(&mut self) {
         let sh = self.director_field.field.dim();
         let n = sh.1 * sh.2 * sh.3;
@@ -130,7 +131,6 @@ impl MagneticSolver {
         g.outer_iter_mut()
             .into_par_iter()
             .for_each(|mut v| fft.reexecute3d(&mut v));
-
     }
 
     /// Given a distribution `d`, it returns a view into the mean magnetic
@@ -151,12 +151,4 @@ impl MagneticSolver {
 
         (self.director_field.field.view(), self.gradient_meanb.view())
     }
-
-    // // TODO define own type for force vector to make typesafe
-    // fn mean_force_on_magnetic_dipole(&self, orientation_vector:
-    // &OrientationVector) -> [f64; 3] {     let i = Complex::new(0., 1.);
-    //     let o = Array::from_iter(orientation_vector.iter()).br
-    //
-    //
-    // }
 }

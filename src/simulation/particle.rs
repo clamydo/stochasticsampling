@@ -6,6 +6,7 @@ use rand::distributions::{IndependentSample, Range};
 use rand::SeedableRng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use simulation::settings::BoxSize;
+use simulation::vector::Vector;
 use std::f64::consts::PI;
 
 const PIHALF: f64 = PI / 2.;
@@ -40,10 +41,15 @@ impl Position {
         self.y = self.y.mod_euc(bs.y);
         self.z = self.z.mod_euc(bs.z);
     }
+
+    pub fn from_vector_mut(&mut self, v: &Vector<Position>) {
+        self.x = v[0];
+        self.y = v[1];
+        self.z = v[2];
+    }
 }
 
-#[derive(Debug)]
-pub struct OrientationVector(pub [f64; 3]);
+pub type OrientationVector = Vector<Orientation>;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Orientation {
@@ -67,7 +73,7 @@ impl Orientation {
     }
 
     pub fn from_vector_mut(&mut self, v: &OrientationVector) {
-        let OrientationVector(v) = v;
+        let v = v.v;
         let rxy = (v[0] * v[0] + v[1] * v[1]).sqrt();
 
         // transform back to spherical coordinate
@@ -102,11 +108,11 @@ impl CosSinOrientation {
     }
 
     pub fn to_orientation_vecor(&self) -> OrientationVector {
-        OrientationVector([
+        [
             self.sin_theta * self.cos_phi,
             self.sin_theta * self.sin_phi,
             self.cos_theta,
-        ])
+        ].into()
     }
 }
 
@@ -363,7 +369,7 @@ mod tests {
         let mut o = Orientation::new(0., 0.);
 
         for (i, e) in input.iter().zip(expect.iter()) {
-            o.from_vector_mut(&OrientationVector(*i));
+            o.from_vector_mut(&((*i).into()));
 
             assert!(
                 equal_floats(e[0], o.theta),

@@ -3,7 +3,7 @@ use ndarray::{Array, Axis, Ix3, Ix4};
 use num_complex::Complex;
 use simulation::distribution::Distribution;
 use simulation::mesh::grid_width::GridWidth;
-use simulation::particle::{Orientation, OrientationVector};
+use simulation::particle::Orientation;
 use simulation::settings::GridSize;
 use std::f64::consts::PI;
 
@@ -50,8 +50,8 @@ impl DirectorField {
             }
         }
 
-        // Does not work, because Zip requires that all producers have exactly the same shape.
-        // Zip::from(field.lanes_mut(Axis(1)))
+        // Does not work, because Zip requires that all producers have exactly the same
+        // shape. Zip::from(field.lanes_mut(Axis(1)))
         // .and(dist.lanes(Axis(0)))
         // .apply(|mut f, d| {
         //     let o = director.dot(&d).map(|v| Complex::new(v * norm, 0.));
@@ -76,7 +76,7 @@ fn orientation_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<f64, 
 
     for (mut ax1, phi) in s.axis_iter_mut(Axis(1)).zip(&angles_phi) {
         for (mut e, theta) in ax1.axis_iter_mut(Axis(1)).zip(&angles_theta) {
-            let OrientationVector(o) = Orientation::new(*phi, *theta).to_vector();
+            let o = Orientation::new(*phi, *theta).to_vector().v;
             // Create ndarray::Array from array
             let o = Array::from_vec(o.to_vec());
 
