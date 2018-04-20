@@ -3,8 +3,9 @@ use super::*;
 use simulation::distribution::Distribution;
 // use simulation::mesh::grid_width::GridWidth;
 use simulation::flowfield::spectral_solver::SpectralSolver;
+use simulation::magnetic_interaction::magnetic_solver::MagneticSolver;
 use simulation::particle::Particle;
-use simulation::settings::StressPrefactors;
+use simulation::settings::{MagneticDipolePrefactors, StressPrefactors};
 use test::Bencher;
 
 // /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
@@ -118,7 +119,6 @@ use test::Bencher;
 //     );
 // }
 
-
 // #[test]
 // fn test_evolve_particles_inplace() {
 //     let bs = BoxSize {
@@ -204,55 +204,65 @@ use test::Bencher;
 //     }
 // }
 //
-#[bench]
-fn bench_evolve_particle_inplace(b: &mut Bencher) {
-    let bs = BoxSize {
-        x: 10.,
-        y: 10.,
-        z: 10.,
-    };
-    let gs = GridSize {
-        x: 10,
-        y: 10,
-        z: 10,
-        phi: 6,
-        theta: 6,
-    };
-    let gw = GridWidth::new(gs, bs);
-    let s = StressPrefactors {
-        active: 1.,
-        magnetic: 1.,
-    };
 
-    let int_param = IntegrationParameter {
-        timestep: 0.1,
-        trans_diffusion: 0.1,
-        rot_diffusion: 0.1,
-        magnetic_reorientation: 0.1,
-    };
-
-    let i = Integrator::new(gs, bs, int_param);
-
-    let mut p = Particle::new(0.6, 0.3, 0., 0., 0., bs);
-    let mut d = Distribution::new(gs, bs);
-    d.sample_from(&vec![p]);
-
-    let mut spectral_solver = SpectralSolver::new(gs, bs, s);
-    let u = spectral_solver.solve_flow_field(&d);
-
-    let vort = vorticity3d_dispatch(gw, u.view());
-
-    let r = RandomVector {
-        x: 0.1,
-        y: 0.1,
-        z: 0.1,
-        axis_angle: 0.1,
-        rotate_angle: 0.1,
-    };
-
-    b.iter(|| {
-        for _ in 0..10000 {
-            i.evolve_particle_inplace(&mut p, &r, &u.view(), &vort.view())
-        }
-    });
-}
+// #[bench]
+// fn bench_evolve_particle_inplace(b: &mut Bencher) {
+//     let bs = BoxSize {
+//         x: 10.,
+//         y: 10.,
+//         z: 10.,
+//     };
+//     let gs = GridSize {
+//         x: 10,
+//         y: 10,
+//         z: 10,
+//         phi: 6,
+//         theta: 6,
+//     };
+//     let gw = GridWidth::new(gs, bs);
+//     let s = StressPrefactors {
+//         active: 1.,
+//         magnetic: 1.,
+//     };
+//
+//     let int_param = IntegrationParameter {
+//         timestep: 0.1,
+//         trans_diffusion: 0.1,
+//         rot_diffusion: 0.1,
+//         magnetic_reorientation: 0.1,
+//         drag: 0.1,
+//     };
+//
+//     let m_param = MagneticDipolePrefactors {
+//         magnetic_moment: 1.23,
+//     };
+//
+//     let i = Integrator::new(gs, bs, int_param);
+//
+//     let mut p = Particle::new(0.6, 0.3, 0., 0., 0., bs);
+//     let mut d = Distribution::new(gs, bs);
+//     d.sample_from(&vec![p]);
+//
+//     let mut spectral_solver = SpectralSolver::new(gs, bs, s);
+//     let u = spectral_solver.solve_flow_field(&d);
+//
+//     let m = MagneticSolver::new(gs, bs, m_param);
+//
+//     let (b, gb) = m.mean_magnetic_field(&d);
+//
+//     let vort = vorticity3d_dispatch(gw, u.view());
+//
+//     let r = RandomVector {
+//         x: 0.1,
+//         y: 0.1,
+//         z: 0.1,
+//         axis_angle: 0.1,
+//         rotate_angle: 0.1,
+//     };
+//
+//     b.iter(|| {
+//         for _ in 0..10000 {
+//             i.evolve_particle_inplace(&mut p, &r, &u.view(), &vort.view(), &b, &gb)
+//         }
+//     });
+// }

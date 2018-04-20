@@ -4,16 +4,19 @@
 pub mod distribution;
 pub mod flowfield;
 pub mod integrators;
+pub mod magnetic_interaction;
 pub mod mesh;
 pub mod output;
 pub mod particle;
+pub mod polarization;
 pub mod settings;
-pub mod vector_analysis;
+pub mod vector;
 
 use self::distribution::Distribution;
 use self::flowfield::spectral_solver::SpectralSolver;
 use self::flowfield::FlowField3D;
 use self::integrators::langevin::{IntegrationParameter, Integrator, RandomVector};
+use self::magnetic_interaction::magnetic_solver::MagneticSolver;
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use consts::TWOPI;
@@ -36,6 +39,7 @@ struct ValueCache {
 pub struct Simulation {
     integrator: Integrator,
     spectral_solver: SpectralSolver,
+    magnetic_solver: MagneticSolver,
     settings: Settings,
     state: SimulationState,
     vcache: ValueCache,
@@ -83,12 +87,16 @@ impl Simulation {
             trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
             rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             magnetic_reorientation: param.magnetic_reorientation,
+            drag: param.drag,
         };
 
         let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
 
         let spectral_solver =
             SpectralSolver::new(sim.grid_size, sim.box_size, scaled_stress_prefactors);
+
+        let magnetic_solver =
+            MagneticSolver::new(sim.grid_size, sim.box_size, param.magnetic_dipole);
 
         // normal distribution with variance timestep
         let seed = [sim.seed[0], sim.seed[1]];
@@ -130,6 +138,7 @@ impl Simulation {
         Simulation {
             integrator: integrator,
             spectral_solver: spectral_solver,
+            magnetic_solver: magnetic_solver,
             settings: settings,
             state: state,
             vcache: ValueCache {
@@ -239,6 +248,9 @@ impl Simulation {
         self.state.flow_field = self.spectral_solver
             .solve_flow_field(&self.state.distribution);
 
+        let (md_b, md_grad_b) = self.magnetic_solver
+            .mean_magnetic_field(&self.state.distribution);
+
         let between = Range::new(0f64, 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
@@ -261,25 +273,13 @@ impl Simulation {
                 }
             });
 
-        // // Generate all needed random numbers here. Makes parallelization easier.
-        // for r in &mut self.state.random_samples {
-        //     *r = RandomVector {
-        //         x: StandardNormal::rand(&mut self.state.rng).0,
-        //         y: StandardNormal::rand(&mut self.state.rng).0,
-        //         z: StandardNormal::rand(&mut self.state.rng).0,
-        //         axis_angle: TWOPI * between.ind_sample(&mut self.state.rng),
-        //         rotate_angle: rayleigh_pdf(
-        //             self.vcache.rot_diff,
-        //             between.ind_sample(&mut self.state.rng),
-        //         ),
-        //     };
-        // }
-
         // Update particle positions
         self.integrator.evolve_particles_inplace(
             &mut self.state.particles,
             &self.state.random_samples,
             self.state.flow_field.view(),
+            md_b,
+            md_grad_b,
         );
 
         // increment timestep counter to keep a continous identifier when resuming

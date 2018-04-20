@@ -26,14 +26,17 @@
 #[path = "./langevin_test.rs"]
 mod langevin_test;
 
-use ndarray::{ArrayView, Ix4};
+use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use ndarray_parallel::prelude::*;
+use num_complex::Complex;
 use quaternion;
 use rayon::prelude::*;
+use simulation::magnetic_interaction::mean_force;
 use simulation::mesh::grid_width::GridWidth;
-use simulation::particle::{CosSinOrientation, OrientationVector, Particle};
+use simulation::particle::{CosSinOrientation, OrientationVector, Particle, Position};
 use simulation::settings::{BoxSize, GridSize};
-use simulation::vector_analysis::vorticity::vorticity3d_dispatch;
+use simulation::vector::vorticity::vorticity3d_dispatch;
+use simulation::vector::{Vector, VectorD};
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
@@ -44,10 +47,10 @@ pub struct RandomVector {
     pub rotate_angle: f64,
 }
 
-fn vec_mut_add(a: &mut [f64; 3], b: &[f64; 3]) {
-    a[0] += b[0];
-    a[1] += b[1];
-    a[2] += b[2];
+impl RandomVector {
+    fn into_pos_vec(&self) -> Vector<Position> {
+        [self.x, self.y, self.z].into()
+    }
 }
 
 /// Holds parameter needed for time step
@@ -57,6 +60,7 @@ pub struct IntegrationParameter {
     pub timestep: f64,
     pub trans_diffusion: f64,
     pub magnetic_reorientation: f64,
+    pub drag: f64,
 }
 
 /// Holds precomuted values
@@ -101,36 +105,53 @@ impl Integrator {
         rv: &RandomVector,
         flow_field: &ArrayView<f64, Ix4>,
         vort: &ArrayView<f64, Ix4>,
+        magnetic_field: &ArrayView<Complex<f64>, Ix4>,
+        grad_magnetic_field: &ArrayView<Complex<f64>, Ix5>,
     ) {
         let param = &self.parameter;
 
         // retreive flow in cell which contains the particle
         let idx = get_cell_index(&p, &self.grid_width);
-        let flow = flow_at_cell(flow_field, idx);
+        let flow = field_at_cell(flow_field, idx);
+        let b = field_at_cell_c(magnetic_field, idx);
+        let gradb = vector_gradient_at_cell(grad_magnetic_field, idx);
 
         // precompute trigonometric functions
         let cs = CosSinOrientation::from_orientation(&p.orientation);
 
         // orientation vector of `n`, switch to cartesian coordinates to ease some
         // computations
-        let OrientationVector(vector) = cs.to_orientation_vecor();
+        let vector = cs.to_orientation_vecor();
+
+        // Get force in magnetic field
+        let fb = mean_force(gradb.view(), &vector);
 
         // Evolve particle position.
         // convection + self-propulsion + diffusion
-        p.position.x += (flow[0] + vector[0]) * param.timestep + param.trans_diffusion * rv.x;
-        p.position.y += (flow[1] + vector[1]) * param.timestep + param.trans_diffusion * rv.y;
-        p.position.z += (flow[2] + vector[2]) * param.timestep + param.trans_diffusion * rv.z;
+
+        let mut new_position: Vector<Position> =
+            (flow + &vector + fb * param.drag).to() * param.timestep;
+        new_position += rv.into_pos_vec() * param.trans_diffusion;
+
+        p.position.from_vector_mut(&new_position);
 
         // rotational diffusion
         let mut new_vector = rotational_diffusion_quat_mut(&vector, &cs, rv);
 
         // rotational coupling to the flow field
         let jef = jeffrey(&vector, idx, vort, param.timestep);
-        vec_mut_add(&mut new_vector, &jef);
+        new_vector += jef;
+
+        // magnetic dipole interaction
+        let nb = new_vector
+            .iter()
+            .zip(b.iter())
+            .fold(0., |acc, (n, b)| acc + n * b);
+
+        new_vector -= new_vector * nb;
 
         // update particles orientation
-        p.orientation
-            .from_vector_mut(&OrientationVector(new_vector));
+        p.orientation.from_vector_mut(&new_vector);
 
         // influence of magnetic field pointing in z-direction
         p.orientation.theta -= param.magnetic_reorientation * cs.sin_theta * param.timestep;
@@ -144,6 +165,8 @@ impl Integrator {
         particles: &mut Vec<Particle>,
         random_samples: &[RandomVector],
         flow_field: ArrayView<'a, f64, Ix4>,
+        magnetic_field: ArrayView<'a, Complex<f64>, Ix4>,
+        grad_magnetic_field: ArrayView<'a, Complex<f64>, Ix5>,
     ) {
         // Calculate vorticity dx uy - dy ux
         let vort = vorticity3d_dispatch(self.grid_width, flow_field);
@@ -152,7 +175,14 @@ impl Integrator {
             .par_iter_mut()
             .zip(random_samples.par_iter())
             .for_each(|(ref mut p, r)| {
-                self.evolve_particle_inplace(p, r, &flow_field, &vort.view())
+                self.evolve_particle_inplace(
+                    p,
+                    r,
+                    &flow_field,
+                    &vort.view(),
+                    &magnetic_field,
+                    &grad_magnetic_field,
+                )
             });
     }
 }
@@ -184,21 +214,40 @@ fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize)
     (ix, iy, iz)
 }
 
-fn flow_at_cell(flow_field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> [f64; 3] {
-    unsafe {
+fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+    let f = unsafe {
         [
-            *flow_field.uget((0, idx.0, idx.1, idx.2)),
-            *flow_field.uget((1, idx.0, idx.1, idx.2)),
-            *flow_field.uget((2, idx.0, idx.1, idx.2)),
+            *field.uget((0, idx.0, idx.1, idx.2)),
+            *field.uget((1, idx.0, idx.1, idx.2)),
+            *field.uget((2, idx.0, idx.1, idx.2)),
         ]
-    }
+    };
+    f.into()
+}
+
+fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+    let f = unsafe {
+        [
+            (*field.uget((0, idx.0, idx.1, idx.2))).re,
+            (*field.uget((1, idx.0, idx.1, idx.2))).re,
+            (*field.uget((2, idx.0, idx.1, idx.2))).re,
+        ]
+    };
+    f.into()
+}
+
+fn vector_gradient_at_cell(
+    field: &ArrayView<Complex<f64>, Ix5>,
+    idx: (usize, usize, usize),
+) -> Array<f64, Ix2> {
+    field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }
 
 fn rotational_diffusion_quat_mut(
-    vector: &[f64; 3],
+    vector: &OrientationVector,
     cs: &CosSinOrientation,
     r: &RandomVector,
-) -> [f64; 3] {
+) -> OrientationVector {
     let rotational_axis = |alpha: f64| {
         let cos_ax = alpha.cos();
         let sin_ax = alpha.sin();
@@ -217,15 +266,15 @@ fn rotational_diffusion_quat_mut(
     let q = quaternion::axis_angle(ax, r.rotate_angle);
 
     // return rot
-    quaternion::rotate_vector(q, *vector)
+    quaternion::rotate_vector(q, vector.v).into()
 }
 
 fn jeffrey(
-    vector: &[f64; 3],
+    vector: &OrientationVector,
     idx: (usize, usize, usize),
     vort: &ArrayView<f64, Ix4>,
     timestep: f64,
-) -> [f64; 3] {
+) -> VectorD {
     let half_timestep = 0.5 * timestep;
     // Get vorticity
     let vort_x = unsafe { vort.uget((0, idx.0, idx.1, idx.2)) };
@@ -237,5 +286,5 @@ fn jeffrey(
         half_timestep * (vort_y * vector[2] - vort_z * vector[1]),
         half_timestep * (vort_z * vector[0] - vort_x * vector[2]),
         half_timestep * (vort_x * vector[1] - vort_y * vector[0]),
-    ]
+    ].into()
 }
