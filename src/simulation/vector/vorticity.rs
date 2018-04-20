@@ -207,7 +207,7 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
         // calculate -dz uy, mind the switched signes
         // bulk
         // dz uy(z) = (uy(z + h) - u(z - h)) / 2h
-        //          [., 1, 2, 3, 4, .]
+        //          [., 1, 2, 3, 4, .] =
         //      +[0, 1, 2, 3, 4, 5]
         //            -[0, 1, 2, 3, 4, 5]
         {
@@ -220,9 +220,9 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
             s /= hz;
         }
         // borders
-        //          [0, ., ., ., ., 5]
-        //      +[0, 1, 2, 3, 4, 5, 0]
-        //         -[5, 0, 1, 2, 3, 4, 5]
+        //          [0, ., ., ., ., 5] =
+        //      +[., 1, 2, 3, 4, 5, 0]
+        //         -[5, 0, 1, 2, 3, 4, .]
         {
             let mut s = vx.slice_mut(s![.., .., ..1]);
             s.assign(&uy.slice(s![.., .., -1..]));
