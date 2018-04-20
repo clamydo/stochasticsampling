@@ -23,6 +23,7 @@
     [simulation.output_at_timestep]
         distribution = 12
         flowfield = 42
+        magneticfield = 41
         particles = 100
         particles_head = 10
         snapshot = 666

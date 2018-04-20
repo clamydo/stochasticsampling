@@ -90,6 +90,8 @@ pub struct Output {
     #[serde(default)]
     pub flowfield: Option<usize>,
     #[serde(default)]
+    pub magneticfield: Option<usize>,
+    #[serde(default)]
     pub particles_head: Option<usize>,
     #[serde(default)]
     pub particles: Option<usize>,
@@ -309,6 +311,12 @@ mod tests {
         assert_eq!(settings.simulation.output_at_timestep.flowfield, Some(42));
         assert_eq!(
             settings_default.simulation.output_at_timestep.flowfield,
+            None
+        );
+
+        assert_eq!(settings.simulation.output_at_timestep.magneticfield, Some(41));
+        assert_eq!(
+            settings_default.simulation.output_at_timestep.magneticfield,
             None
         );
 

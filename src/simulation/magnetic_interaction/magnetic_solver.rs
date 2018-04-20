@@ -151,4 +151,8 @@ impl MagneticSolver {
 
         (self.director_field.field.view(), self.gradient_meanb.view())
     }
+
+    pub fn get_real_magnet_field(&self) -> Array<f64, Ix4> {
+        self.director_field.field.map(|v| v.re)
+    }
 }

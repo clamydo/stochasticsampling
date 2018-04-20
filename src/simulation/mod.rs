@@ -21,7 +21,7 @@ use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use consts::TWOPI;
 use extprim;
-use ndarray::Array;
+use ndarray::{Array, Ix4};
 use pcg_rand::Pcg64;
 use rand::distributions::normal::StandardNormal;
 use rand::distributions::{IndependentSample, Range};
@@ -228,6 +228,11 @@ impl Simulation {
     /// Returns sampled flow field
     pub fn get_flow_field(&self) -> FlowField3D {
         self.state.flow_field.clone()
+    }
+
+    /// Returns magnetic field
+    pub fn get_magnetic_field(&self) -> Array<f64, Ix4> {
+        self.magnetic_solver.get_real_magnet_field()
     }
 
     /// Returns current timestep

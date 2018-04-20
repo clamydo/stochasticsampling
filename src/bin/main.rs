@@ -204,6 +204,18 @@ fn run_simulation(
                         None
                     }
                 }),
+            magneticfield: settings
+                .simulation
+                .output_at_timestep
+                .magneticfield
+                .and_then(|x| {
+                    if timestep % x == 0 {
+                        info!("Timestep {}: Save magnetic-field...", timestep);
+                        Some(simulation.get_magnetic_field())
+                    } else {
+                        None
+                    }
+                }),
             particles: settings
                 .simulation
                 .output_at_timestep
