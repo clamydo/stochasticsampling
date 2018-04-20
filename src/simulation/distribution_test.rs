@@ -45,13 +45,16 @@ fn histogram() {
     let sum = d.dist.fold(0., |s, x| s + x);
     // Sum over all bins should be particle number
     assert_eq!(sum, n as f64);
+    let mut p2 = Particle::new(0.6, 0.3, 0., 4., 1., box_size);
+    p2.pbc(box_size);
+    let p2v = vec![p2];
 
-    let p2 = vec![Particle::new(0.6, 0.3, 0., 4., 1., box_size)];
-
-    d.histogram_from(&p2);
+    d.histogram_from(&p2v);
+    println!("{:?}", d.grid_width);
+    println!("{:?}", d.coord_to_grid(&p2));
     println!("{}", d.dist);
 
-    assert_eq!(d.dist[[3, 1, 0, 1, 0]], 1.0);
+    assert_eq!(d.dist[[2, 1, 0, 1, 0]], 1.0);
 }
 
 #[test]
@@ -100,8 +103,8 @@ fn sample_from() {
 
     // Check if properly normalised to 1 (N = 1)
     assert!(
-        equal_floats(d.dist[[3, 1, 0, 0, 0]] * vol, 1.),
-        "Value is {}, but expected: {}.",
+        equal_floats(d.dist[[2, 1, 0, 0, 0]] * vol, 1.),
+        "Value is {:?}, but expected: {:?}.",
         d.dist[[2, 1, 0, 0, 0]] * vol,
         1.0
     );
