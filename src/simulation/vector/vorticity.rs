@@ -180,6 +180,140 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
 /// $v_y = \partial_z u_x - \partial_x u_z$
 /// $v_z = \partial_x u_y - \partial_y u_x$
 ///
+/// where $\partial_y = 0$. Consequently,
+///
+/// $v_x = - \partial_z u_y$
+/// $v_y = \partial_z u_x - \partial_x u_z$
+/// $v_z = \partial_x u_y$
+///
+pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+    let sh = u.shape();
+    let sx = sh[1];
+    let sy = sh[2];
+    let sz = sh[3];
+
+    // allocate uninitialized memory, is assigned later
+    let len = 3 * sx * sy * sz;
+    let mut uninit = Vec::with_capacity(len);
+    unsafe {
+        uninit.set_len(len);
+    }
+
+    let mut res = Array::from_vec(uninit).into_shape((3, sx, sy, sz)).unwrap();
+
+    let hx = 2. * grid_width.x;
+    let hz = 2. * grid_width.z;
+
+    let hxz = hx / hz;
+
+    let ux = u.subview(Axis(0), 0);
+    let uy = u.subview(Axis(0), 1);
+    let uz = u.subview(Axis(0), 2);
+
+    {
+        // calculate dy uz
+        let mut vx = res.subview_mut(Axis(0), 0);
+        // calculate -dz uy, mind the switched signes
+        // bulk
+        {
+            let mut s = vx.slice_mut(s![.., .., 1..-1]);
+            s.assign(&uy.slice(s![.., .., ..-2]));
+            s -= &uy.slice(s![.., .., 2..]);
+            s /= hz;
+        }
+        // borders
+        {
+            let mut s = vx.slice_mut(s![.., .., ..1]);
+            s.assign(&uy.slice(s![.., .., -1..]));
+            s -= &uy.slice(s![.., .., 1..2]);
+            s /= hz;
+        }
+        {
+            let mut s = vx.slice_mut(s![.., .., -1..]);
+            s.assign(&uy.slice(s![.., .., -2..-1]));
+            s -= &uy.slice(s![.., .., ..1]);
+            s /= hz;
+        }
+    }
+    {
+        let mut vy = res.subview_mut(Axis(0), 1);
+        // calculate dz ux
+        // bulk
+        {
+            let mut s = vy.slice_mut(s![.., .., 1..-1]);
+            s.assign(&ux.slice(s![.., .., 2..]));
+            s -= &ux.slice(s![.., .., ..-2]);
+            s *= hxz;
+        }
+        // borders
+        {
+            let mut s = vy.slice_mut(s![.., .., ..1]);
+            s.assign(&ux.slice(s![.., .., 1..2]));
+            s -= &ux.slice(s![.., .., -1..]);
+            s *= hxz;
+        }
+        {
+            let mut s = vy.slice_mut(s![.., .., -1..]);
+            s.assign(&ux.slice(s![.., .., ..1]));
+            s -= &ux.slice(s![.., .., -2..-1]);
+            s *= hxz;
+        }
+
+        // calculate -dx uz, mind the switched signes
+        // bulk
+        {
+            let mut s = vy.slice_mut(s![1..-1, .., ..]);
+            s -= &uz.slice(s![2.., .., ..]);
+            s += &uz.slice(s![..-2, .., ..]);
+            s /= hx;
+        }
+        // borders
+        {
+            let mut s = vy.slice_mut(s![..1, .., ..]);
+            s -= &uz.slice(s![1..2, .., ..]);
+            s += &uz.slice(s![-1.., .., ..]);
+            s /= hx;
+        }
+        {
+            let mut s = vy.slice_mut(s![-1.., .., ..]);
+            s -= &uz.slice(s![..1, .., ..]);
+            s += &uz.slice(s![-2..-1, .., ..]);
+            s /= hx;
+        }
+    }
+    {
+        let mut vz = res.subview_mut(Axis(0), 2);
+        // calculate dx uy
+        // bulk
+        {
+            let mut s = vz.slice_mut(s![1..-1, .., ..]);
+            s.assign(&uy.slice(s![2.., .., ..]));
+            s -= &uy.slice(s![..-2, .., ..]);
+            s /= hx;
+        }
+        // borders
+        {
+            let mut s = vz.slice_mut(s![..1, .., ..]);
+            s.assign(&uy.slice(s![1..2, .., ..]));
+            s -= &uy.slice(s![-1.., .., ..]);
+            s /= hx;
+        }
+        {
+            let mut s = vz.slice_mut(s![-1.., .., ..]);
+            s.assign(&uy.slice(s![..1, .., ..]));
+            s -= &uy.slice(s![-2..-1, .., ..]);
+            s /= hx;
+        }
+    }
+    res
+}
+
+/// Calculates cross product for (1, 1, nz) grid.
+///
+/// $v_x = \partial_y u_z - \partial_z u_y$
+/// $v_y = \partial_z u_x - \partial_x u_z$
+/// $v_z = \partial_x u_y - \partial_y u_x$
+///
 /// where $\partial_{x,y} = 0$. So
 ///
 /// $v_x = - \partial_z u_y$
@@ -271,10 +405,14 @@ pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Ve
     let sy = sh[2];
     let sz = sh[3];
 
-    if sx == 1 && sy == 1 && sz > 1 {
+    if sx > 1 && sy > 1 && sz > 1 {
+        vorticity3d(grid_width, u)
+    } else if sx > 1 && sy == 1 && sz > 1 {
+        vorticity3d_quasi2d(grid_width, u)
+    } else if sx == 1 && sy == 1 && sz > 1 {
         vorticity3d_quasi1d(grid_width, u)
     } else {
-        vorticity3d(grid_width, u)
+        panic!("Dimensions not supported.")
     }
 }
 
