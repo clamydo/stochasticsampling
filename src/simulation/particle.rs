@@ -11,12 +11,16 @@ use std::f64::consts::PI;
 
 const PIHALF: f64 = PI / 2.;
 
+pub fn modulo(f: f64, m: f64) -> f64 {
+    ((f % m) + m) % m
+}
+
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
-    let theta = theta.mod_euc(TWOPI);
+    let theta = modulo(theta, TWOPI);
     if theta > PI {
-        ((phi + PI).mod_euc(TWOPI), TWOPI - theta)
+        (modulo(phi + PI, TWOPI), TWOPI - theta)
     } else {
-        (phi.mod_euc(TWOPI), theta)
+        (modulo(phi, TWOPI), theta)
     }
 }
 
@@ -30,16 +34,16 @@ pub struct Position {
 impl Position {
     pub fn new(x: f64, y: f64, z: f64, bs: BoxSize) -> Position {
         Position {
-            x: x.mod_euc(bs.x),
-            y: y.mod_euc(bs.y),
-            z: z.mod_euc(bs.z),
+            x: modulo(x, bs.x),
+            y: modulo(y, bs.y),
+            z: modulo(z, bs.z),
         }
     }
 
     pub fn pbc(&mut self, bs: BoxSize) {
-        self.x = self.x.mod_euc(bs.x);
-        self.y = self.y.mod_euc(bs.y);
-        self.z = self.z.mod_euc(bs.z);
+        self.x = modulo(self.x, bs.x);
+        self.y = modulo(self.y, bs.y);
+        self.z = modulo(self.z, bs.z);
     }
 
     pub fn from_vector_mut(&mut self, v: &Vector<Position>) {
@@ -128,10 +132,13 @@ pub struct Particle {
 impl Particle {
     /// Returns a `Particle` with given coordinates.
     pub fn new(x: f64, y: f64, z: f64, phi: f64, theta: f64, box_size: BoxSize) -> Particle {
-        Particle {
+        let mut p = Particle {
             position: Position::new(x, y, z, box_size),
             orientation: Orientation::new(phi, theta),
-        }
+        };
+
+        p.pbc(box_size);
+        p
     }
 
     pub fn pbc(&mut self, bs: BoxSize) {
@@ -281,7 +288,7 @@ mod tests {
         ];
 
         for (i, o) in input.iter().zip(output.iter()) {
-            let a = i[0].mod_euc(i[1]);
+            let a = modulo(i[0], i[1]);
             assert!(
                 equal_floats(a, *o),
                 "in: {} mod {}, out: {}, expected: {}",
@@ -295,12 +302,23 @@ mod tests {
 
     #[test]
     fn test_ang_pbc() {
-        let input = [[1., 0.], [1., PI], [1., -0.1], [1., PI + 0.1]];
+        let input = [
+            [1., 0.],
+            [1., PI],
+            [1., -0.1],
+            [1., PI + 0.1],
+            [TWOPI, PI],
+            [6.283185307179586, 1.5707963267948966],
+            [PI, PI + 1.],
+        ];
         let expect = [
             [1., 0.],
             [1., PI],
             [1. + PI, 0.09999999999999964],
             [1. + PI, PI - 0.1],
+            [0., PI],
+            [0., PI / 2.],
+            [0., PI - 1.],
         ];
 
         for (i, e) in input.iter().zip(expect.iter()) {
