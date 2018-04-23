@@ -29,6 +29,8 @@ pub fn stress_kernel(
     let a = stress.active;
     let b = stress.magnetic;
 
+    // TODO implement stress due to magnetic dipole interaction
+
     for (mut ax1, phi) in s.axis_iter_mut(Axis(2)).zip(&angles_phi) {
         for (mut e, theta) in ax1.axis_iter_mut(Axis(2)).zip(&angles_theta) {
             let s = stress_active(*phi, *theta) * a + stress_magnetic(*phi, *theta) * b;
