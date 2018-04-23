@@ -84,6 +84,18 @@ impl Distribution {
         );
 
         debug_assert!(
+            p.position.x < self.box_size.x && p.position.y < self.box_size.y
+                && p.position.z < self.box_size.z,
+            "Position out of range {:?}",
+            p
+        );
+
+        debug_assert!(
+            p.orientation.phi <= 2. * ::std::f64::consts::PI,
+            "Theta is not in range> {:?}",
+            p
+        );
+        debug_assert!(
             p.orientation.theta <= ::std::f64::consts::PI,
             "Theta is not in range> {:?}",
             p
@@ -93,8 +105,11 @@ impl Distribution {
         let gy = (p.position.y / self.grid_width.y).floor() as Ix;
         let gz = (p.position.z / self.grid_width.z).floor() as Ix;
         let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
-        let gtheta =
-            (p.orientation.theta / self.grid_width.theta).floor() as Ix % self.dist.dim().4;
+        let mut gtheta =
+            (p.orientation.theta / self.grid_width.theta).floor() as Ix;
+
+        // treat theta = PI as a null set and include it in the last cell
+        if gtheta == self.grid_size.theta { gtheta -=1};
 
         // trust in positions are in bound of PBC
         [gx, gy, gz, gphi, gtheta]
