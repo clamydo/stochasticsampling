@@ -191,6 +191,62 @@ mod tests {
     }
 
     #[test]
+    fn test_get_norm_k_mesh() {
+        let bs = BoxSize {
+            x: TWOPI,
+            y: TWOPI,
+            z: TWOPI,
+        };
+        let gs = GridSize {
+            x: 4,
+            y: 3,
+            z: 2,
+            phi: 1,
+            theta: 1,
+        };
+
+        let mesh = get_norm_k_mesh(gs, bs);
+
+        let expect = [
+            [
+                [[0., 0.], [0., 0.], [0., 0.]],
+                [[1., 0.5], [1., 1.], [1., 1.]],
+                [[-2., -2.], [-2., -2.], [-2., -2.]],
+                [[-1., -1.], [-1., -1.], [-1., -1.]],
+            ],
+            [
+                [[0., 0.], [1., 1.], [-1., -1.]],
+                [[0., 0.], [1., 1.], [-1., -1.]],
+                [[0., 0.], [1., 1.], [-1., -1.]],
+                [[0., 0.], [1., 1.], [-1., -1.]],
+            ],
+            [
+                [[0., -1.], [0., -1.], [0., -1.]],
+                [[0., -1.], [0., -1.], [0., -1.]],
+                [[0., -1.], [0., -1.], [0., -1.]],
+                [[0., -1.], [0., -1.], [0., -1.]],
+            ],
+        ];
+
+        let expect: Vec<f64> = expect
+            .iter()
+            .flat_map(|v| v.iter())
+            .flat_map(|v| v.iter())
+            .flat_map(|v| v.iter().cloned())
+            .collect();
+
+        let expect = Array::from_vec(expect).into_shape([3, 4, 3, 2]).unwrap();
+        assert_eq!(expect.shape(), [3, 4, 3, 2]);
+
+
+        println!("{}", mesh);
+
+        for (v, (i, e)) in mesh.iter().zip(expect.iter().enumerate()) {
+            assert!(equal_floats(v.re, *e), "{} != {:?} at index {}", v.re, *e, i);
+        }
+    }
+
+    #[test]
     fn test_get_inverse_norm_squared() {
         let bs = BoxSize {
             x: TWOPI,

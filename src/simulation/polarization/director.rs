@@ -39,14 +39,14 @@ impl DirectorField {
         let dist = dist.dist.view().into_shape([n_dist, n_angle]).unwrap();
         let mut field = self.field.view_mut().into_shape([3, n_dist]).unwrap();
 
-        // integration measures and FFT normalization
-        let norm = gw.phi * gw.theta / (gs.x as f64 * gs.y as f64 * gs.z as f64);
+        // Integration measure. sin(theta) is already included.
+        let measure = gw.phi * gw.theta;
 
         // Calculating the integral over the orientation. `norm` includes weights for
         // integration and normalisation of DFT
         for (s, mut o1) in director.outer_iter().zip(field.outer_iter_mut()) {
             for (d, o2) in dist.outer_iter().zip(o1.iter_mut()) {
-                *o2 = Complex::from(s.dot(&d) * norm)
+                *o2 = Complex::from(s.dot(&d) * measure)
             }
         }
 
