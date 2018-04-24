@@ -1,3 +1,8 @@
+// Move unit test into own file
+#[cfg(test)]
+#[path = "./director_test.rs"]
+mod director_test;
+
 use consts::TWOPI;
 use ndarray::{Array, Axis, Ix3, Ix4};
 use num_complex::Complex;
@@ -30,7 +35,6 @@ impl DirectorField {
         let n_angle = dist_sh.3 * dist_sh.4;
         let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
 
-        let gs = dist.get_grid_size();
         let gw = dist.get_grid_width();
 
         // collapse dimension to ease calculations
