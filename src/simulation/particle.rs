@@ -12,7 +12,15 @@ use std::f64::consts::PI;
 const PIHALF: f64 = PI / 2.;
 
 pub fn modulo(f: f64, m: f64) -> f64 {
-    ((f % m) + m) % m
+    // ((f % m) + m) % m
+    let r = f.mod_euc(m);
+    // protect from floating point voodoo
+    // Otherwise this function returns -EPSILON mod 3. = 3. 
+    if r == m {
+        0.0
+    } else {
+        r
+    }
 }
 
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
@@ -277,15 +285,7 @@ mod tests {
             [-7., 4.],
             [-7., -4.],
         ];
-        let output = [
-            0.,
-            2. * ::std::f64::consts::PI - ::std::f64::EPSILON,
-            0.,
-            3.,
-            3.,
-            1.,
-            1.,
-        ];
+        let output = [0., 0., 0., 3., 3., 1., 1.];
 
         for (i, o) in input.iter().zip(output.iter()) {
             let a = modulo(i[0], i[1]);
