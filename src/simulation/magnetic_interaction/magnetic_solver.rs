@@ -130,8 +130,9 @@ impl MagneticSolver {
             .zip(k.axis_iter(Axis(1)))
             .zip(b.axis_iter(Axis(1)))
         {
-            let b = b.broadcast([3, 3]).unwrap();
-            let e = k.dot(&b);
+            let k = k.broadcast([3, 3]).unwrap();
+            let k = k.t();
+            let e = (&k * &b) * Complex::new(0., 1.);
             g.assign(&e)
         }
 
