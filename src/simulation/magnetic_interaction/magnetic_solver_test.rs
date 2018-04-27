@@ -4,7 +4,6 @@ use simulation::distribution::Distribution;
 use simulation::particle::Particle;
 use simulation::settings::MagneticDipolePrefactors;
 use std::f64::consts::PI;
-use test::Bencher;
 
 #[test]
 fn test_magnetic() {
@@ -34,8 +33,5 @@ fn test_magnetic() {
     let (b, gb) = solver.mean_magnetic_field(&d);
 
     println!("{:?}", b);
-    // TODO: Do some meaningfull test
-    assert_eq!(b[[0, 0, 0, 0]], Complex::new(0., 0.));
-    assert_eq!(b[[1, 0, 0, 0]], Complex::new(0., 0.));
-    assert_eq!(b[[2, 0, 0, 0]], Complex::new(0., 0.));
+    unimplemented!();
 }

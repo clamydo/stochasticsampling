@@ -87,10 +87,11 @@ impl MagneticSolver {
 
         let m = self.parameter.magnetic_moment;
 
-        // integration measures and FFT normalization
-        let norm = 1. / (sh.0 as f64 * sh.1 as f64 * sh.2 as f64);
+        // FFT normalization and prefactor
+        let norm = m / (sh.1 * sh.2 * sh.3) as f64;
 
-        // set fft[p](k=0)=0
+        // set fft[p](k=0)=0, same as setting the magnetic dipole field operator to
+        // zero at k=0
         p.slice_mut(s![.., 0, 0, 0])
             .map_inplace(|v| *v = 0.0_f64.into());
 
@@ -98,25 +99,9 @@ impl MagneticSolver {
             .and(self.k_norm_mesh.lanes(Axis(0)))
             .apply(|mut p, k| {
                 let kdotp = k.dot(&p);
-                let mag = (&p / 3. - &k * kdotp) * m / norm;
+                let mag = (&p / 3. - &k * kdotp) * norm;
                 p.assign(&mag);
             });
-
-        debug_assert!(
-            p[[0, 0, 0, 0]] == 0.0_f64.into(),
-            "FFT magnetic field, origin 0 not zero: {:?}",
-            p
-        );
-        debug_assert!(
-            p[[1, 0, 0, 0]] == 0.0_f64.into(),
-            "FFT magnetic field, origin 1 not zero: {:?}",
-            p
-        );
-        debug_assert!(
-            p[[2, 0, 0, 0]] == 0.0_f64.into(),
-            "FFT magnetic field, origin 2 not zero: {:?}",
-            p
-        );
     }
 
     /// Returns vector gradient of magnetic field.
@@ -173,7 +158,6 @@ impl MagneticSolver {
             .outer_iter_mut()
             .into_par_iter()
             .for_each(|mut v| fft.reexecute3d(&mut v));
-
 
         (self.director_field.field.view(), self.gradient_meanb.view())
     }
