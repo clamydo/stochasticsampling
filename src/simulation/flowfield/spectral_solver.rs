@@ -109,7 +109,9 @@ impl SpectralSolver {
             .into_par_iter()
             .for_each(|mut v| fft.reexecute3d(&mut v));
 
+        let norm  = (dist_sh.0 * dist_sh.1 * dist_sh.2) as f64;
+
         // convert to real vector field
-        u.map(|v| v.re)
+        u.map(|v| v.re / norm)
     }
 }

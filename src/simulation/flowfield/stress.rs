@@ -97,7 +97,6 @@ pub fn average_stress<'a>(
     let n_stress = stress_sh.0 * stress_sh.1;
     let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
 
-    let gs = dist.get_grid_size();
     let gw = dist.get_grid_width();
 
     // Put axis in order, so that components fields are continuous in memory,
@@ -118,13 +117,13 @@ pub fn average_stress<'a>(
     let mut stress_field = stress_field.into_shape((n_stress, n_dist)).unwrap();
 
     // integration measures and FFT normalization
-    let norm = gw.phi * gw.theta / (gs.x as f64 * gs.y as f64 * gs.z as f64);
+    let measure = gw.phi * gw.theta;
 
     // Calculating the integral over the orientation. `norm` includes weights for
     // integration and normalisation of DFT
     for (s, mut o1) in stress.outer_iter().zip(stress_field.outer_iter_mut()) {
         for (d, o2) in dist.outer_iter().zip(o1.iter_mut()) {
-            *o2 = Complex::from(s.dot(&d) * norm)
+            *o2 = Complex::from(s.dot(&d) * measure)
         }
     }
 
