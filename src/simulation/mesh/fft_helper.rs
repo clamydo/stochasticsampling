@@ -1,3 +1,9 @@
+
+// Move unit test into own file
+#[cfg(test)]
+#[path = "./fft_helper_test.rs"]
+mod fft_helper_test;
+
 use super::mesh3d;
 use consts::TWOPI;
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
@@ -54,7 +60,8 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
     mesh3d::<Complex<f64>>(&ks)
 }
 
-/// Returns a normalized meshgrid of k values for FFT, except for zero which is zero.
+/// Returns a normalized meshgrid of k values for FFT, except for zero which is
+/// zero.
 ///
 /// The first axis denotes the components of the k-vector:
 ///     `res[c, i, j, m] -> k_c[i, j, m]`
@@ -79,220 +86,14 @@ pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<C
     inorm
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ndarray::arr3;
-    use test_helper::equal_floats;
+/// Returns scalar field of inversed norm squared of k-vector-values.
+///
+/// The inverse norm of k=0 is set to zero, i.e. 1/(k=0)^2 == 0
+pub fn get_inverse_norm(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<Complex<f64>, Ix3> {
+    let squared = &k_mesh * &k_mesh;
 
-    #[test]
-    fn test_get_k_sampling() {
-        let bs = BoxSize {
-            x: 6.,
-            y: 7.,
-            z: TWOPI,
-        };
-        let gs = GridSize {
-            x: 6,
-            y: 7,
-            z: 3,
-            phi: 1,
-            theta: 1,
-        };
+    let mut inorm = squared.sum_axis(Axis(0)).map(|v| (1. / v.re.sqrt()).into());
+    inorm[[0, 0, 0]] = Complex::new(0., 0.);
 
-        let k = get_k_sampling(gs, bs);
-
-        let expect0 = [
-            0.,
-            1.0471975511965976,
-            2.0943951023931953,
-            -3.1415926535897931,
-            -2.0943951023931953,
-            -1.0471975511965976,
-        ];
-        let expect1 = [
-            0.,
-            0.8975979010256552,
-            1.7951958020513104,
-            2.6927937030769655,
-            -2.6927937030769655,
-            -1.7951958020513104,
-            -0.8975979010256552,
-        ];
-
-        let expect2 = [0., 1., -1.];
-
-        for (v, e) in k[0].iter().zip(&expect0) {
-            assert!(equal_floats(v.re, *e), "{} != {}", v.re, *e);
-        }
-
-        for (v, e) in k[1].iter().zip(&expect1) {
-            assert!(equal_floats(v.re, *e), "{} != {}", v.re, *e);
-        }
-
-        for (v, e) in k[2].iter().zip(&expect2) {
-            assert!(equal_floats(v.re, *e), "{} != {}", v.re, *e);
-        }
-    }
-
-    #[test]
-    fn test_get_k_mesh() {
-        let bs = BoxSize {
-            x: TWOPI,
-            y: TWOPI,
-            z: TWOPI,
-        };
-        let gs = GridSize {
-            x: 4,
-            y: 3,
-            z: 2,
-            phi: 1,
-            theta: 1,
-        };
-
-        let mesh = get_k_mesh(gs, bs);
-
-        let expect = [
-            [
-                [[0., 0.], [0., 0.], [0., 0.]],
-                [[1., 1.], [1., 1.], [1., 1.]],
-                [[-2., -2.], [-2., -2.], [-2., -2.]],
-                [[-1., -1.], [-1., -1.], [-1., -1.]],
-            ],
-            [
-                [[0., 0.], [1., 1.], [-1., -1.]],
-                [[0., 0.], [1., 1.], [-1., -1.]],
-                [[0., 0.], [1., 1.], [-1., -1.]],
-                [[0., 0.], [1., 1.], [-1., -1.]],
-            ],
-            [
-                [[0., -1.], [0., -1.], [0., -1.]],
-                [[0., -1.], [0., -1.], [0., -1.]],
-                [[0., -1.], [0., -1.], [0., -1.]],
-                [[0., -1.], [0., -1.], [0., -1.]],
-            ],
-        ];
-
-        let expect: Vec<f64> = expect
-            .iter()
-            .flat_map(|v| v.iter())
-            .flat_map(|v| v.iter())
-            .flat_map(|v| v.iter().cloned())
-            .collect();
-
-        let expect = Array::from_vec(expect).into_shape([3, 4, 3, 2]).unwrap();
-        assert_eq!(expect.shape(), [3, 4, 3, 2]);
-
-        println!("{}", mesh);
-
-        for (v, e) in mesh.iter().zip(expect.iter()) {
-            assert!(equal_floats(v.re, *e), "{} != {:?}", v.re, *e);
-        }
-    }
-
-    #[test]
-    fn test_get_norm_k_mesh() {
-        let bs = BoxSize {
-            x: TWOPI,
-            y: TWOPI,
-            z: TWOPI,
-        };
-        let gs = GridSize {
-            x: 4,
-            y: 3,
-            z: 2,
-            phi: 1,
-            theta: 1,
-        };
-
-        let mesh = get_norm_k_mesh(gs, bs);
-
-        let expect = [
-            [
-                [[0., 0.], [0., 0.], [0., 0.]],
-                [[1., 0.5], [1., 1.], [1., 1.]],
-                [[-2., -2.], [-2., -2.], [-2., -2.]],
-                [[-1., -1.], [-1., -1.], [-1., -1.]],
-            ],
-            [
-                [[0., 0.], [1., 1.], [-1., -1.]],
-                [[0., 0.], [1., 1.], [-1., -1.]],
-                [[0., 0.], [1., 1.], [-1., -1.]],
-                [[0., 0.], [1., 1.], [-1., -1.]],
-            ],
-            [
-                [[0., -1.], [0., -1.], [0., -1.]],
-                [[0., -1.], [0., -1.], [0., -1.]],
-                [[0., -1.], [0., -1.], [0., -1.]],
-                [[0., -1.], [0., -1.], [0., -1.]],
-            ],
-        ];
-
-        let expect: Vec<f64> = expect
-            .iter()
-            .flat_map(|v| v.iter())
-            .flat_map(|v| v.iter())
-            .flat_map(|v| v.iter().cloned())
-            .collect();
-
-        let expect = Array::from_vec(expect).into_shape([3, 4, 3, 2]).unwrap();
-        assert_eq!(expect.shape(), [3, 4, 3, 2]);
-
-
-        println!("{}", mesh);
-
-        for (v, (i, e)) in mesh.iter().zip(expect.iter().enumerate()) {
-            assert!(equal_floats(v.re, *e), "{} != {:?} at index {}", v.re, *e, i);
-        }
-    }
-
-    #[test]
-    fn test_get_inverse_norm_squared() {
-        let bs = BoxSize {
-            x: TWOPI,
-            y: TWOPI,
-            z: TWOPI,
-        };
-        let gs = GridSize {
-            x: 4,
-            y: 3,
-            z: 2,
-            phi: 1,
-            theta: 1,
-        };
-
-        let mesh = get_k_mesh(gs, bs);
-
-        let inorm = get_inverse_norm_squared(mesh.view());
-
-        let expect = arr3(&[
-            [
-                [0.0, 1.000000000000000],
-                [1.000000000000000, 0.5000000000000000],
-                [1.000000000000000, 0.5000000000000000],
-            ],
-            [
-                [1.000000000000000, 0.5000000000000000],
-                [0.5000000000000000, 0.3333333333333333],
-                [0.5000000000000000, 0.3333333333333333],
-            ],
-            [
-                [0.2500000000000000, 0.2000000000000000],
-                [0.2000000000000000, 0.1666666666666667],
-                [0.2000000000000000, 0.1666666666666667],
-            ],
-            [
-                [1.000000000000000, 0.5000000000000000],
-                [0.5000000000000000, 0.3333333333333333],
-                [0.5000000000000000, 0.3333333333333333],
-            ],
-        ]);
-
-        println!("{}", inorm);
-
-        for (v, e) in inorm.iter().zip(expect.iter()) {
-            assert!(equal_floats(v.re, *e), "{} != {}", v.re, *e);
-        }
-    }
-
+    inorm
 }
