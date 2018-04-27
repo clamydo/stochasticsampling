@@ -62,9 +62,9 @@ pub fn get_norm_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<
     let ks = get_k_sampling(grid_size, box_size);
     let mesh = mesh3d::<Complex<f64>>(&ks);
 
-    let k2inv = get_inverse_norm_squared(mesh.view());
+    let kinv = get_inverse_norm(mesh.view());
 
-    &mesh * &k2inv
+    &mesh * &kinv
 }
 
 /// Returns scalar field of inversed norm squared of k-vector-values.
