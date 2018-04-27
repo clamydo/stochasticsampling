@@ -12,7 +12,7 @@ use simulation::distribution::Distribution;
 use simulation::mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
 use simulation::mesh::grid_width::GridWidth;
 use simulation::polarization::director::DirectorField;
-use simulation::settings::{BoxSize, GridSize, MagneticDipolePrefactors};
+use simulation::settings::{BoxSize, GridSize};
 use std::sync::Arc;
 
 pub type MagneticField = Array<Complex<f64>, Ix4>;
@@ -24,7 +24,6 @@ pub struct MagneticSolver {
     k_norm_mesh: Array<Complex<f64>, Ix4>,
     director_field: DirectorField,
     gradient_meanb: Array<Complex<f64>, Ix5>,
-    parameter: MagneticDipolePrefactors,
     // magnetic_field: Array<Complex<f64>, Ix4>,
 }
 
@@ -32,7 +31,6 @@ impl MagneticSolver {
     pub fn new(
         grid_size: GridSize,
         box_size: BoxSize,
-        parameter: MagneticDipolePrefactors,
     ) -> MagneticSolver {
         let grid_width = GridWidth::new(grid_size, box_size);
 
@@ -60,7 +58,6 @@ impl MagneticSolver {
             fft_plan_backward: Arc::new(plan_backward),
             director_field: DirectorField::new(grid_size, grid_width),
             gradient_meanb: Array::default([3, 3, grid_size.x, grid_size.y, grid_size.z]),
-            parameter: parameter,
         }
     }
 
@@ -85,10 +82,8 @@ impl MagneticSolver {
             .into_par_iter()
             .for_each(|mut v| fft.reexecute3d(&mut v));
 
-        let m = self.parameter.magnetic_moment;
-
-        // FFT normalization and prefactor
-        let norm = m / (sh.1 * sh.2 * sh.3) as f64;
+        // FFT normalization
+        let norm = (sh.1 * sh.2 * sh.3) as f64;
 
         // set fft[p](k=0)=0, same as setting the magnetic dipole field operator to
         // zero at k=0
@@ -99,7 +94,7 @@ impl MagneticSolver {
             .and(self.k_norm_mesh.lanes(Axis(0)))
             .apply(|mut p, k| {
                 let kdotp = k.dot(&p);
-                let mag = (&p / 3. - &k * kdotp) * norm;
+                let mag = (&p / 3. - &k * kdotp) / norm;
                 p.assign(&mag);
             });
     }

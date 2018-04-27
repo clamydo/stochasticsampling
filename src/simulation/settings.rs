@@ -62,7 +62,7 @@ pub struct StressPrefactors {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MagneticDipolePrefactors {
-    pub magnetic_moment: f64,
+    pub magnetic_dipole_dipole: f64,
 }
 
 /// Holds phyiscal parameters
@@ -256,7 +256,7 @@ mod tests {
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
-        assert_eq!(settings.parameters.magnetic_dipole.magnetic_moment, 5.0);
+        assert_eq!(settings.parameters.magnetic_dipole.magnetic_dipole_dipole, 5.0);
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.parameters.drag, 123.4);
         assert_eq!(

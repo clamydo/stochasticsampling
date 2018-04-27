@@ -88,6 +88,7 @@ impl Simulation {
             rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             magnetic_reorientation: param.magnetic_reorientation,
             drag: param.drag,
+            magnetic_dipole_dipole: param.magnetic_dipole.magnetic_dipole_dipole,
         };
 
         let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
@@ -96,7 +97,7 @@ impl Simulation {
             SpectralSolver::new(sim.grid_size, sim.box_size, scaled_stress_prefactors);
 
         let magnetic_solver =
-            MagneticSolver::new(sim.grid_size, sim.box_size, param.magnetic_dipole);
+            MagneticSolver::new(sim.grid_size, sim.box_size);
 
         // normal distribution with variance timestep
         let seed = [sim.seed[0], sim.seed[1]];

@@ -61,6 +61,7 @@ pub struct IntegrationParameter {
     pub trans_diffusion: f64,
     pub magnetic_reorientation: f64,
     pub drag: f64,
+    pub magnetic_dipole_dipole: f64,
 }
 
 /// Holds precomuted values
@@ -142,13 +143,9 @@ impl Integrator {
         let jef = jeffrey(&vector, idx, vort, param.timestep);
         new_vector += jef;
 
-        // magnetic dipole interaction
-        let nb = new_vector
-            .iter()
-            .zip(b.iter())
-            .fold(0., |acc, (n, b)| acc + n * b);
+        let mag = magnetic_dipole_rotation(&vector, b);
 
-        new_vector -= new_vector * nb;
+        new_vector += mag * param.timestep * param.magnetic_dipole_dipole;
 
         // update particles orientation
         p.orientation.from_vector_mut(&new_vector);
@@ -287,4 +284,12 @@ fn jeffrey(
         half_timestep * (vort_z * vector[0] - vort_x * vector[2]),
         half_timestep * (vort_x * vector[1] - vort_y * vector[0]),
     ].into()
+}
+
+fn magnetic_dipole_rotation(
+    vector: &OrientationVector,
+    mut b: VectorD,
+) -> VectorD {
+    b -= (*vector) * vector.dot(&b);
+    b
 }

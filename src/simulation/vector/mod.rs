@@ -25,6 +25,10 @@ impl<T> Vector<T> {
             t: PhantomData,
         }
     }
+
+    pub fn dot<D>(&self, rhs: &Vector<D>) -> f64 {
+        self.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
+    }
 }
 
 impl<T, R> Add<Vector<R>> for Vector<T> {
