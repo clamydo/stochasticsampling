@@ -125,13 +125,13 @@ impl Integrator {
         let vector = cs.to_orientation_vecor();
 
         // Get force in magnetic field
-        let fb = mean_force(gradb.view(), &vector);
+        let fb = mean_force(gradb.view(), &vector) * param.drag;
 
         // Evolve particle position.
         // convection + self-propulsion + diffusion
 
-        let mut new_position: Vector<Position> =
-            (flow + &vector + fb * param.drag).to() * param.timestep;
+        let mut new_position: Vector<Position> = p.position.to_vector();
+        new_position += (flow + &vector + fb) * param.timestep;
         new_position += rv.into_pos_vec() * param.trans_diffusion;
 
         p.position.from_vector_mut(&new_position);

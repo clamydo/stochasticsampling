@@ -59,6 +59,14 @@ impl Position {
         self.y = v[1];
         self.z = v[2];
     }
+
+    pub fn to_vector(&self) -> Vector<Position> {
+        [
+            self.x,
+            self.y,
+            self.z
+        ].into()
+    }
 }
 
 pub type OrientationVector = Vector<Orientation>;
