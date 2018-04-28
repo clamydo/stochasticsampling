@@ -105,7 +105,7 @@ impl Integrator {
         p: &mut Particle,
         rv: &RandomVector,
         flow_field: &ArrayView<f64, Ix4>,
-        vort: &ArrayView<f64, Ix4>,
+        vorticity: &ArrayView<f64, Ix4>,
         magnetic_field: &ArrayView<Complex<f64>, Ix4>,
         grad_magnetic_field: &ArrayView<Complex<f64>, Ix5>,
     ) {
@@ -114,6 +114,7 @@ impl Integrator {
         // retreive flow in cell which contains the particle
         let idx = get_cell_index(&p, &self.grid_width);
         let flow = field_at_cell(flow_field, idx);
+        let vort = field_at_cell(vorticity, idx);
         let b = field_at_cell_c(magnetic_field, idx);
         let gradb = vector_gradient_at_cell(grad_magnetic_field, idx);
 
@@ -124,25 +125,31 @@ impl Integrator {
         // computations
         let vector = cs.to_orientation_vecor();
 
+        // POSITION ----------------
+
         // Get force in magnetic field
-        let fb = mean_force(gradb.view(), &vector) * param.drag;
+        let fb = mean_force(gradb.view(), &vector) * param.drag * param.timestep;
 
         // Evolve particle position.
         // convection + self-propulsion + diffusion
 
         let mut new_position: Vector<Position> = p.position.to_vector();
         new_position += (flow + &vector + fb) * param.timestep;
+        // timestep is alredy included in random vector
         new_position += rv.into_pos_vec() * param.trans_diffusion;
 
         p.position.from_vector_mut(&new_position);
 
-        // rotational diffusion
+        // ORIENTATION -------------
+
+        // rotational diffusion, timestep is already included in random vector
         let mut new_vector = rotational_diffusion_quat_mut(&vector, &cs, rv);
 
-        // rotational coupling to the flow field
-        let jef = jeffrey(&vector, idx, vort, param.timestep);
-        new_vector += jef;
+        // Rotational coupling to the flow field. Timestep is handled in function.
+        let jef = jeffrey(&vector, vort);
+        new_vector += jef * param.timestep;
 
+        // get relative rotation in mean magnetic field
         let mag = magnetic_dipole_rotation(&vector, b);
 
         new_vector += mag * param.timestep * param.magnetic_dipole_dipole;
@@ -150,7 +157,7 @@ impl Integrator {
         // update particles orientation
         p.orientation.from_vector_mut(&new_vector);
 
-        // influence of magnetic field pointing in z-direction
+        // influence of static magnetic field pointing in z-direction
         p.orientation.theta -= param.magnetic_reorientation * cs.sin_theta * param.timestep;
 
         // IMPORTANT: apply periodic boundary condition
@@ -165,7 +172,8 @@ impl Integrator {
         magnetic_field: ArrayView<'a, Complex<f64>, Ix4>,
         grad_magnetic_field: ArrayView<'a, Complex<f64>, Ix5>,
     ) {
-        // Calculate vorticity dx uy - dy ux
+        // TODO move into caller
+        // Calculate vorticity
         let vort = vorticity3d_dispatch(self.grid_width, flow_field);
 
         particles
@@ -268,22 +276,17 @@ fn rotational_diffusion_quat_mut(
 
 fn jeffrey(
     vector: &OrientationVector,
-    idx: (usize, usize, usize),
-    vort: &ArrayView<f64, Ix4>,
-    timestep: f64,
+    vort: VectorD,
 ) -> VectorD {
-    let half_timestep = 0.5 * timestep;
-    // Get vorticity
-    let vort_x = unsafe { vort.uget((0, idx.0, idx.1, idx.2)) };
-    let vort_y = unsafe { vort.uget((1, idx.0, idx.1, idx.2)) };
-    let vort_z = unsafe { vort.uget((2, idx.0, idx.1, idx.2)) };
-
     // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
-    [
-        half_timestep * (vort_y * vector[2] - vort_z * vector[1]),
-        half_timestep * (vort_z * vector[0] - vort_x * vector[2]),
-        half_timestep * (vort_x * vector[1] - vort_y * vector[0]),
-    ].into()
+
+    let mut r: VectorD = [
+        vort[1] * vector[2] - vort[2] * vector[1],
+        vort[2] * vector[0] - vort[0] * vector[2],
+        vort[0] * vector[1] - vort[1] * vector[0],
+    ].into();
+    r *= 0.5;
+    r
 }
 
 fn magnetic_dipole_rotation(
