@@ -128,12 +128,11 @@ impl Integrator {
         // POSITION ----------------
 
         // Get force in magnetic field
-        let fb = mean_force(gradb.view(), &vector) * param.drag * param.timestep;
+        let fb = mean_force(gradb.view(), &vector) * param.drag;
 
-        // Evolve particle position.
-        // convection + self-propulsion + diffusion
 
         let mut new_position: Vector<Position> = p.position.to_vector();
+        // convection + self-propulsion + magnetic drag force
         new_position += (flow + &vector + fb) * param.timestep;
         // timestep is alredy included in random vector
         new_position += rv.into_pos_vec() * param.trans_diffusion;
