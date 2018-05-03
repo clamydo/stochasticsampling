@@ -12,15 +12,7 @@ use std::f64::consts::PI;
 const PIHALF: f64 = PI / 2.;
 
 pub fn modulo(f: f64, m: f64) -> f64 {
-    // ((f % m) + m) % m
-    let r = f.mod_euc(m);
-    // protect from floating point voodoo
-    // Otherwise this function returns -EPSILON mod 3. = 3. 
-    if r == m {
-        0.0
-    } else {
-        r
-    }
+    f.mod_euc(m)
 }
 
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {

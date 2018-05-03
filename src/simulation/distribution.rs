@@ -101,15 +101,32 @@ impl Distribution {
             p
         );
 
-        let gx = (p.position.x / self.grid_width.x).floor() as Ix;
-        let gy = (p.position.y / self.grid_width.y).floor() as Ix;
-        let gz = (p.position.z / self.grid_width.z).floor() as Ix;
-        let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
-        let mut gtheta =
-            (p.orientation.theta / self.grid_width.theta).floor() as Ix;
+        let mut gx = (p.position.x / self.grid_width.x).floor() as Ix;
+        let mut gy = (p.position.y / self.grid_width.y).floor() as Ix;
+        let mut gz = (p.position.z / self.grid_width.z).floor() as Ix;
+        let mut gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
+        let mut gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix;
+
+        // In some case positions at the right border are possible due to floating
+        // point roundoff-errors in the modulo calculation.
+        // It happens for very small negative values after the modulo operation.
+        if gx == self.grid_size.x {
+            gx -= 1
+        };
+        if gy == self.grid_size.x {
+            gy -= 1
+        };
+        if gz == self.grid_size.x {
+            gz -= 1
+        };
+        if gphi == self.grid_size.phi {
+            gphi -= 1
+        };
 
         // treat theta = PI as a null set and include it in the last cell
-        if gtheta == self.grid_size.theta { gtheta -=1};
+        if gtheta == self.grid_size.theta {
+            gtheta -= 1
+        };
 
         // trust in positions are in bound of PBC
         [gx, gy, gz, gphi, gtheta]
