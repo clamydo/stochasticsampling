@@ -47,7 +47,7 @@ pub fn version() -> String {
 
 fn main() {
     // initialize the env_logger implementation
-    env_logger::init().unwrap();
+    env_logger::init();
 
     // error handling of runner
     if let Err(ref e) = run() {
