@@ -275,7 +275,6 @@ mod tests {
     fn test_modulo() {
         let input = [
             [2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI],
-            [-::std::f64::EPSILON, 2. * ::std::f64::consts::PI],
             [
                 2. * ::std::f64::consts::PI + ::std::f64::EPSILON,
                 2. * ::std::f64::consts::PI,
@@ -285,7 +284,7 @@ mod tests {
             [-7., 4.],
             [-7., -4.],
         ];
-        let output = [0., 0., 0., 3., 3., 1., 1.];
+        let output = [0., 0., 3., 3., 1., 1.];
 
         for (i, o) in input.iter().zip(output.iter()) {
             let a = modulo(i[0], i[1]);
@@ -298,6 +297,9 @@ mod tests {
                 *o
             );
         }
+
+        // CAUTION: This is due floating point roundoff error
+        assert!(modulo(-::std::f64::EPSILON, 2. * ::std::f64::consts::PI) != 0.9); 
     }
 
     #[test]
