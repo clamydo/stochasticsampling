@@ -4,7 +4,8 @@
 mod director_test;
 
 use consts::TWOPI;
-use ndarray::{Array, Axis, Ix3, Ix4};
+use ndarray::{Array, Axis, Ix3, Ix4, Zip};
+use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use simulation::distribution::Distribution;
 use simulation::mesh::grid_width::GridWidth;
@@ -30,15 +31,13 @@ impl DirectorField {
 
     pub fn from_distribution(&mut self, dist: &Distribution) {
         let dist_sh = dist.dim();
-        // let kern_sh = self.kernel.dim();
-
         let n_angle = dist_sh.3 * dist_sh.4;
         let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
 
         let gw = dist.get_grid_width();
 
         // collapse dimension to ease calculations
-        let director = self.kernel.view_mut().into_shape([3, n_angle]).unwrap();
+        let kernel = self.kernel.view_mut().into_shape([3, n_angle]).unwrap();
 
         let dist = dist.dist.view().into_shape([n_dist, n_angle]).unwrap();
         let mut field = self.field.view_mut().into_shape([3, n_dist]).unwrap();
@@ -48,19 +47,13 @@ impl DirectorField {
 
         // Calculating the integral over the orientation. `norm` includes weights for
         // integration and normalisation of DFT
-        for (s, mut o1) in director.outer_iter().zip(field.outer_iter_mut()) {
-            for (d, o2) in dist.outer_iter().zip(o1.iter_mut()) {
-                *o2 = Complex::from(s.dot(&d) * measure)
-            }
-        }
-
-        // Does not work, because Zip requires that all producers have exactly the same
-        // shape. Zip::from(field.lanes_mut(Axis(1)))
-        // .and(dist.lanes(Axis(0)))
-        // .apply(|mut f, d| {
-        //     let o = director.dot(&d).map(|v| Complex::new(v * norm, 0.));
-        //     f.assign(&o);
-        // });
+        Zip::from(field.axis_iter_mut(Axis(1)))
+            .and(dist.outer_iter())
+            .par_apply(|mut f, d| {
+                for (mut f, kern) in f.iter_mut().zip(kernel.outer_iter()) {
+                    *f = Complex::from(kern.dot(&d) * measure);
+                }
+            });
     }
 }
 

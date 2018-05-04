@@ -28,10 +28,7 @@ pub struct MagneticSolver {
 }
 
 impl MagneticSolver {
-    pub fn new(
-        grid_size: GridSize,
-        box_size: BoxSize,
-    ) -> MagneticSolver {
+    pub fn new(grid_size: GridSize, box_size: BoxSize) -> MagneticSolver {
         let grid_width = GridWidth::new(grid_size, box_size);
 
         let mesh = get_k_mesh(grid_size, box_size);
@@ -121,15 +118,15 @@ impl MagneticSolver {
         let g = self.gradient_meanb.view_mut();
         let mut g = g.into_shape([3, 3, n]).unwrap();
 
-        for ((mut g, k), b) in g.axis_iter_mut(Axis(2))
-            .zip(k.axis_iter(Axis(1)))
-            .zip(b.axis_iter(Axis(1)))
-        {
-            let k = k.broadcast([3, 3]).unwrap();
-            let k = k.t();
-            let e = (&k * &b) * Complex::new(0., 1.);
-            g.assign(&e)
-        }
+        Zip::from(g.axis_iter_mut(Axis(2)))
+            .and(k.axis_iter(Axis(1)))
+            .and(b.axis_iter(Axis(1)))
+            .par_apply(|mut g, k, b| {
+                let k = k.broadcast([3, 3]).unwrap();
+                let k = k.t();
+                let e = (&k * &b) * Complex::new(0., 1.);
+                g.assign(&e)
+            });
 
         let mut g = g.into_shape([9, sh.1, sh.2, sh.3]).unwrap();
 
@@ -145,7 +142,11 @@ impl MagneticSolver {
         &mut self,
         d: &Distribution,
     ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
+        // TODO refactor to make it more explicit and readable
+        // calculate FFT of magnetic field and store result in self.director_field.field
         self.fft_mean_magnetic_field(d);
+        // use stored value of FFT of magnetic field to calculate vector gradient and
+        // store it in self.gradient_meanb
         self.update_gradient();
 
         let fft = &self.fft_plan_backward;
