@@ -48,7 +48,6 @@ pub struct Simulation {
 /// Holds the current state of the simulation.
 struct SimulationState {
     distribution: Distribution,
-    flow_field: FlowField3D,
     particles: Vec<Particle>,
     random_samples: Vec<RandomVector>,
     rng: Vec<Pcg64>,
@@ -96,8 +95,7 @@ impl Simulation {
         let spectral_solver =
             SpectralSolver::new(sim.grid_size, sim.box_size, scaled_stress_prefactors);
 
-        let magnetic_solver =
-            MagneticSolver::new(sim.grid_size, sim.box_size);
+        let magnetic_solver = MagneticSolver::new(sim.grid_size, sim.box_size);
 
         // normal distribution with variance timestep
         let seed = [sim.seed[0], sim.seed[1]];
@@ -120,7 +118,6 @@ impl Simulation {
         // initialize state with zeros
         let state = SimulationState {
             distribution: Distribution::new(sim.grid_size, sim.box_size),
-            flow_field: Array::zeros((3, sim.grid_size.x, sim.grid_size.y, sim.grid_size.z)),
             particles: Vec::with_capacity(sim.number_of_particles),
             random_samples: vec![
                 RandomVector {
@@ -228,7 +225,7 @@ impl Simulation {
 
     /// Returns sampled flow field
     pub fn get_flow_field(&self) -> FlowField3D {
-        self.state.flow_field.clone()
+        self.spectral_solver.get_real_flow_field()
     }
 
     /// Returns magnetic field
@@ -251,8 +248,9 @@ impl Simulation {
             * self.settings.simulation.box_size.z;
 
         // Calculate flow field from distribution.
-        self.state.flow_field = self.spectral_solver
-            .solve_flow_field(&self.state.distribution);
+        self.spectral_solver
+            .update_flow_field(&self.state.distribution);
+        let ff = self.spectral_solver.get_real_flow_field();
 
         let (md_b, md_grad_b) = self.magnetic_solver
             .mean_magnetic_field(&self.state.distribution);
@@ -283,7 +281,7 @@ impl Simulation {
         self.integrator.evolve_particles_inplace(
             &mut self.state.particles,
             &self.state.random_samples,
-            self.state.flow_field.view(),
+            ff.view(),
             md_b,
             md_grad_b,
         );
