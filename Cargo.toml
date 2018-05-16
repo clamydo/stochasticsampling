@@ -1,8 +1,9 @@
 [package]
 name = "stochasticsampling"
-version = "1.2.8"
+version = "1.3.0"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
+autobins = false
 
 [[bin]]
 name = "simulation"
