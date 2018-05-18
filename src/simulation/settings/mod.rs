@@ -1,5 +1,7 @@
 //! This module handles a TOML settings file.
 
+pub mod si;
+
 use std::fs::File;
 use std::io::prelude::*;
 use toml;
