@@ -213,22 +213,26 @@ impl Drop for FFTPlan {
 }
 
 pub fn fftw_init(nthreads: Option<usize>) -> Result<(), i32> {
-    match nthreads {
-        Some(n) => unsafe {
-            let code = ::fftw3_ffi::fftw_init_threads();
-            if code != 0 {
-                return Err(code);
-            };
-            ::fftw3_ffi::fftw_plan_with_nthreads(n as i32);
-        },
-        None => (),
+    if cfg!(feature = "fftw-threaded") {
+        match nthreads {
+            Some(n) => unsafe {
+                let code = ::fftw3_ffi::fftw_init_threads();
+                if code != 0 {
+                    return Err(code);
+                };
+                ::fftw3_ffi::fftw_plan_with_nthreads(n as i32);
+            },
+            None => (),
+        }
     }
 
     Ok(())
 }
 
 pub fn fttw_finalize() {
-    unsafe {
-        ::fftw3_ffi::fftw_cleanup_threads();
-    };
+    if cfg!(feature = "fftw-threaded") {
+        unsafe {
+            ::fftw3_ffi::fftw_cleanup_threads();
+        };
+    }
 }

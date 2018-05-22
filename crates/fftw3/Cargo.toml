@@ -3,6 +3,11 @@ name = "fftw3"
 version = "0.3.0"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 
+[features]
+default = []
+fftw-threaded = []
+
+
 [dependencies]
 ndarray = "0.11.0"
 num-complex = "0.1"

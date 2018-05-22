@@ -21,6 +21,7 @@ use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
 use consts::TWOPI;
 use extprim;
+use fftw3::fft;
 use ndarray::{Array, Ix4};
 use pcg_rand::Pcg64;
 use rand::distributions::normal::StandardNormal;
@@ -30,7 +31,6 @@ use rayon;
 use rayon::prelude::*;
 use std::env;
 use std::str::FromStr;
-use fftw3::fft;
 
 struct ValueCache {
     rot_diff: f64,
