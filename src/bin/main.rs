@@ -80,22 +80,20 @@ fn run() -> Result<()> {
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
     let mut settings = if cli_matches.is_present("si_units") {
-        let s = settings::si::read_parameter_file(settings_file_name)
+        settings::si::read_parameter_file(settings_file_name)
             .chain_err(|| "Error reading parameter file.")?
-            .into_settings();
-
-        let name = Path::new(settings_file_name);
-        let mut stem = name.file_stem().unwrap().to_os_string();
-        stem.push("_default");
-        let name = Path::new(&stem).with_extension(&(name.extension().unwrap()));
-
-        s.save_to_file(name.to_str().unwrap())
-            .chain_err(|| "Unable to save parameter file in simulation units.")?;
-        s
+            .into_settings()
     } else {
         settings::read_parameter_file(settings_file_name)
             .chain_err(|| "Error reading parameter file.")?
     };
+
+    let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
+    let path = OutputPath::new(output_dir, &settings.environment.prefix);
+
+    let param_name = path.with_extension("toml");
+    settings.save_to_file(param_name.to_str().unwrap())
+        .chain_err(|| "Unable to save parameter file in simulation units.")?;
 
     settings.set_version(&version());
     // drop mutability for safety
@@ -113,9 +111,6 @@ fn run() -> Result<()> {
     } else {
         InitType::File
     };
-
-    let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
-    let path = OutputPath::new(output_dir, &settings.environment.prefix);
 
     let mut simulation = init::init_simulation(&settings, init_type)
         .chain_err(|| "Error during initialization of simulation.")?;
