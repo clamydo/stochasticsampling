@@ -45,13 +45,13 @@ impl SpectralSolver {
         let plan_stress = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Forward,
-            fft::FFTFlags::Measure,
+            fft::FFTFlags::Patient,
         ).unwrap();
 
         let plan_ff = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Backward,
-            fft::FFTFlags::Measure,
+            fft::FFTFlags::Patient,
         ).unwrap();
 
         SpectralSolver {

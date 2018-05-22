@@ -20,6 +20,7 @@ pub enum FFTDirection {
 pub enum FFTFlags {
     Estimate = ::fftw3_ffi::FFTW_ESTIMATE as isize,
     Measure = ::fftw3_ffi::FFTW_MEASURE as isize,
+    Patient = ::fftw3_ffi::FFTW_PATIENT as isize,
     /// This is equal to FFTW_MEASURE | FFTW_UNALIGNED
     Unaligned = ::fftw3_ffi::FFTW_UNALIGNED as isize,
     EstimateUnaligned = (::fftw3_ffi::FFTW_ESTIMATE | ::fftw3_ffi::FFTW_UNALIGNED) as isize,
@@ -209,4 +210,25 @@ impl Drop for FFTPlan {
             ::fftw3_ffi::fftw_destroy_plan(self.plan.as_mut());
         }
     }
+}
+
+pub fn fftw_init(nthreads: Option<usize>) -> Result<(), i32> {
+    match nthreads {
+        Some(n) => unsafe {
+            let code = ::fftw3_ffi::fftw_init_threads();
+            if code != 0 {
+                return Err(code);
+            };
+            ::fftw3_ffi::fftw_plan_with_nthreads(n as i32);
+        },
+        None => (),
+    }
+
+    Ok(())
+}
+
+pub fn fttw_finalize() {
+    unsafe {
+        ::fftw3_ffi::fftw_cleanup_threads();
+    };
 }

@@ -30,6 +30,7 @@ use rayon;
 use rayon::prelude::*;
 use std::env;
 use std::str::FromStr;
+use fftw3::fft;
 
 struct ValueCache {
     rot_diff: f64,
@@ -109,6 +110,9 @@ impl Simulation {
             .num_threads(num_threads)
             .build_global()
             .unwrap();
+
+        // Initialze threads of FFTW
+        fft::fftw_init(Some(num_threads)).unwrap();
 
         let rng = (0..num_threads)
             .into_iter()
@@ -289,6 +293,12 @@ impl Simulation {
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
         self.state.timestep
+    }
+}
+
+impl Drop for Simulation {
+    fn drop(&mut self) {
+        fft::fttw_finalize();
     }
 }
 

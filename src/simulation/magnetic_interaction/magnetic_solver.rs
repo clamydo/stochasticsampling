@@ -39,13 +39,13 @@ impl MagneticSolver {
         let plan_forward = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Forward,
-            fft::FFTFlags::Measure,
+            fft::FFTFlags::Patient,
         ).unwrap();
 
         let plan_backward = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Backward,
-            fft::FFTFlags::Measure,
+            fft::FFTFlags::Patient,
         ).unwrap();
 
         MagneticSolver {
