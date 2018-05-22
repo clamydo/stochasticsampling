@@ -75,8 +75,8 @@ pub struct Parameters {
     pub stress: StressPrefactors,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
-    /// Magnetic moment of one particle including magnetic field constant `\mu_0`
-    /// WARNING: at the moment independend variable
+    /// Magnetic moment of one particle including magnetic field constant
+    /// `\mu_0` WARNING: at the moment independend variable
     pub magnetic_dipole: MagneticDipolePrefactors,
     pub drag: f64,
 }
@@ -225,6 +225,18 @@ impl Settings {
         // save version to metadata
         self.environment.version = version.to_string();
     }
+    /// Saves `Settings` to TOML file
+    pub fn save_to_file(&self, filename: &str) -> Result<()> {
+        let mut f = File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
+
+        let s = toml::to_string_pretty(&self)
+            .chain_err(|| "Failed to transform stettings into TOML format.")?;
+
+        f.write_all(s.as_bytes())
+            .chain_err(|| "Failed to write settings to file.")?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -258,7 +270,10 @@ mod tests {
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
-        assert_eq!(settings.parameters.magnetic_dipole.magnetic_dipole_dipole, 5.0);
+        assert_eq!(
+            settings.parameters.magnetic_dipole.magnetic_dipole_dipole,
+            5.0
+        );
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.parameters.drag, 123.4);
         assert_eq!(
@@ -316,7 +331,10 @@ mod tests {
             None
         );
 
-        assert_eq!(settings.simulation.output_at_timestep.magneticfield, Some(41));
+        assert_eq!(
+            settings.simulation.output_at_timestep.magneticfield,
+            Some(41)
+        );
         assert_eq!(
             settings_default.simulation.output_at_timestep.magneticfield,
             None
