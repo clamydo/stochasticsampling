@@ -79,8 +79,23 @@ fn run() -> Result<()> {
 
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
-    let mut settings = settings::read_parameter_file(settings_file_name)
-        .chain_err(|| "Error reading parameter file.")?;
+    let mut settings = if cli_matches.is_present("si_units") {
+        let s = settings::si::read_parameter_file(settings_file_name)
+            .chain_err(|| "Error reading parameter file.")?
+            .into_settings();
+
+        let name = Path::new(settings_file_name);
+        let mut stem = name.file_stem().unwrap().to_os_string();
+        stem.push("_default");
+        let name = Path::new(&stem).with_extension(&(name.extension().unwrap()));
+
+        s.save_to_file(name.to_str().unwrap())
+            .chain_err(|| "Unable to save parameter file in simulation units.")?;
+        s
+    } else {
+        settings::read_parameter_file(settings_file_name)
+            .chain_err(|| "Error reading parameter file.")?
+    };
 
     settings.set_version(&version());
     // drop mutability for safety
