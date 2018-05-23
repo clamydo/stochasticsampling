@@ -5,6 +5,7 @@ pub mod si;
 use std::fs::File;
 use std::io::prelude::*;
 use toml;
+use serde_json;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 1;
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::MsgPack;
@@ -71,24 +72,26 @@ pub struct MagneticDipolePrefactors {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub diffusion: DiffusionConstants,
-    pub stress: StressPrefactors,
+    pub drag: f64,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
+    pub diffusion: DiffusionConstants,
+    pub stress: StressPrefactors,
     /// Magnetic moment of one particle including magnetic field constant
     /// `\mu_0` WARNING: at the moment independend variable
     pub magnetic_dipole: MagneticDipolePrefactors,
-    pub drag: f64,
 }
 
 /// Holds output configuration
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Output {
-    #[serde(default)]
-    pub distribution: Option<usize>,
+    #[serde(default = "default_initial_condition")]
+    pub initial_condition: bool,
     #[serde(default = "default_final_snapshot")]
     pub final_snapshot: bool,
+    #[serde(default)]
+    pub distribution: Option<usize>,
     #[serde(default)]
     pub flowfield: Option<usize>,
     #[serde(default)]
@@ -97,8 +100,6 @@ pub struct Output {
     pub particles_head: Option<usize>,
     #[serde(default)]
     pub particles: Option<usize>,
-    #[serde(default = "default_initial_condition")]
-    pub initial_condition: bool,
     #[serde(default)]
     pub snapshot: Option<usize>,
 }
@@ -121,15 +122,15 @@ pub enum InitDistribution {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SimulationSettings {
-    pub box_size: BoxSize,
-    pub grid_size: GridSize,
-    #[serde(default = "default_init_distribution")]
-    pub init_distribution: InitDistribution,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub output_at_timestep: Output,
     pub timestep: f64,
+    #[serde(default = "default_init_distribution")]
+    pub init_distribution: InitDistribution,
     pub seed: [u64; 2],
+    pub output_at_timestep: Output,
+    pub box_size: BoxSize,
+    pub grid_size: GridSize,
 }
 
 /// Default init type
@@ -148,15 +149,15 @@ pub enum OutputFormat {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EnvironmentSettings {
+    pub prefix: String,
+    #[serde(skip_deserializing)]
+    version: String,
     #[serde(default)]
     pub init_file: Option<String>,
     #[serde(default = "default_io_queue_size")]
     pub io_queue_size: usize,
     #[serde(default = "default_output_format")]
     pub output_format: OutputFormat,
-    pub prefix: String,
-    #[serde(skip_deserializing)]
-    version: String,
 }
 
 /// Default value of IO queue size
@@ -230,11 +231,16 @@ impl Settings {
         let mut f =
             File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
 
-        let s = toml::to_string_pretty(&self)
-            .chain_err(|| "Failed to transform stettings into TOML format.")?;
+        // blocked on https://github.com/alexcrichton/toml-rs/issues/244
+        // let s = toml::to_string_pretty(&self)
+        //     .chain_err(|| "Failed to transform stettings into TOML format.")?;
 
-        f.write_all(s.as_bytes())
-            .chain_err(|| "Failed to write settings to file.")?;
+        // f.write_all(s.as_bytes())
+        //     .chain_err(|| "Failed to write settings to file.")?;
+        //
+
+        serde_json::to_writer_pretty(&mut f, &self)
+            .chain_err(|| "Cannot write settings file as MsgPack.")?;
 
         Ok(())
     }

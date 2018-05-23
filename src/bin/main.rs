@@ -93,8 +93,8 @@ fn run() -> Result<()> {
     path.create()
         .chain_err(|| "Cannot create output directory")?;
 
-
-    let param_name = path.with_extension("toml");
+    // TOML does not work well at the moment
+    let param_name = path.with_extension("json");
     settings.save_to_file(param_name.to_str().unwrap())
         .chain_err(|| "Unable to save parameter file in simulation units.")?;
 
