@@ -217,7 +217,7 @@ pub fn fftw_init(nthreads: Option<usize>) -> Result<(), i32> {
         match nthreads {
             Some(n) => unsafe {
                 let code = ::fftw3_ffi::fftw_init_threads();
-                if code != 0 {
+                if code == 0 {
                     return Err(code);
                 };
                 ::fftw3_ffi::fftw_plan_with_nthreads(n as i32);
