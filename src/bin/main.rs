@@ -90,6 +90,9 @@ fn run() -> Result<()> {
 
     let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
     let path = OutputPath::new(output_dir, &settings.environment.prefix);
+    path.create()
+        .chain_err(|| "Cannot create output directory")?;
+
 
     let param_name = path.with_extension("toml");
     settings.save_to_file(param_name.to_str().unwrap())
@@ -116,9 +119,6 @@ fn run() -> Result<()> {
         .chain_err(|| "Error during initialization of simulation.")?;
 
     let show_progress = cli_matches.is_present("progress_bar");
-
-    path.create()
-        .chain_err(|| "Cannot create output directory")?;
 
     let worker = Worker::new(
         settings.environment.io_queue_size,
