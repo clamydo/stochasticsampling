@@ -15,11 +15,17 @@ Due to the use of serde and syntax extension in testing code, rust nightly is
 necessary at the moment.
 
 # Build
-If all prerequisits are fulfilled, build with
+If all prerequisites are fulfilled, build with
 ```
 env RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 to get performance benefits from auto-vectorization.
+
+## Dependencies
+Compile FFTW3 with
+```
+./configure --enable-threads --enable-sse2 --enable-avx --enable-avx2 --enable-avx512 --prefix fftw-3.3.7/build CFLAGS="-march=native"
+```
 
 # Documentation
 Usage instructions can be found when

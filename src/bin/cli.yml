@@ -30,7 +30,7 @@ args:
         help: Show progress
     - si_units:
         long: si
-        help: Take a parameter file in SI units. This also creates a standard parameter file and saves it with the postfix '_default'.
+        help: Take a parameter file in SI units. This also creates a standard parameter file and saves it in the output directory.
 
 groups:
     - mode:

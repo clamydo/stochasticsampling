@@ -227,7 +227,8 @@ impl Settings {
     }
     /// Saves `Settings` to TOML file
     pub fn save_to_file(&self, filename: &str) -> Result<()> {
-        let mut f = File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
+        let mut f =
+            File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
 
         let s = toml::to_string_pretty(&self)
             .chain_err(|| "Failed to transform stettings into TOML format.")?;
