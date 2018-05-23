@@ -9,7 +9,10 @@ extern crate ndarray;
 extern crate num_complex;
 
 pub mod fft;
+#[cfg(feature = "default")]
 mod fftw3_ffi;
+#[cfg(feature = "fftw-threaded")]
+mod fftw3_threads_ffi;
 pub mod fftw_ndarray;
 
 #[cfg(test)]

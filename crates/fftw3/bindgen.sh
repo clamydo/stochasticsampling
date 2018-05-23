@@ -1,2 +1,2 @@
-env C_INCLUDE_PATH="/localscratch/fkoessel/.local/mpich/include" bindgen --convert-macros --builtins --link fftw3 /usr/include/fftw3.h > fftw3.rs
-# env C_INCLUDE_PATH="/localscratch/fkoessel/.local/mpich/include" bindgen --convert-macros --builtins --link fftw3 /usr/include/fftw3-mpi.h > fftw3-mpi.rs
+bindgen --builtins /usr/include/fftw3.h > src/fftw3_ffi.rs
+bindgen --builtins external/fftw-3.3.7/build/include/fftw3.h > src/fftw3_threads_fii.rs

@@ -1,9 +1,13 @@
 [package]
 name = "stochasticsampling"
-version = "1.3.3"
+version = "1.3.4"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 autobins = false
+
+[features]
+fftw-threaded = ["fftw3/fftw-threaded"]
+fftw-static = ["fftw3/fftw-static"]
 
 [[bin]]
 name = "simulation"
