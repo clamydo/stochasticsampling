@@ -53,11 +53,7 @@ impl Position {
     }
 
     pub fn to_vector(&self) -> Vector<Position> {
-        [
-            self.x,
-            self.y,
-            self.z
-        ].into()
+        [self.x, self.y, self.z].into()
     }
 }
 
@@ -164,7 +160,7 @@ impl Particle {
         let between = Range::new(0f64, 1.);
 
         for _ in 0..n {
-            particles.push(Particle::new(
+            let mut p = Particle::new(
                 bs.x * between.ind_sample(&mut rng),
                 bs.y * between.ind_sample(&mut rng),
                 bs.z * between.ind_sample(&mut rng),
@@ -172,7 +168,9 @@ impl Particle {
                 // take care of the spherical geometry by drawing from sin
                 pdf_sin(2. * between.ind_sample(&mut rng)),
                 bs,
-            ))
+            );
+            p.pbc(bs);
+            particles.push(p);
         }
 
         particles
@@ -187,14 +185,17 @@ impl Particle {
         let between = Range::new(0f64, 1.);
 
         for _ in 0..n {
-            particles.push(Particle::new(
+            let mut p = Particle::new(
                 bs.x * between.ind_sample(&mut rng),
                 bs.y * between.ind_sample(&mut rng),
                 bs.z * between.ind_sample(&mut rng),
                 TWOPI * between.ind_sample(&mut rng),
                 pdf_homogeneous_fixpoint(kappa, between.ind_sample(&mut rng)),
                 bs,
-            ))
+            );
+            p.pbc(bs);
+            debug_assert!(p.orientation.theta != ::std::f64::NAN);
+            particles.push(p);
         }
 
         particles
@@ -209,7 +210,18 @@ pub fn pdf_sin(x: f64) -> f64 {
 /// $\sin(\theta) \psi(\kappa, \theta)$.
 /// Including the measure of spherical coordinates $\sin(\theta)$ is crucial.
 pub fn pdf_homogeneous_fixpoint(kappa: f64, x: f64) -> f64 {
-    f64::acos(f64::ln(f64::exp(kappa) - 2. * x * f64::sinh(kappa)) / kappa)
+    assert!(
+        kappa != 0.0,
+        "Alignment of zero is the isotropic state. Please use that instead."
+    );
+    let r = f64::acos(f64::ln(f64::exp(kappa) - 2. * x * f64::sinh(kappa)) / kappa);
+
+    assert!(
+        !(r.is_nan()),
+        "Caution, the alignment parameter is too high for the given precision."
+    );
+
+    r
 }
 
 /// Serialize particle as continuous array instead of struct
@@ -299,7 +311,7 @@ mod tests {
         }
 
         // CAUTION: This is due floating point roundoff error
-        assert!(modulo(-::std::f64::EPSILON, 2. * ::std::f64::consts::PI) != 0.9); 
+        assert!(modulo(-::std::f64::EPSILON, 2. * ::std::f64::consts::PI) != 0.9);
     }
 
     #[test]
