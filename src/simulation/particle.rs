@@ -160,7 +160,7 @@ impl Particle {
         let between = Range::new(0f64, 1.);
 
         for _ in 0..n {
-            let mut p = Particle::new(
+            let p = Particle::new(
                 bs.x * between.ind_sample(&mut rng),
                 bs.y * between.ind_sample(&mut rng),
                 bs.z * between.ind_sample(&mut rng),
@@ -169,7 +169,6 @@ impl Particle {
                 pdf_sin(2. * between.ind_sample(&mut rng)),
                 bs,
             );
-            p.pbc(bs);
             particles.push(p);
         }
 
@@ -185,7 +184,7 @@ impl Particle {
         let between = Range::new(0f64, 1.);
 
         for _ in 0..n {
-            let mut p = Particle::new(
+            let p = Particle::new(
                 bs.x * between.ind_sample(&mut rng),
                 bs.y * between.ind_sample(&mut rng),
                 bs.z * between.ind_sample(&mut rng),
@@ -193,8 +192,6 @@ impl Particle {
                 pdf_homogeneous_fixpoint(kappa, between.ind_sample(&mut rng)),
                 bs,
             );
-            p.pbc(bs);
-            debug_assert!(p.orientation.theta != ::std::f64::NAN);
             particles.push(p);
         }
 
