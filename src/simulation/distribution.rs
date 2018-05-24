@@ -113,10 +113,10 @@ impl Distribution {
         if gx == self.grid_size.x {
             gx -= 1
         };
-        if gy == self.grid_size.x {
+        if gy == self.grid_size.y {
             gy -= 1
         };
-        if gz == self.grid_size.x {
+        if gz == self.grid_size.z {
             gz -= 1
         };
         if gphi == self.grid_size.phi {
