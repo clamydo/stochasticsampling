@@ -5,7 +5,6 @@ pub mod si;
 use std::fs::File;
 use std::io::prelude::*;
 use toml;
-use serde_json;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 1;
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat::MsgPack;
@@ -231,16 +230,11 @@ impl Settings {
         let mut f =
             File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
 
-        // blocked on https://github.com/alexcrichton/toml-rs/issues/244
-        // let s = toml::to_string_pretty(&self)
-        //     .chain_err(|| "Failed to transform stettings into TOML format.")?;
+        let s = toml::to_string_pretty(&self)
+            .chain_err(|| "Failed to transform stettings into TOML format.")?;
 
-        // f.write_all(s.as_bytes())
-        //     .chain_err(|| "Failed to write settings to file.")?;
-        //
-
-        serde_json::to_writer_pretty(&mut f, &self)
-            .chain_err(|| "Cannot write settings file as MsgPack.")?;
+        f.write_all(s.as_bytes())
+            .chain_err(|| "Failed to write settings to file.")?;
 
         Ok(())
     }
