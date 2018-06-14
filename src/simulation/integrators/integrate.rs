@@ -1,8 +1,3 @@
-// Move unit test into own file
-#[cfg(test)]
-#[path = "./langevin_test.rs"]
-mod langevin_test;
-
 use ndarray::{ArrayView, Axis, Ix1};
 
 /// Implements Simpon's Rule integration on an array, representing sampled
