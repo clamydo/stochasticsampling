@@ -204,7 +204,8 @@ impl Simulation {
         Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
-            rng_seed: seed.iter()
+            rng_seed: seed
+                .iter()
                 .map(|s| [s[0].lo, s[0].hi, s[1].lo, s[1].hi])
                 .collect(),
             timestep: self.state.timestep,
@@ -256,8 +257,22 @@ impl Simulation {
             .update_flow_field(&self.state.distribution);
         let ff = self.spectral_solver.get_real_flow_field();
 
-        let (md_b, md_grad_b) = self.magnetic_solver
-            .mean_magnetic_field(&self.state.distribution);
+        // skip calculation of magnetic field if zero
+        let magnetic = if self.settings.parameters.drag == 0.
+            && self
+                .settings
+                .parameters
+                .magnetic_dipole
+                .magnetic_dipole_dipole == 0.
+        {
+            None
+        } else {
+            let m = self
+                .magnetic_solver
+                .mean_magnetic_field(&self.state.distribution);
+
+            Some(m)
+        };
 
         let between = Range::new(0f64, 1.);
 
@@ -286,8 +301,7 @@ impl Simulation {
             &mut self.state.particles,
             &self.state.random_samples,
             ff.view(),
-            md_b,
-            md_grad_b,
+            magnetic,
         );
 
         // increment timestep counter to keep a continous identifier when resuming

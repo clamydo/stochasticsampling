@@ -106,8 +106,7 @@ impl Integrator {
         rv: &RandomVector,
         flow_field: &ArrayView<f64, Ix4>,
         vorticity: &ArrayView<f64, Ix4>,
-        magnetic_field: &ArrayView<Complex<f64>, Ix4>,
-        grad_magnetic_field: &ArrayView<Complex<f64>, Ix5>,
+        magnetic_field: Option<(ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>)>,
     ) {
         let param = &self.parameter;
 
@@ -115,8 +114,14 @@ impl Integrator {
         let idx = get_cell_index(&p, &self.grid_width);
         let flow = field_at_cell(flow_field, idx);
         let vort = field_at_cell(vorticity, idx);
-        let b = field_at_cell_c(magnetic_field, idx);
-        let gradb = vector_gradient_at_cell(grad_magnetic_field, idx);
+
+        let (b, gradb) = match magnetic_field {
+            Some((v, m)) => (
+                field_at_cell_c(&v, idx),
+                vector_gradient_at_cell(&m, idx)
+            ),
+            None => (VectorD::default(), Array::default((3,3)))
+        };
 
         // precompute trigonometric functions
         let cs = CosSinOrientation::from_orientation(&p.orientation);
@@ -168,8 +173,7 @@ impl Integrator {
         particles: &mut Vec<Particle>,
         random_samples: &[RandomVector],
         flow_field: ArrayView<'a, f64, Ix4>,
-        magnetic_field: ArrayView<'a, Complex<f64>, Ix4>,
-        grad_magnetic_field: ArrayView<'a, Complex<f64>, Ix5>,
+        magnetic_field: Option<(ArrayView<'a, Complex<f64>, Ix4>, ArrayView<'a, Complex<f64>, Ix5>)>
     ) {
         // TODO move into caller
         // Calculate vorticity
@@ -184,8 +188,7 @@ impl Integrator {
                     r,
                     &flow_field,
                     &vort.view(),
-                    &magnetic_field,
-                    &grad_magnetic_field,
+                    magnetic_field,
                 )
             });
     }

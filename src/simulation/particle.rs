@@ -24,6 +24,8 @@ pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
     }
 }
 
+pub type PositionVector = Vector<Position>;
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Position {
     pub x: f64,

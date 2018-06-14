@@ -4,6 +4,7 @@ use std::convert::From;
 use std::iter::Iterator;
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAssign};
+use std::default::Default as StdDefault;
 
 pub struct Default();
 pub type VectorD = Vector<Default>;
@@ -175,5 +176,14 @@ impl<T> From<[f64; 3]> for Vector<T> {
 impl<T> From<Vector<T>> for [f64; 3] {
     fn from(a: Vector<T>) -> [f64; 3] {
         a.v
+    }
+}
+
+impl<T> StdDefault for Vector<T> {
+    fn default() -> Self {
+        Vector::<T> {
+            v: [0., 0., 0.],
+            t: PhantomData,
+        }
     }
 }
