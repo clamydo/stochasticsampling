@@ -156,12 +156,13 @@ impl SettingsSI {
             * self.parameters.external_field / rotfriction
             / (rotdiff_brown + rotdiff_active);
 
+
         let mut res = super::Settings {
             simulation: self.simulation,
             parameters: super::Parameters {
                 diffusion: diff,
                 stress: stress,
-                magnetic_reorientation: alignment_parameter,
+                magnetic_reorientation: alignment_parameter * diff.rotational,
                 magnetic_dipole: super::MagneticDipolePrefactors {
                     magnetic_dipole_dipole: number_density.powf(2. / 3.) / uc / rotfriction * 4.0e-7
                         * PI
