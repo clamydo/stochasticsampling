@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAssign};
 use std::default::Default as StdDefault;
 
+#[derive(Clone, Copy)]
 pub struct Default();
 pub type VectorD = Vector<Default>;
 
@@ -21,6 +22,13 @@ impl<T> Vector<T> {
     }
 
     pub fn to<D>(self) -> Vector<D> {
+        Vector::<D> {
+            v: self.v,
+            t: PhantomData,
+        }
+    }
+
+    pub fn convert<D>(&self) -> Vector<D> {
         Vector::<D> {
             v: self.v,
             t: PhantomData,

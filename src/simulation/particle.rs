@@ -42,19 +42,27 @@ impl Position {
         }
     }
 
+    pub fn from_vector(v: &PositionVector) -> Position {
+        Position {
+            x: v[0],
+            y: v[1],
+            z: v[2],
+        }
+    }
+
     pub fn pbc(&mut self, bs: BoxSize) {
         self.x = modulo(self.x, bs.x);
         self.y = modulo(self.y, bs.y);
         self.z = modulo(self.z, bs.z);
     }
 
-    pub fn from_vector_mut(&mut self, v: &Vector<Position>) {
+    pub fn from_vector_mut(&mut self, v: &PositionVector) {
         self.x = v[0];
         self.y = v[1];
         self.z = v[2];
     }
 
-    pub fn to_vector(&self) -> Vector<Position> {
+    pub fn to_vector(&self) -> PositionVector {
         [self.x, self.y, self.z].into()
     }
 }
@@ -76,6 +84,23 @@ impl Orientation {
         }
     }
 
+    pub fn from_vector(v: &OrientationVector) -> Orientation {
+        let v = v.v;
+        let rxy = (v[0] * v[0] + v[1] * v[1]).sqrt();
+
+        // transform back to spherical coordinate
+        let phi = v[1].atan2(v[0]);
+        let theta = PIHALF - (v[2]).atan2(rxy);
+
+        debug_assert!(phi.is_finite());
+        debug_assert!(theta.is_finite());
+
+        Orientation {
+            phi: phi,
+            theta: theta,
+        }
+    }
+
     pub fn pbc(&mut self) {
         let (phi, theta) = ang_pbc(self.phi, self.theta);
         self.phi = phi;
@@ -90,7 +115,7 @@ impl Orientation {
         self.phi = v[1].atan2(v[0]);
         self.theta = PIHALF - (v[2]).atan2(rxy);
 
-        debug_assert!(self.theta.is_finite());
+        debug_assert!(self.phi.is_finite());
         debug_assert!(self.theta.is_finite());
     }
 
@@ -136,11 +161,23 @@ pub struct Particle {
 }
 
 impl Particle {
-    /// Returns a `Particle` with given coordinates.
+    /// Returns a `Particle` with given coordinates. Automatically applies pbc.
     pub fn new(x: f64, y: f64, z: f64, phi: f64, theta: f64, box_size: BoxSize) -> Particle {
         let mut p = Particle {
             position: Position::new(x, y, z, box_size),
             orientation: Orientation::new(phi, theta),
+        };
+
+        p.pbc(box_size);
+        p
+    }
+
+    /// Returns a `Particle` from a given position and orientation.
+    /// Automatically applies pbc.
+    pub fn from_position_orientation(pos: Position, o: Orientation, box_size: BoxSize) -> Particle {
+        let mut p = Particle {
+            position: pos,
+            orientation: o,
         };
 
         p.pbc(box_size);
