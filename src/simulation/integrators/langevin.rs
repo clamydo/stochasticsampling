@@ -22,9 +22,9 @@
 //! cell itself.
 
 // Move unit test into own file
-#[cfg(test)]
-#[path = "./langevin_test.rs"]
-mod langevin_test;
+// #[cfg(test)]
+// #[path = "./langevin_test.rs"]
+// mod langevin_test;
 
 use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use ndarray_parallel::prelude::*;
