@@ -40,7 +40,7 @@ serde_json = "1.0"
 time = "0.1.35"
 toml = { git = "https://github.com/alexcrichton/toml-rs", rev = "2be7ce9079fa02d9dd42958410ba1c40cef9811c" }
 extprim = "1.4.0"
-#derive_more = "0.10.0"
+derive_more = "0.10.0"
 
 [dev-dependencies]
 quickcheck = "0.6"

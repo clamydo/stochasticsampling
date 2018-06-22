@@ -16,8 +16,8 @@ extern crate ndarray_rand;
 #[cfg(test)]
 extern crate quickcheck;
 
-// #[macro_use]
-// extern crate derive_more;
+#[macro_use]
+extern crate derive_more;
 #[cfg(test)]
 extern crate test;
 #[macro_use]
