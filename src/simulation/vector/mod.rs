@@ -38,6 +38,13 @@ impl<T> Vector<T> {
     pub fn dot<D>(&self, rhs: &Vector<D>) -> f64 {
         self.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
     }
+
+    pub fn zero() -> Vector<T> {
+        Vector::<T> {
+            v: [0., 0., 0.],
+            t: PhantomData,
+        }
+    }
 }
 
 impl<T, R> Add<Vector<R>> for Vector<T> {
@@ -189,9 +196,6 @@ impl<T> From<Vector<T>> for [f64; 3] {
 
 impl<T> StdDefault for Vector<T> {
     fn default() -> Self {
-        Vector::<T> {
-            v: [0., 0., 0.],
-            t: PhantomData,
-        }
+        Vector::<T>::zero()
     }
 }
