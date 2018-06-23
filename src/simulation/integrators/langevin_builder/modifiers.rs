@@ -3,7 +3,7 @@
 #[path = "./modifiers_test.rs"]
 mod modifiers_test;
 
-use simulation::particle::{OrientationVector, ParticleVector};
+use simulation::particle::{OrientationVector, PositionVector, ParticleVector};
 use simulation::vector::VectorD;
 
 pub fn identity(_: ParticleVector, delta: ParticleVector) -> ParticleVector {
@@ -25,5 +25,25 @@ pub fn convection(_: ParticleVector, delta: ParticleVector, flow: VectorD) -> Pa
     delta + ParticleVector {
         position: flow.to(),
         orientation: OrientationVector::zero(),
+    }
+}
+
+pub fn jeffrey_vorticity(
+    p: ParticleVector,
+    delta: ParticleVector,
+    vort: VectorD,
+) -> ParticleVector {
+    // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
+
+    let mut r: VectorD = [
+        vort[1] * p.orientation[2] - vort[2] * p.orientation[1],
+        vort[2] * p.orientation[0] - vort[0] * p.orientation[2],
+        vort[0] * p.orientation[1] - vort[1] * p.orientation[0],
+    ].into();
+    r *= 0.5;
+
+    delta + ParticleVector {
+        position: PositionVector::zero(),
+        orientation: r.to(),
     }
 }
