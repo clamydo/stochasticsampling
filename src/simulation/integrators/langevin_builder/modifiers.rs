@@ -47,14 +47,20 @@ pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) ->
     }
 }
 
+pub struct MagnetDipoleDipoleForceParameter<'a> {
+    grad_b: ArrayView<'a, f64, Ix2>,
+    drag: f64,
+}
+
 /// Translates the particle due to magnetic dipole forces.
-pub fn magnetic_dipole_force(
+pub fn magnetic_dipole_dipole_force(
     p: OriginalParticle,
     delta: ParticleVector,
-    grad_b: ArrayView<f64, Ix2>,
+    param: &MagnetDipoleDipoleForceParameter,
 ) -> ParticleVector {
     delta + ParticleVector {
-        position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to(),
+        position: magnetic_interaction::mean_force(param.grad_b, &p.vector.orientation).to()
+            * param.drag,
         orientation: OrientationVector::zero(),
     }
 }

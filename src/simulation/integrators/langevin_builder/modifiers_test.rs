@@ -1,6 +1,6 @@
 use super::super::*;
 use super::*;
-use ndarray::{arr2, ArrayView, Ix2};
+use ndarray::arr2;
 use simulation::settings::BoxSize;
 
 const BS: BoxSize = BoxSize {
@@ -42,9 +42,14 @@ fn convection() {
 }
 
 #[test]
-fn magnetic_dipole_force() {
+fn magnetic_dipole_dipole_force() {
     let grad_b = arr2(&[[0., 0., 1.], [0., 0., 1.], [0., 0., 1.]]);
-    quicktest_modifier!(magnetic_dipole_force; grad_b.view(); (1., 1., 1., 0., 0.));
+    let param = MagnetDipoleDipoleForceParameter {
+        grad_b: grad_b.view(),
+        drag: 0.1,
+    };
+
+    quicktest_modifier!(magnetic_dipole_dipole_force; &param; (0.1, 0.1, 0.1, 0., 0.));
 }
 
 #[test]
