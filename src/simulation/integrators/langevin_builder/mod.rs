@@ -5,21 +5,38 @@ mod mod_test;
 
 pub mod modifiers;
 
-use simulation::particle::{Orientation, Particle, ParticleVector, Position};
+use simulation::particle::{CosSinOrientation, Particle, ParticleVector};
 use simulation::settings::BoxSize;
 
-pub struct LangevinBuilder(ParticleVector);
+#[derive(Clone, Copy)]
+pub struct OriginalParticle {
+    pub vector: ParticleVector,
+    pub orientation_angles: CosSinOrientation,
+}
+
+pub struct LangevinBuilder(OriginalParticle);
 pub struct Modification {
-    old: ParticleVector,
+    old: OriginalParticle,
     delta: ParticleVector,
 }
 
 impl LangevinBuilder {
     pub fn new(p: &Particle) -> LangevinBuilder {
-        LangevinBuilder(p.into())
+        // Simpler, but calculates trigonometric functions under the hood
+        // LangevinBuilder(p.into())
+
+        // cache trigonometric functions for performance
+        let cs = CosSinOrientation::from_orientation(&p.orientation);
+        LangevinBuilder(OriginalParticle {
+            vector: ParticleVector {
+                position: p.position.to_vector(),
+                orientation: cs.to_orientation_vector(),
+            },
+            orientation_angles: cs,
+        })
     }
 
-    pub fn with(self, f: fn(ParticleVector, ParticleVector) -> ParticleVector) -> Modification {
+    pub fn with(self, f: fn(OriginalParticle, ParticleVector) -> ParticleVector) -> Modification {
         Modification {
             old: self.0,
             delta: f(self.0, ParticleVector::zero()),
@@ -28,7 +45,7 @@ impl LangevinBuilder {
 
     pub fn with_param<T>(
         self,
-        f: fn(ParticleVector, ParticleVector, T) -> ParticleVector,
+        f: fn(OriginalParticle, ParticleVector, T) -> ParticleVector,
         p: T,
     ) -> Modification {
         Modification {
@@ -41,7 +58,7 @@ impl LangevinBuilder {
 pub struct TimeStep(f64);
 
 impl Modification {
-    pub fn with(self, f: fn(ParticleVector, ParticleVector) -> ParticleVector) -> Modification {
+    pub fn with(self, f: fn(OriginalParticle, ParticleVector) -> ParticleVector) -> Modification {
         Modification {
             old: self.old,
             delta: f(self.old, self.delta),
@@ -50,7 +67,7 @@ impl Modification {
 
     pub fn with_param<T>(
         self,
-        f: fn(ParticleVector, ParticleVector, T) -> ParticleVector,
+        f: fn(OriginalParticle, ParticleVector, T) -> ParticleVector,
         p: T,
     ) -> Modification {
         Modification {
@@ -67,7 +84,7 @@ impl Modification {
     }
 
     pub fn finalize(self, bs: BoxSize) -> Particle {
-        let mut p = Particle::from(self.old + self.delta);
+        let mut p = Particle::from(self.old.vector + self.delta);
         p.pbc(bs);
         p
     }

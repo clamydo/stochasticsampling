@@ -39,15 +39,15 @@ fn test_langevin_builder_conversion() {
         let pp = m.finalize(bs);
 
         println!("IN: {:?}", p);
-        println!("VEC: {:?}", v);
+        println!("VEC: {:?}", v.vector);
         println!("OUT: {:?}", pp);
 
         assert_eq!(p, pp);
 
-        for (a, b) in e[0].iter().zip(v.position.iter()) {
+        for (a, b) in e[0].iter().zip(v.vector.position.iter()) {
             assert!(equal_floats(*a, *b), "left: {}, right: {}", *a, *b);
         }
-        for (a, b) in e[1].iter().zip(v.orientation.iter()) {
+        for (a, b) in e[1].iter().zip(v.vector.orientation.iter()) {
             assert!(equal_floats(*a, *b), "left: {}, right: {}", *a, *b);
         }
     }

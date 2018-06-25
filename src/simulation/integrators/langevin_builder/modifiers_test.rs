@@ -39,3 +39,28 @@ fn self_propulsion() {
 fn convection() {
     quicktest_modifier!(convection; [1., 1., 0.].into(); (1., 1., 0., 0., 0.));
 }
+
+#[test]
+fn translational_diffusion() {
+    quicktest_modifier!(translational_diffusion; [1., 1., 0.].into(); (1., 1., 0., 0., 0.));
+}
+
+#[test]
+fn jeffrey_vorticity() {
+    quicktest_modifier!(jeffrey_vorticity; [0., 0.01, 0.].into(); (0., 0., 0., 0., 0.0049999583339581655));
+}
+
+
+#[test]
+fn magnetic_dipole_dipole_rotation() {
+    quicktest_modifier!(magnetic_dipole_dipole_rotation; [0.01, 0., 0.].into(); (0., 0., 0., 0., 0.009999666686665076));
+}
+
+#[test]
+fn rotational_diffusion() {
+    let r = RotDiff {
+        axis_angle: 0.,
+        rotate_angle:0.1,
+    };
+    quicktest_modifier!(rotational_diffusion; &r; (0., 0., 0., 0., 0.09999999999999987));
+}
