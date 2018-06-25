@@ -1,0 +1,43 @@
+[environment]
+    init_file = "foo/bar.cbor"
+    io_queue_size = 50
+    output_format = "Bincode"
+    prefix = "foo"
+
+[simulation]
+    init_distribution = "Homogeneous"
+    number_of_particles = 100
+    number_of_timesteps = 500
+    timestep = 0.1
+    seed = [ 1, 1 ]
+    [simulation.box_size]
+        x = 1.0e-4
+        y = 1.0e-4
+        z = 1.0e-4
+    [simulation.grid_size]
+        x = 30
+        y = 31
+        z = 32
+        phi = 4
+        theta = 5
+    [simulation.output_at_timestep]
+        distribution = 12
+        flowfield = 42
+        magneticfield = 41
+        particles = 100
+        particles_head = 10
+        snapshot = 666
+        initial_condition = false
+        final_snapshot = false
+
+[parameters]
+    viscocity = 1e-3
+    temperature = 300
+    volume_fraction = 1e-2
+    external_field = 1e-3
+    [parameters.particle]
+        radius = 1e-6
+        self_propulsion_speed = 1e-4
+        force_dipole = 1.88496e-18
+        magnetic_dipole_moment = 1e-15
+        persistance_time = 0.75
