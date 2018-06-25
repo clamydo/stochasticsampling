@@ -15,35 +15,51 @@ pub mod vector;
 use self::distribution::Distribution;
 use self::flowfield::spectral_solver::SpectralSolver;
 use self::flowfield::FlowField3D;
-use self::integrators::langevin::{IntegrationParameter, Integrator, RandomVector};
+use self::integrators::langevin_builder::modifiers::*;
+use self::integrators::langevin_builder::TimeStep;
+use self::integrators::LangevinBuilder;
 use self::magnetic_interaction::magnetic_solver::MagneticSolver;
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
+use self::vector::VectorD;
 use consts::TWOPI;
 use extprim;
 use fftw3::fft;
-use ndarray::{Array, Ix4};
+use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
+use num_complex::Complex;
 use pcg_rand::Pcg64;
 use rand::distributions::normal::StandardNormal;
 use rand::distributions::{IndependentSample, Range};
 use rand::{Rand, SeedableRng};
 use rayon;
 use rayon::prelude::*;
+use simulation::mesh::grid_width::GridWidth;
+use simulation::vector::vorticity::vorticity3d_dispatch;
 use std::env;
 use std::str::FromStr;
 
-struct ValueCache {
+struct ParamCache {
+    trans_diff: f64,
     rot_diff: f64,
+    grid_width: GridWidth,
+}
+
+#[derive(Clone, Copy)]
+pub struct RandomVector {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub axis_angle: f64,
+    pub rotate_angle: f64,
 }
 
 /// Main data structure representing the simulation.
 pub struct Simulation {
-    integrator: Integrator,
     spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
     settings: Settings,
     state: SimulationState,
-    vcache: ValueCache,
+    pcache: ParamCache,
 }
 
 /// Holds the current state of the simulation.
@@ -80,18 +96,6 @@ impl Simulation {
             active: param.stress.active,
             magnetic: 0.5 * param.stress.magnetic,
         };
-
-        let int_param = IntegrationParameter {
-            timestep: sim.timestep,
-            // see documentation of `integrator.evolve_particle_inplace` for a rational
-            trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
-            rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
-            magnetic_reorientation: param.magnetic_reorientation,
-            drag: param.drag,
-            magnetic_dipole_dipole: param.magnetic_dipole.magnetic_dipole_dipole,
-        };
-
-        let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
 
         let spectral_solver =
             SpectralSolver::new(sim.grid_size, sim.box_size, scaled_stress_prefactors);
@@ -138,13 +142,14 @@ impl Simulation {
         };
 
         Simulation {
-            integrator: integrator,
             spectral_solver: spectral_solver,
             magnetic_solver: magnetic_solver,
             settings: settings,
             state: state,
-            vcache: ValueCache {
+            pcache: ParamCache {
+                trans_diff: (2. * param.diffusion.translational * sim.timestep).sqrt(),
                 rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+                grid_width: GridWidth::new(sim.grid_size, sim.box_size),
             },
         }
     }
@@ -252,33 +257,12 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        // Calculate flow field from distribution.
-        self.spectral_solver
-            .update_flow_field(&self.state.distribution);
-        let ff = self.spectral_solver.get_real_flow_field();
-
-        // skip calculation of magnetic field if zero
-        let magnetic = if self.settings.parameters.drag == 0.
-            && self
-                .settings
-                .parameters
-                .magnetic_dipole
-                .magnetic_dipole_dipole == 0.
-        {
-            None
-        } else {
-            let m = self
-                .magnetic_solver
-                .mean_magnetic_field(&self.state.distribution);
-
-            Some(m)
-        };
-
         let between = Range::new(0f64, 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
-        let rot_diff = self.vcache.rot_diff;
+        let dt = self.pcache.trans_diff;
+        let dr = self.pcache.rot_diff;
 
         self.state
             .random_samples
@@ -287,22 +271,58 @@ impl Simulation {
             .for_each(|(c, mut rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: StandardNormal::rand(&mut rng).0,
-                        y: StandardNormal::rand(&mut rng).0,
-                        z: StandardNormal::rand(&mut rng).0,
+                        x: StandardNormal::rand(&mut rng).0 * dt,
+                        y: StandardNormal::rand(&mut rng).0 * dt,
+                        z: StandardNormal::rand(&mut rng).0 * dt,
                         axis_angle: TWOPI * between.ind_sample(&mut rng),
-                        rotate_angle: rayleigh_pdf(rot_diff, between.ind_sample(&mut rng)),
+                        rotate_angle: rayleigh_pdf(dr, between.ind_sample(&mut rng)),
                     };
                 }
             });
 
-        // Update particle positions
-        self.integrator.evolve_particles_inplace(
-            &mut self.state.particles,
-            &self.state.random_samples,
-            ff.view(),
-            magnetic,
-        );
+        // Calculate flow field from distribution.
+        self.spectral_solver
+            .update_flow_field(&self.state.distribution);
+        let flow_field = self.spectral_solver.get_real_flow_field();
+
+        // skip calculation of magnetic field if zero
+
+        let (b, grad_b) = self
+            .magnetic_solver
+            .mean_magnetic_field(&self.state.distribution);
+
+        let vorticity = vorticity3d_dispatch(self.pcache.grid_width, flow_field.view());
+        let sim = self.settings.simulation;
+        let param = self.settings.parameters;
+        let gw = self.pcache.grid_width;
+
+        self.state
+            .particles
+            .par_iter_mut()
+            .zip(self.state.random_samples.par_iter())
+            .for_each(|(p, r)| {
+                let idx = get_cell_index(&p, &gw);
+                let flow = field_at_cell(&flow_field.view(), idx);
+                let vort = field_at_cell(&vorticity.view(), idx);
+
+                let b = field_at_cell_c(&b, idx);
+                let grad_b = vector_gradient_at_cell(&grad_b, idx);
+                let dr = RotDiff {
+                    axis_angle: r.axis_angle,
+                    rotate_angle: r.rotate_angle,
+                };
+                *p = LangevinBuilder::new(&p)
+                    .with(self_propulsion)
+                    .with_param(convection, flow)
+                    .with_param(magnetic_dipole_dipole_force, grad_b.view())
+                    .with_param(external_field_alignment, param.magnetic_reorientation)
+                    .with_param(magnetic_dipole_dipole_rotation, b)
+                    .with_param(jeffrey_vorticity, vort)
+                    .step(TimeStep(sim.timestep))
+                    .with_param(translational_diffusion, [r.x, r.y, r.z].into())
+                    .with_param(rotational_diffusion, &dr)
+                    .finalize(sim.box_size);
+            });
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
@@ -326,4 +346,41 @@ impl Iterator for Simulation {
     fn next(&mut self) -> Option<usize> {
         Some(self.do_timestep())
     }
+}
+
+fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize) {
+    let ix = (p.position.x / grid_width.x).floor() as usize;
+    let iy = (p.position.y / grid_width.y).floor() as usize;
+    let iz = (p.position.z / grid_width.z).floor() as usize;
+
+    (ix, iy, iz)
+}
+
+fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+    let f = unsafe {
+        [
+            *field.uget((0, idx.0, idx.1, idx.2)),
+            *field.uget((1, idx.0, idx.1, idx.2)),
+            *field.uget((2, idx.0, idx.1, idx.2)),
+        ]
+    };
+    f.into()
+}
+
+fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+    let f = unsafe {
+        [
+            (*field.uget((0, idx.0, idx.1, idx.2))).re,
+            (*field.uget((1, idx.0, idx.1, idx.2))).re,
+            (*field.uget((2, idx.0, idx.1, idx.2))).re,
+        ]
+    };
+    f.into()
+}
+
+fn vector_gradient_at_cell(
+    field: &ArrayView<Complex<f64>, Ix5>,
+    idx: (usize, usize, usize),
+) -> Array<f64, Ix2> {
+    field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }
