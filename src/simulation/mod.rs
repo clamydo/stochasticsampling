@@ -15,14 +15,15 @@ pub mod vector;
 use self::distribution::Distribution;
 use self::flowfield::spectral_solver::SpectralSolver;
 use self::flowfield::FlowField3D;
-use self::integrators::langevin::{IntegrationParameter, Integrator, RandomVector};
+use self::integrators::LangevinBuilder;
 use self::magnetic_interaction::magnetic_solver::MagneticSolver;
 use self::particle::Particle;
 use self::settings::{Settings, StressPrefactors};
+use self::integrators::langevin_builder::modifiers::*;
 use consts::TWOPI;
 use extprim;
 use fftw3::fft;
-use ndarray::{Array, Ix4};
+use ndarray::{Array, ArrayView, Ix2, Ix4};
 use pcg_rand::Pcg64;
 use rand::distributions::normal::StandardNormal;
 use rand::distributions::{IndependentSample, Range};
@@ -32,18 +33,19 @@ use rayon::prelude::*;
 use std::env;
 use std::str::FromStr;
 
-struct ValueCache {
+struct ParamCache {
+    trans_diff: f64,
     rot_diff: f64,
 }
 
 /// Main data structure representing the simulation.
-pub struct Simulation {
-    integrator: Integrator,
+pub struct Simulation<F: FnOnce(p: &Particle, flow: VectorD, grad_b: ArrayView<f64, Ix2>, b: VectorD, vort: VectorD, dt: VectorD, dr: RotDiff)> {
+    integrator: F,
     spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
     settings: Settings,
     state: SimulationState,
-    vcache: ValueCache,
+    pcache: ParamCache,
 }
 
 /// Holds the current state of the simulation.
@@ -81,17 +83,18 @@ impl Simulation {
             magnetic: 0.5 * param.stress.magnetic,
         };
 
-        let int_param = IntegrationParameter {
-            timestep: sim.timestep,
-            // see documentation of `integrator.evolve_particle_inplace` for a rational
-            trans_diffusion: (2. * param.diffusion.translational * sim.timestep).sqrt(),
-            rot_diffusion: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
-            magnetic_reorientation: param.magnetic_reorientation,
-            drag: param.drag,
-            magnetic_dipole_dipole: param.magnetic_dipole.magnetic_dipole_dipole,
-        };
-
-        let integrator = Integrator::new(sim.grid_size, sim.box_size, int_param);
+        let integrator = |p: &Particle, flow: VectorD, grad_b: ArrayView<f64, Ix2>, b: VectorD, vort: VectorD, dt: VectorD, dr: RotDiff|
+            LangevinBuilder::new(p)
+            .with(self_propulsion)
+            .with_param(convection, flow)
+            .with_param(magnetic_dipole_dipole_force, grad_b)
+            .with_param(external_field_alignment, param.magnetic_reorientation)
+            .with_param(magnetic_dipole_dipole_rotation, b)
+            .with_param(jeffrey_vorticity, vort)
+            .step(sim.timestep)
+            .with_param(translational_diffusion, dt)
+            .with_param(translational_diffusion, dr)
+            .finalize(sim.box_size);
 
         let spectral_solver =
             SpectralSolver::new(sim.grid_size, sim.box_size, scaled_stress_prefactors);
@@ -143,7 +146,8 @@ impl Simulation {
             magnetic_solver: magnetic_solver,
             settings: settings,
             state: state,
-            vcache: ValueCache {
+            param_cache: ParamCache {
+                trans_diff: (2. * param.diffusion.translational * sim.timestep).sqrt(),
                 rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
             },
         }
@@ -278,8 +282,6 @@ impl Simulation {
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
-        let rot_diff = self.vcache.rot_diff;
-
         self.state
             .random_samples
             .par_chunks_mut(chunksize)
@@ -287,22 +289,29 @@ impl Simulation {
             .for_each(|(c, mut rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: StandardNormal::rand(&mut rng).0,
-                        y: StandardNormal::rand(&mut rng).0,
-                        z: StandardNormal::rand(&mut rng).0,
+                        x: StandardNormal::rand(&mut rng).0 * self.param_cache.trans_diff,
+                        y: StandardNormal::rand(&mut rng).0 * self.param_cache.trans_diff,
+                        z: StandardNormal::rand(&mut rng).0 * self.param_cache.trans_diff,
                         axis_angle: TWOPI * between.ind_sample(&mut rng),
-                        rotate_angle: rayleigh_pdf(rot_diff, between.ind_sample(&mut rng)),
+                        rotate_angle: rayleigh_pdf(self.param_cache.rot_diff, between.ind_sample(&mut rng)),
                     };
                 }
             });
 
-        // Update particle positions
-        self.integrator.evolve_particles_inplace(
-            &mut self.state.particles,
-            &self.state.random_samples,
-            ff.view(),
-            magnetic,
-        );
+        let vort = vorticity3d_dispatch(self.grid_width, flow_field);
+
+        particles
+            .par_iter_mut()
+            .zip(random_samples.par_iter())
+            .for_each(|(ref mut p, r)| {
+                self.evolve_particle_inplace(
+                    p,
+                    r,
+                    &flow_field,
+                    &vort.view(),
+                    magnetic_field,
+                )
+            });
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;
