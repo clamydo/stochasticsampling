@@ -126,10 +126,11 @@ impl Orientation {
 
     pub fn to_vector(&self) -> OrientationVector {
         let cs = CosSinOrientation::from_orientation(self);
-        cs.to_orientation_vecor()
+        cs.to_orientation_vector()
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct CosSinOrientation {
     pub cos_phi: f64,
     pub sin_phi: f64,
@@ -147,7 +148,7 @@ impl CosSinOrientation {
         }
     }
 
-    pub fn to_orientation_vecor(&self) -> OrientationVector {
+    pub fn to_orientation_vector(&self) -> OrientationVector {
         [
             self.sin_theta * self.cos_phi,
             self.sin_theta * self.sin_phi,
