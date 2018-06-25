@@ -14,7 +14,9 @@
 mod modifiers_test;
 
 use super::OriginalParticle;
+use ndarray::{ArrayView, Ix2};
 use quaternion;
+use simulation::magnetic_interaction;
 use simulation::particle::{OrientationVector, ParticleVector, PositionVector};
 use simulation::vector::VectorD;
 
@@ -45,15 +47,31 @@ pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) ->
     }
 }
 
-/// Translates according to translational diffusion. CAUTION: Must be called only after `.step`. The random vector should already include the timestep and translatinal diffusion constant.
-pub fn translational_diffusion(_p: OriginalParticle, delta: ParticleVector, random_vector: VectorD) -> ParticleVector {
+/// Translates the particle due to magnetic dipole forces.
+pub fn magnetic_dipole_force(
+    p: OriginalParticle,
+    delta: ParticleVector,
+    grad_b: ArrayView<f64, Ix2>,
+) -> ParticleVector {
+    delta + ParticleVector {
+        position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to(),
+        orientation: OrientationVector::zero(),
+    }
+}
+
+/// Translates according to translational diffusion. CAUTION: Must be called
+/// only after `.step`. The random vector should already include the timestep
+/// and translatinal diffusion constant.
+pub fn translational_diffusion(
+    _p: OriginalParticle,
+    delta: ParticleVector,
+    random_vector: VectorD,
+) -> ParticleVector {
     delta + ParticleVector {
         position: random_vector.to(),
         orientation: OrientationVector::zero(),
     }
-
 }
-
 
 /// Rotates the particle due to coupling to the flow's vorticiyt. Symmetric
 /// Jeffrey's term.

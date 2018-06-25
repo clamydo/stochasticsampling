@@ -1,5 +1,6 @@
 use super::super::*;
 use super::*;
+use ndarray::{arr2, ArrayView, Ix2};
 use simulation::settings::BoxSize;
 
 const BS: BoxSize = BoxSize {
@@ -41,6 +42,12 @@ fn convection() {
 }
 
 #[test]
+fn magnetic_dipole_force() {
+    let grad_b = arr2(&[[0., 0., 1.], [0., 0., 1.], [0., 0., 1.]]);
+    quicktest_modifier!(magnetic_dipole_force; grad_b.view(); (1., 1., 1., 0., 0.));
+}
+
+#[test]
 fn translational_diffusion() {
     quicktest_modifier!(translational_diffusion; [1., 1., 0.].into(); (1., 1., 0., 0., 0.));
 }
@@ -49,7 +56,6 @@ fn translational_diffusion() {
 fn jeffrey_vorticity() {
     quicktest_modifier!(jeffrey_vorticity; [0., 0.01, 0.].into(); (0., 0., 0., 0., 0.0049999583339581655));
 }
-
 
 #[test]
 fn magnetic_dipole_dipole_rotation() {
@@ -60,7 +66,7 @@ fn magnetic_dipole_dipole_rotation() {
 fn rotational_diffusion() {
     let r = RotDiff {
         axis_angle: 0.,
-        rotate_angle:0.1,
+        rotate_angle: 0.1,
     };
     quicktest_modifier!(rotational_diffusion; &r; (0., 0., 0., 0., 0.09999999999999987));
 }
