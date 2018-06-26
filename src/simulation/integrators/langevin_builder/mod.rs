@@ -55,7 +55,7 @@ impl LangevinBuilder {
     }
 }
 
-pub struct TimeStep(f64);
+pub struct TimeStep(pub f64);
 
 impl Modification {
     pub fn with(self, f: fn(OriginalParticle, ParticleVector) -> ParticleVector) -> Modification {
