@@ -22,9 +22,9 @@
 //! cell itself.
 
 // Move unit test into own file
-#[cfg(test)]
-#[path = "./langevin_test.rs"]
-mod langevin_test;
+// #[cfg(test)]
+// #[path = "./langevin_test.rs"]
+// mod langevin_test;
 
 use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use ndarray_parallel::prelude::*;
@@ -128,7 +128,7 @@ impl Integrator {
 
         // orientation vector of `n`, switch to cartesian coordinates to ease some
         // computations
-        let vector = cs.to_orientation_vecor();
+        let vector = cs.to_orientation_vector();
 
         // POSITION ----------------
 

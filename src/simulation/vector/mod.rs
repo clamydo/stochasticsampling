@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAssign};
 use std::default::Default as StdDefault;
 
+#[derive(Clone, Copy)]
 pub struct Default();
 pub type VectorD = Vector<Default>;
 
@@ -27,8 +28,22 @@ impl<T> Vector<T> {
         }
     }
 
+    pub fn convert<D>(&self) -> Vector<D> {
+        Vector::<D> {
+            v: self.v,
+            t: PhantomData,
+        }
+    }
+
     pub fn dot<D>(&self, rhs: &Vector<D>) -> f64 {
         self.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
+    }
+
+    pub fn zero() -> Vector<T> {
+        Vector::<T> {
+            v: [0., 0., 0.],
+            t: PhantomData,
+        }
     }
 }
 
@@ -181,9 +196,6 @@ impl<T> From<Vector<T>> for [f64; 3] {
 
 impl<T> StdDefault for Vector<T> {
     fn default() -> Self {
-        Vector::<T> {
-            v: [0., 0., 0.],
-            t: PhantomData,
-        }
+        Vector::<T>::zero()
     }
 }
