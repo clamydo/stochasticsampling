@@ -5,6 +5,7 @@
 
 #![crate_type = "staticlib"]
 #![feature(slice_patterns)]
+#![feature(euclidean_division)]
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
 
@@ -14,17 +15,21 @@ extern crate bincode;
 extern crate ndarray_rand;
 #[cfg(test)]
 extern crate quickcheck;
+
+#[macro_use]
+extern crate derive_more;
 #[cfg(test)]
 extern crate test;
-
 #[macro_use]
 extern crate error_chain;
 extern crate extprim;
 extern crate fftw3;
+#[macro_use]
+extern crate itertools;
 #[macro_use(s)]
 extern crate ndarray;
 extern crate ndarray_parallel;
-extern crate num;
+extern crate num_complex;
 extern crate pcg_rand;
 extern crate quaternion;
 extern crate rand;

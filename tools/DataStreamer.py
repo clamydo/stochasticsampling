@@ -134,6 +134,11 @@ def data_to_flowfield(data):
     ff = np.array(ff['data']).reshape(ff['dim'])
     return ff
 
+def data_to_magneticfield(data):
+    """ Return magnetic field with [component, x, y, z]. """
+    mf = data['magneticfield']
+    mf = np.array(mf['data']).reshape(mf['dim'])
+    return mf
 
 def data_to_dist(data):
     """Takes data dictonary and returns numpy array of sampled

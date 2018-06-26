@@ -19,7 +19,10 @@
     [simulation.output_at_timestep]
 
 [parameters]
+    drag = 123.4
     magnetic_reorientation = 1.0
+    [parameters.magnetic_dipole]
+        magnetic_dipole_dipole = 5.0
     [parameters.diffusion]
         rotational = 0.5
         translational = 1.0

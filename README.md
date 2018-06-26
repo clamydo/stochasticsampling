@@ -15,11 +15,17 @@ Due to the use of serde and syntax extension in testing code, rust nightly is
 necessary at the moment.
 
 # Build
-If all prerequisits are fulfilled, build with
+If all prerequisites are fulfilled, build with
 ```
 env RUSTFLAGS="-C target-cpu=native" cargo build --release
 ```
 to get performance benefits from auto-vectorization.
+
+## Dependencies
+Compile FFTW3 with
+```
+./configure --enable-threads --enable-sse2 --enable-avx --enable-avx2 --enable-avx512 --prefix fftw-3.3.7/build CFLAGS="-march=native"
+```
 
 # Documentation
 Usage instructions can be found when
@@ -47,4 +53,19 @@ with open('output.msgpack.lzma', 'rb') as f:
     buffer = lzma.decompress(buffer)
     msgpack.unpackb(buffer, encoding='utf-8')
 
+```
+# Profiling
+One way to optain a runtime profile is using perf:
+```
+env RAYON_NUM_THREADS=1 perf record --call-graph=lbr <simulation>
+```
+or
+```
+env RAYON_NUM_THREADS=1 perf record -F 99 -b --call-graph=dwarf <simulation>
+```
+Using `frame-pointer` is not reliable since the are often omitted in builds (as are they in `opt-level >= 2` in rust). `lbr` is faster, but only available on Intel Haswell CPUs and later. On Skylake it is limited to a call depth of 16. `dwarf` results in rich information, but produces quiet heavy profiles. It might be necessary to reduce the sampling rate, for example `-F 99`, in `perf`.
+
+In case `flamegraph` tools are installed, a flamegraph can be produces from the perf profile with
+```
+perf script | stackcollapse-perf | flamegraph > flame.svg
 ```

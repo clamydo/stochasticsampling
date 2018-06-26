@@ -34,9 +34,9 @@ use output::path::OutputPath;
 use output::worker::Worker;
 use pbr::ProgressBar;
 use std::path::Path;
-use stochasticsampling::simulation::Simulation;
 use stochasticsampling::simulation::output::OutputEntry;
 use stochasticsampling::simulation::settings::{self, Settings};
+use stochasticsampling::simulation::Simulation;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
@@ -47,7 +47,7 @@ pub fn version() -> String {
 
 fn main() {
     // initialize the env_logger implementation
-    env_logger::init().unwrap();
+    env_logger::init();
 
     // error handling of runner
     if let Err(ref e) = run() {
@@ -79,8 +79,24 @@ fn run() -> Result<()> {
 
     let settings_file_name = cli_matches.value_of("parameter_file").unwrap();
 
-    let mut settings = settings::read_parameter_file(settings_file_name)
-        .chain_err(|| "Error reading parameter file.")?;
+    let mut settings = if cli_matches.is_present("si_units") {
+        settings::si::read_parameter_file(settings_file_name)
+            .chain_err(|| "Error reading parameter file.")?
+            .into_settings()
+    } else {
+        settings::read_parameter_file(settings_file_name)
+            .chain_err(|| "Error reading parameter file.")?
+    };
+
+    let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
+    let path = OutputPath::new(output_dir, &settings.environment.prefix);
+    path.create()
+        .chain_err(|| "Cannot create output directory")?;
+
+    // TOML does not work well at the moment
+    let param_name = path.with_extension("toml");
+    settings.save_to_file(param_name.to_str().unwrap())
+        .chain_err(|| "Unable to save parameter file in simulation units.")?;
 
     settings.set_version(&version());
     // drop mutability for safety
@@ -99,16 +115,10 @@ fn run() -> Result<()> {
         InitType::File
     };
 
-    let output_dir = Path::new(cli_matches.value_of("output_directory").unwrap());
-    let path = OutputPath::new(output_dir, &settings.environment.prefix);
-
     let mut simulation = init::init_simulation(&settings, init_type)
         .chain_err(|| "Error during initialization of simulation.")?;
 
     let show_progress = cli_matches.is_present("progress_bar");
-
-    path.create()
-        .chain_err(|| "Cannot create output directory")?;
 
     let worker = Worker::new(
         settings.environment.io_queue_size,
@@ -200,6 +210,18 @@ fn run_simulation(
                     if timestep % x == 0 {
                         info!("Timestep {}: Save flow-field...", timestep);
                         Some(simulation.get_flow_field())
+                    } else {
+                        None
+                    }
+                }),
+            magneticfield: settings
+                .simulation
+                .output_at_timestep
+                .magneticfield
+                .and_then(|x| {
+                    if timestep % x == 0 {
+                        info!("Timestep {}: Save magnetic-field...", timestep);
+                        Some(simulation.get_magnetic_field())
                     } else {
                         None
                     }

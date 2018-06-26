@@ -1,11 +1,17 @@
 [package]
 name = "fftw3"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
+
+[features]
+default = []
+fftw-threaded = []
+fftw-static = []
+
 
 [dependencies]
 ndarray = "0.11.0"
-num = "0.1.37"
+num-complex = "0.1"
 
 [dev-dependencies]
 quickcheck = "*"

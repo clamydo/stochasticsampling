@@ -11,15 +11,15 @@
     timestep = 0.1
     seed = [ 1, 1 ]
     [simulation.box_size]
-        x = 1.0
-        y = 2.0
-        z = 3.0
+        x = 1.0e-4
+        y = 1.0e-4
+        z = 1.0e-4
     [simulation.grid_size]
-        x = 11
-        y = 12
-        z = 13
-        phi = 6
-        theta = 7
+        x = 30
+        y = 31
+        z = 32
+        phi = 4
+        theta = 5
     [simulation.output_at_timestep]
         distribution = 12
         flowfield = 42
@@ -31,13 +31,13 @@
         final_snapshot = false
 
 [parameters]
-    drag = 123.4
-    magnetic_reorientation = 1.0
-    [parameters.magnetic_dipole]
-        magnetic_dipole_dipole = 5.0
-    [parameters.diffusion]
-        rotational = 0.5
-        translational = 1.0
-    [parameters.stress]
-        active =  1.0
-        magnetic = 1.0
+    viscocity = 1e-3
+    temperature = 300
+    volume_fraction = 1e-2
+    external_field = 1e-3
+    [parameters.particle]
+        radius = 1e-6
+        self_propulsion_speed = 1e-4
+        force_dipole = 1.88496e-18
+        magnetic_dipole_moment = 1e-15
+        persistance_time = 0.75

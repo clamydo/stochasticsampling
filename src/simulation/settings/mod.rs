@@ -1,5 +1,7 @@
 //! This module handles a TOML settings file.
 
+pub mod si;
+
 use std::fs::File;
 use std::io::prelude::*;
 use toml;
@@ -58,32 +60,45 @@ pub struct StressPrefactors {
     pub magnetic: f64,
 }
 
+/// Holds prefactors for active and magnetic stress
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MagneticDipolePrefactors {
+    pub magnetic_dipole_dipole: f64,
+}
+
 /// Holds phyiscal parameters
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub diffusion: DiffusionConstants,
-    pub stress: StressPrefactors,
+    pub drag: f64,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
+    pub diffusion: DiffusionConstants,
+    pub stress: StressPrefactors,
+    /// Magnetic moment of one particle including magnetic field constant
+    /// `\mu_0` WARNING: at the moment independend variable
+    pub magnetic_dipole: MagneticDipolePrefactors,
 }
 
 /// Holds output configuration
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Output {
-    #[serde(default)]
-    pub distribution: Option<usize>,
+    #[serde(default = "default_initial_condition")]
+    pub initial_condition: bool,
     #[serde(default = "default_final_snapshot")]
     pub final_snapshot: bool,
     #[serde(default)]
+    pub distribution: Option<usize>,
+    #[serde(default)]
     pub flowfield: Option<usize>,
+    #[serde(default)]
+    pub magneticfield: Option<usize>,
     #[serde(default)]
     pub particles_head: Option<usize>,
     #[serde(default)]
     pub particles: Option<usize>,
-    #[serde(default = "default_initial_condition")]
-    pub initial_condition: bool,
     #[serde(default)]
     pub snapshot: Option<usize>,
 }
@@ -106,15 +121,15 @@ pub enum InitDistribution {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SimulationSettings {
-    pub box_size: BoxSize,
-    pub grid_size: GridSize,
-    #[serde(default = "default_init_distribution")]
-    pub init_distribution: InitDistribution,
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub output_at_timestep: Output,
     pub timestep: f64,
+    #[serde(default = "default_init_distribution")]
+    pub init_distribution: InitDistribution,
     pub seed: [u64; 2],
+    pub output_at_timestep: Output,
+    pub box_size: BoxSize,
+    pub grid_size: GridSize,
 }
 
 /// Default init type
@@ -133,15 +148,15 @@ pub enum OutputFormat {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EnvironmentSettings {
+    pub prefix: String,
+    #[serde(skip_deserializing)]
+    version: String,
     #[serde(default)]
     pub init_file: Option<String>,
     #[serde(default = "default_io_queue_size")]
     pub io_queue_size: usize,
     #[serde(default = "default_output_format")]
     pub output_format: OutputFormat,
-    pub prefix: String,
-    #[serde(skip_deserializing)]
-    version: String,
 }
 
 /// Default value of IO queue size
@@ -210,6 +225,19 @@ impl Settings {
         // save version to metadata
         self.environment.version = version.to_string();
     }
+    /// Saves `Settings` to TOML file
+    pub fn save_to_file(&self, filename: &str) -> Result<()> {
+        let mut f =
+            File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
+
+        let s = toml::to_string_pretty(&self)
+            .chain_err(|| "Failed to transform stettings into TOML format.")?;
+
+        f.write_all(s.as_bytes())
+            .chain_err(|| "Failed to write settings to file.")?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -243,7 +271,12 @@ mod tests {
         assert_eq!(settings.parameters.diffusion.translational, 1.0);
         assert_eq!(settings.parameters.stress.active, 1.0);
         assert_eq!(settings.parameters.stress.magnetic, 1.0);
+        assert_eq!(
+            settings.parameters.magnetic_dipole.magnetic_dipole_dipole,
+            5.0
+        );
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
+        assert_eq!(settings.parameters.drag, 123.4);
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {
@@ -296,6 +329,15 @@ mod tests {
         assert_eq!(settings.simulation.output_at_timestep.flowfield, Some(42));
         assert_eq!(
             settings_default.simulation.output_at_timestep.flowfield,
+            None
+        );
+
+        assert_eq!(
+            settings.simulation.output_at_timestep.magneticfield,
+            Some(41)
+        );
+        assert_eq!(
+            settings_default.simulation.output_at_timestep.magneticfield,
             None
         );
 

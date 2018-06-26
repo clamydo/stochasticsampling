@@ -1,9 +1,14 @@
 //! A representation for the probability distribution function.
 
-use super::grid_width::GridWidth;
-use super::particle::Particle;
-use super::settings::GridSize;
+// Move unit test into own file
+#[cfg(test)]
+#[path = "./distribution_test.rs"]
+mod distribution_test;
+
 use ndarray::{Array, Ix, Ix5};
+use simulation::mesh::grid_width::GridWidth;
+use simulation::particle::Particle;
+use simulation::settings::{BoxSize, GridSize};
 use std::ops::Index;
 
 /// Holds a normalised sampled distribution function on a grid, assuming the
@@ -18,24 +23,45 @@ pub struct Distribution {
     pub dist: Array<f64, Ix5>,
     /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
+    box_size: BoxSize,
+    grid_size: GridSize,
 }
 
 type GridCoordinate = [Ix; 5];
 
 impl Distribution {
     /// Returns a zero initialised instance of Distribution.
-    pub fn new(grid: GridSize, grid_width: GridWidth) -> Distribution {
-        let grid = [grid.x, grid.y, grid.z, grid.phi, grid.theta];
+    pub fn new(grid_size: GridSize, box_size: BoxSize) -> Distribution {
+        let grid = [
+            grid_size.x,
+            grid_size.y,
+            grid_size.z,
+            grid_size.phi,
+            grid_size.theta,
+        ];
+        let grid_width = GridWidth::new(grid_size, box_size);
 
         Distribution {
             dist: Array::default(grid),
             grid_width: grid_width,
+            box_size: box_size,
+            grid_size: grid_size,
         }
     }
 
     /// Returns the width of on cell for every axis
     pub fn get_grid_width(&self) -> GridWidth {
         self.grid_width
+    }
+
+    /// Returns the box dimensions
+    pub fn get_box_size(&self) -> BoxSize {
+        self.box_size
+    }
+
+    /// Returns grid size
+    pub fn get_grid_size(&self) -> GridSize {
+        self.grid_size
     }
 
     pub fn dim(&self) -> (Ix, Ix, Ix, Ix, Ix) {
@@ -58,17 +84,49 @@ impl Distribution {
         );
 
         debug_assert!(
+            p.position.x < self.box_size.x && p.position.y < self.box_size.y
+                && p.position.z < self.box_size.z,
+            "Position out of range {:?}",
+            p
+        );
+
+        debug_assert!(
+            p.orientation.phi <= 2. * ::std::f64::consts::PI,
+            "Theta is not in range> {:?}",
+            p
+        );
+        debug_assert!(
             p.orientation.theta <= ::std::f64::consts::PI,
             "Theta is not in range> {:?}",
             p
         );
 
-        let gx = (p.position.x / self.grid_width.x).floor() as Ix;
-        let gy = (p.position.y / self.grid_width.y).floor() as Ix;
-        let gz = (p.position.z / self.grid_width.z).floor() as Ix;
-        let gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
-        let gtheta =
-            (p.orientation.theta / self.grid_width.theta).floor() as Ix % self.dist.dim().4;
+        let mut gx = (p.position.x / self.grid_width.x).floor() as Ix;
+        let mut gy = (p.position.y / self.grid_width.y).floor() as Ix;
+        let mut gz = (p.position.z / self.grid_width.z).floor() as Ix;
+        let mut gphi = (p.orientation.phi / self.grid_width.phi).floor() as Ix;
+        let mut gtheta = (p.orientation.theta / self.grid_width.theta).floor() as Ix;
+
+        // In some case positions at the right border are possible due to floating
+        // point roundoff-errors in the modulo calculation.
+        // It happens for very small negative values after the modulo operation.
+        if gx == self.grid_size.x {
+            gx -= 1
+        };
+        if gy == self.grid_size.y {
+            gy -= 1
+        };
+        if gz == self.grid_size.z {
+            gz -= 1
+        };
+        if gphi == self.grid_size.phi {
+            gphi -= 1
+        };
+
+        // treat theta = PI as a null set and include it in the last cell
+        if gtheta == self.grid_size.theta {
+            gtheta -= 1
+        };
 
         // trust in positions are in bound of PBC
         [gx, gy, gz, gphi, gtheta]
@@ -137,210 +195,5 @@ impl Index<[i32; 5]> for Distribution {
                 wrap(index[4], stheta as i32),
             ))
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use simulation::grid_width::GridWidth;
-    use simulation::particle::Particle;
-    use simulation::settings::{BoxSize, GridSize};
-    use test_helper::equal_floats;
-
-    #[test]
-    fn new() {
-        let gs = GridSize {
-            x: 10,
-            y: 11,
-            z: 12,
-            phi: 13,
-            theta: 14,
-        };
-        let bs = BoxSize {
-            x: 1.,
-            y: 2.,
-            z: 3.,
-        };
-        let dist = Distribution::new(gs, GridWidth::new(gs, bs));
-        assert_eq!(dist.dim(), (10, 11, 12, 13, 14));
-    }
-
-    #[test]
-    fn histogram() {
-        let grid_size = GridSize {
-            x: 5,
-            y: 5,
-            z: 1,
-            phi: 2,
-            theta: 2,
-        };
-        let box_size = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let gw = GridWidth::new(grid_size, box_size);
-        let n = 1000;
-        let p = Particle::place_isotropic(n, box_size, [1, 1]);
-        let mut d = Distribution::new(grid_size, gw);
-
-        d.histogram_from(&p);
-
-        let sum = d.dist.fold(0., |s, x| s + x);
-        // Sum over all bins should be particle number
-        assert_eq!(sum, n as f64);
-
-        let p2 = vec![Particle::new(0.6, 0.3, 0., 4., 1., box_size)];
-
-        d.histogram_from(&p2);
-        println!("{}", d.dist);
-
-        assert_eq!(d.dist[[3, 1, 0, 1, 0]], 1.0);
-    }
-
-    #[test]
-    fn sample_from() {
-        let box_size = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let grid_size = GridSize {
-            x: 5,
-            y: 5,
-            z: 1,
-            phi: 2,
-            theta: 2,
-        };
-        let n = 1000;
-        let p = Particle::place_isotropic(n, box_size, [1, 1]);
-        let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
-
-        d.sample_from(&p);
-
-        // calculate approximate integral over the distribution function//
-        // interpreted as a step function
-        let GridWidth {
-            x: gx,
-            y: gy,
-            z: gz,
-            phi: gphi,
-            theta: gtheta,
-        } = d.grid_width;
-        let vol = gx * gy * gz * gphi * gtheta;
-        // Naive integration, sin(theta) is already included
-        let sum = vol * d.dist.scalar_sum();
-        assert!(
-            equal_floats(sum, 1.),
-            "Step function sum is: {}, but expected: {}. Should be normalised.",
-            sum,
-            1.
-        );
-
-        let p2 = vec![Particle::new(0.6, 0.3, 0., 0., 0., box_size)];
-
-        d.sample_from(&p2);
-        println!("{}", d.dist);
-
-        // Check if properly normalised to 1 (N = 1)
-        assert!(
-            equal_floats(d.dist[[3, 1, 0, 0, 0]] * vol, 1.),
-            "Value is {}, but expected: {}.",
-            d.dist[[2, 1, 0, 0, 0]] * vol,
-            1.0
-        );
-    }
-    #[test]
-    fn coord_to_grid() {
-        let box_size = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let grid_size = GridSize {
-            x: 50,
-            y: 50,
-            z: 1,
-            phi: 10,
-            theta: 1,
-        };
-
-        fn check(i: &[f64; 5], o: &[usize; 5], p: Particle, gs: GridSize, bs: BoxSize) {
-            let dist = Distribution::new(gs, GridWidth::new(gs, bs));
-
-            let g = dist.coord_to_grid(&p);
-
-            for ((a, b), c) in i.iter().zip(o.iter()).zip(g.iter()) {
-                assert!(
-                    b == c,
-                    "For input {:?}. Expected coordinate to be '{}', got '{}'.",
-                    a,
-                    b,
-                    c
-                );
-            }
-        };
-
-        let input = [
-            // [0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
-            [0., 0., 0., 0., 0.],
-            [1., 0., 0., 0., 0.],
-            [0., 1., 0., 0., 0.],
-            [0., 0., 0., 0.5, 0.],
-            [0., 0., 0., 7., 0.],
-            [0., 0., 0., -1., 0.],
-            [0.96, 0., 0., 0., 0.],
-            [0.5, 0.5, 0., -1., 0.],
-            [0.5, 0.5, 0., 0., 0.],
-            [0., 0., 0., 2. * ::std::f64::consts::PI, 0.],
-            [0.51000000000000005, 0.5, 0., 6.283185307179584, 0.],
-        ];
-
-        let result = [
-            // [0usize, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 0, 8, 0],
-            [48, 0, 0, 0, 0],
-            [25, 25, 0, 8, 0],
-            [25, 25, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [25, 25, 0, 9, 0],
-        ];
-
-        for (i, o) in input.iter().zip(result.iter()) {
-            let p = Particle::new(i[0], i[1], i[2], i[3], i[4], box_size);
-
-            check(i, o, p, grid_size, box_size);
-        }
-    }
-
-    #[test]
-    fn index() {
-        let box_size = BoxSize {
-            x: 1.,
-            y: 1.,
-            z: 1.,
-        };
-        let grid_size = GridSize {
-            x: 2,
-            y: 3,
-            z: 1,
-            phi: 2,
-            theta: 1,
-        };
-        let mut d = Distribution::new(grid_size, GridWidth::new(grid_size, box_size));
-
-        d.dist[[1, 2, 0, 1, 0]] = 42.;
-
-        assert_eq!(d[[1, 2, 0, 1, 0]], 42.);
-        assert_eq!(d[[-1, 2, 0, 1, 0]], 42.);
-        assert_eq!(d[[1, -1, 0, 1, 0]], 42.);
-        assert_eq!(d[[3, -1, 0, 1, 0]], 42.);
-        assert_eq!(d[[3, 5, 0, 1, 0]], 42.);
     }
 }
