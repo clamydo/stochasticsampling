@@ -285,8 +285,6 @@ impl Simulation {
             .update_flow_field(&self.state.distribution);
         let flow_field = self.spectral_solver.get_real_flow_field();
 
-        // skip calculation of magnetic field if zero
-
         let (b, grad_b) = self
             .magnetic_solver
             .mean_magnetic_field(&self.state.distribution);
