@@ -51,10 +51,10 @@ pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) ->
 pub fn magnetic_dipole_dipole_force(
     p: OriginalParticle,
     delta: ParticleVector,
-    grad_b: ArrayView<f64, Ix2>,
+    (drag, grad_b): (f64, ArrayView<f64, Ix2>),
 ) -> ParticleVector {
     delta + ParticleVector {
-        position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to(),
+        position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to() * drag,
         orientation: OrientationVector::zero(),
     }
 }

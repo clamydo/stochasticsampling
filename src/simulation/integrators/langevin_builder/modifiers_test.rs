@@ -45,7 +45,7 @@ fn convection() {
 fn magnetic_dipole_dipole_force() {
     let grad_b = arr2(&[[0., 0., 1.], [0., 0., 1.], [0., 0., 1.]]);
 
-    quicktest_modifier!(magnetic_dipole_dipole_force; grad_b.view(); (1.0, 1.0, 1.0, 0., 0.));
+    quicktest_modifier!(magnetic_dipole_dipole_force; (0.1, grad_b.view()); (0.1, 0.1, 0.1, 0., 0.));
 }
 
 #[test]

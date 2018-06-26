@@ -305,7 +305,7 @@ impl Simulation {
                 let flow = field_at_cell(&flow_field.view(), idx);
                 let vort = field_at_cell(&vorticity.view(), idx);
 
-                let b = field_at_cell_c(&b, idx);
+                let b = field_at_cell_c(&b, idx) * param.magnetic_reorientation;
                 let grad_b = vector_gradient_at_cell(&grad_b, idx);
                 let dr = RotDiff {
                     axis_angle: r.axis_angle,
@@ -314,7 +314,7 @@ impl Simulation {
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
-                    .with_param(magnetic_dipole_dipole_force, grad_b.view())
+                    .with_param(magnetic_dipole_dipole_force, (param.drag, grad_b.view()))
                     .with_param(external_field_alignment, param.magnetic_reorientation)
                     .with_param(magnetic_dipole_dipole_rotation, b)
                     .with_param(jeffrey_vorticity, vort)
