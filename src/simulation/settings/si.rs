@@ -192,14 +192,14 @@ fn volume_fraction_to_number_density(volfrac: f64, radius: f64) -> f64 {
     volfrac / volp
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_conversion() {
-        let settings = read_parameter_file("./test/parameter_si.toml").unwrap();
-        println!("{:?}", settings.into_settings());
-        unimplemented!();
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[test]
+//     fn test_conversion() {
+//         let settings = read_parameter_file("./test/parameter_si.toml").unwrap();
+//         println!("{:?}", settings.into_settings());
+//         unimplemented!();
+//     }
+// }
