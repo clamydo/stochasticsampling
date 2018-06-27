@@ -45,6 +45,8 @@ pub struct DiffusionConstants {
 #[serde(deny_unknown_fields)]
 pub struct Particle {
     pub radius: f64,
+    #[serde(default)]
+    pub shape: f64,
     pub self_propulsion_speed: f64,
     pub force_dipole: f64,
     pub magnetic_dipole_moment: f64,
@@ -166,6 +168,7 @@ impl SettingsSI {
                         * PI
                         * self.parameters.particle.magnetic_dipole_moment.powi(2),
                 },
+                shape: self.parameters.particle.shape,
                 drag: number_density / uc / transfriction
                     * 4.0e-7
                     * PI

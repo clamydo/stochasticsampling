@@ -86,7 +86,10 @@ impl Simulation {
 
         let stress = |phi, theta| {
             param.stress.active * stress_active(phi, theta)
-                + param.stress.magnetic * stress_magnetic(phi, theta)
+                + param.stress.magnetic
+                    * stress_magnetic(phi, theta)
+                    * param.shape
+                    * stress_magnetic_rods(phi, theta)
         };
 
         let spectral_solver = SpectralSolver::new(sim.grid_size, sim.box_size, stress);

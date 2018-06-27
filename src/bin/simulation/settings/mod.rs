@@ -50,6 +50,8 @@ pub struct Parameters {
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
     pub diffusion: DiffusionConstants,
+    #[serde(default)]
+    pub shape: f64,
     pub stress: StressPrefactors,
     /// Magnetic moment of one particle including magnetic field constant
     /// `\mu_0` WARNING: at the moment independend variable
@@ -252,6 +254,8 @@ mod tests {
         );
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.parameters.drag, 123.4);
+        assert_eq!(settings_default.parameters.drag, 0.0);
+        assert_eq!(settings.parameters.shape, 44.3);
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {
