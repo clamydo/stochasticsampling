@@ -1,3 +1,4 @@
+use super::super::stress::stresses::*;
 use super::*;
 
 use distribution::Distribution;
@@ -28,10 +29,8 @@ fn test_calculate_flow_field_against_cache() {
         phi: 11,
         theta: 11,
     };
-    let s = StressPrefactors {
-        active: 1.,
-        magnetic: 0.,
-    };
+
+    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
@@ -165,10 +164,8 @@ fn test_compare_implementations() {
         phi: 15,
         theta: 15,
     };
-    let s = StressPrefactors {
-        active: 1.,
-        magnetic: 0.,
-    };
+
+    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
@@ -208,10 +205,8 @@ fn bench_calculate_flow(b: &mut Bencher) {
         phi: 15,
         theta: 15,
     };
-    let s = StressPrefactors {
-        active: 1.,
-        magnetic: 0.,
-    };
+
+    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
@@ -240,10 +235,7 @@ fn bench_calculate_flow_new(b: &mut Bencher) {
         phi: 15,
         theta: 15,
     };
-    let s = StressPrefactors {
-        active: 1.,
-        magnetic: 0.,
-    };
+    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 

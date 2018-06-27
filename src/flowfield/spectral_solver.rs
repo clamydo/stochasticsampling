@@ -5,7 +5,7 @@ mod spectral_solver_test;
 
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use ndarray::{Array, Axis, Ix3, Ix4, Ix5, Zip};
+use ndarray::{Array, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use distribution::Distribution;
@@ -16,7 +16,6 @@ use mesh::fft_helper::{
 };
 use mesh::grid_width::GridWidth;
 use {BoxSize, GridSize};
-use super::stress::StressPrefactors;
 use std::sync::Arc;
 
 pub struct SpectralSolver {
@@ -32,11 +31,14 @@ pub struct SpectralSolver {
 }
 
 impl SpectralSolver {
-    pub fn new(
+    pub fn new<F>(
         grid_size: GridSize,
         box_size: BoxSize,
-        parameter: StressPrefactors,
-    ) -> SpectralSolver {
+        stress: F,
+    ) -> SpectralSolver
+    where
+        F: Fn(f64, f64) -> Array<f64, Ix2>,
+    {
         let grid_width = GridWidth::new(grid_size, box_size);
 
         let mesh = get_k_mesh(grid_size, box_size);
@@ -61,7 +63,7 @@ impl SpectralSolver {
             k_mesh: mesh,
             k_normed_mesh: get_norm_k_mesh(grid_size, box_size),
             flow_field: Array::zeros((3, grid_size.x, grid_size.y, grid_size.z)),
-            stress_kernel: stress_kernel(grid_size, grid_width, parameter),
+            stress_kernel: stress_kernel(grid_size, grid_width, stress),
             fft_plan_forward: Arc::new(plan_stress),
             fft_plan_backward: Arc::new(plan_ff),
             stress_field: Array::zeros((3, 3, grid_size.x, grid_size.y, grid_size.z)),

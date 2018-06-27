@@ -1,4 +1,5 @@
 use super::*;
+use super::stresses::*;
 // use ndarray::Array;
 // use mesh::grid_width::GridWidth;
 use bincode;
@@ -9,7 +10,6 @@ use ndarray::{Array, Ix4};
 // use integrators::langevin::{IntegrationParameter, Integrator};
 use mesh::grid_width::GridWidth;
 // use particle::Particle;
-use flowfield::stress::StressPrefactors;
 use {BoxSize, GridSize};
 // use std::f64::consts::PI;
 use test_helper::equal_floats;
@@ -96,9 +96,9 @@ fn stress_kernel_test() {
 
     let gw = GridWidth::new(gs, bs);
 
-    let s = StressPrefactors {
-        active: 1.,
-        magnetic: 1.,
+    let s = |phi, theta| {
+        1. * stress_active(phi, theta) +
+        1. * stress_magnetic(phi, theta)
     };
 
     let sk = stress_kernel(gs, gw, s);
