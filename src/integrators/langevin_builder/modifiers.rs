@@ -16,9 +16,9 @@ mod modifiers_test;
 use super::OriginalParticle;
 use ndarray::{ArrayView, Ix2};
 use quaternion;
-use simulation::magnetic_interaction;
-use simulation::particle::{OrientationVector, ParticleVector, PositionVector};
-use simulation::vector::VectorD;
+use magnetic_interaction;
+use particle::{OrientationVector, ParticleVector, PositionVector};
+use vector::VectorD;
 
 /// Does not change anything, just returns the given `delta`.
 pub fn identity(_p: OriginalParticle, delta: ParticleVector) -> ParticleVector {

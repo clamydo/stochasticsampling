@@ -3,7 +3,7 @@
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::prelude::*;
-use stochasticsampling::simulation::flowfield::stress::StressPrefactors;
+use stochasticsampling::flowfield::stress::StressPrefactors;
 use toml;
 
 error_chain! {

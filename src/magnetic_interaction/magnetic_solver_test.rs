@@ -1,7 +1,7 @@
 use super::*;
 use ndarray::{Array, Ix1, Ix4};
-use simulation::distribution::Distribution;
-use simulation::particle::Particle;
+use distribution::Distribution;
+use particle::Particle;
 use std::f64::consts::PI;
 use test_helper::equal_floats;
 

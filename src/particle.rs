@@ -9,8 +9,8 @@ use pcg_rand::Pcg64;
 use rand::distributions::{IndependentSample, Range};
 use rand::SeedableRng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use simulation::BoxSize;
-use simulation::vector::Vector;
+use BoxSize;
+use vector::Vector;
 use std::convert::From;
 use std::f64::consts::PI;
 

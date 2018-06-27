@@ -6,9 +6,9 @@ mod langevin_test;
 use consts::TWOPI;
 use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
-use simulation::distribution::Distribution;
-use simulation::mesh::grid_width::GridWidth;
-use simulation::GridSize;
+use distribution::Distribution;
+use mesh::grid_width::GridWidth;
+use GridSize;
 use std::f64::consts::PI;
 
 /// Holds prefactors for active and magnetic stress

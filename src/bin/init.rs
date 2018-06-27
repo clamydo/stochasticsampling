@@ -5,11 +5,11 @@ use rmp_serde;
 use serde::de::DeserializeOwned;
 use serde_cbor;
 use simulation::settings::{InitDistribution, Settings};
-use simulation::Simulation;
+use Simulation;
 use std::fs::File;
 use std::io;
 use std::path::Path;
-use stochasticsampling::simulation::particle::Particle;
+use stochasticsampling::particle::Particle;
 
 /// Type of setting up initial condition.
 pub enum InitType {

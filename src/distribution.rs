@@ -6,9 +6,9 @@
 mod distribution_test;
 
 use ndarray::{Array, Ix, Ix5};
-use simulation::mesh::grid_width::GridWidth;
-use simulation::particle::Particle;
-use simulation::{BoxSize, GridSize};
+use mesh::grid_width::GridWidth;
+use particle::Particle;
+use {BoxSize, GridSize};
 use std::ops::Index;
 
 /// Holds a normalised sampled distribution function on a grid, assuming the

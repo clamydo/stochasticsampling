@@ -1,8 +1,8 @@
 pub mod magnetic_solver;
 
 use ndarray::{Array, ArrayView, Ix2};
-use simulation::particle::OrientationVector;
-use simulation::vector::Vector;
+use particle::OrientationVector;
+use vector::Vector;
 
 pub struct Force();
 

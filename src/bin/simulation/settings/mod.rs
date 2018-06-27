@@ -4,8 +4,8 @@ pub mod si;
 
 use std::fs::File;
 use std::io::prelude::*;
-use stochasticsampling::simulation::flowfield::stress::StressPrefactors;
-use stochasticsampling::simulation::{BoxSize, GridSize};
+use stochasticsampling::flowfield::stress::StressPrefactors;
+use stochasticsampling::{BoxSize, GridSize};
 use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 1;

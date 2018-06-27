@@ -1,5 +1,5 @@
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4};
-use simulation::mesh::grid_width::GridWidth;
+use mesh::grid_width::GridWidth;
 
 pub type VectorField3D = Array<f64, Ix4>;
 pub type ScalarField3D = Array<f64, Ix3>;
@@ -420,8 +420,8 @@ pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Ve
 mod tests {
     use super::*;
     use ndarray::Array;
-    use simulation::mesh::grid_width::GridWidth;
-    use simulation::{BoxSize, GridSize};
+    use mesh::grid_width::GridWidth;
+    use {BoxSize, GridSize};
     use test_helper::equal_floats;
 
     #[test]

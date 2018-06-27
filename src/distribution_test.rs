@@ -1,7 +1,7 @@
 use super::*;
-use simulation::mesh::grid_width::GridWidth;
-use simulation::particle::Particle;
-use simulation::{BoxSize, GridSize};
+use mesh::grid_width::GridWidth;
+use particle::Particle;
+use {BoxSize, GridSize};
 use test_helper::equal_floats;
 
 #[test]

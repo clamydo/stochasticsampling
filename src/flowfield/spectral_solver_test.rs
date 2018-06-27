@@ -1,7 +1,7 @@
 use super::*;
 
-use simulation::distribution::Distribution;
-use simulation::particle::Particle;
+use distribution::Distribution;
+use particle::Particle;
 use test::Bencher;
 use test_helper::equal_floats;
 

@@ -17,18 +17,18 @@ use rayon::prelude::*;
 use std::env;
 use std::str::FromStr;
 use stochasticsampling::consts::TWOPI;
-use stochasticsampling::simulation::distribution::Distribution;
-use stochasticsampling::simulation::flowfield::spectral_solver::SpectralSolver;
-use stochasticsampling::simulation::flowfield::stress::StressPrefactors;
-use stochasticsampling::simulation::flowfield::FlowField3D;
-use stochasticsampling::simulation::integrators::langevin_builder::modifiers::*;
-use stochasticsampling::simulation::integrators::langevin_builder::TimeStep;
-use stochasticsampling::simulation::integrators::LangevinBuilder;
-use stochasticsampling::simulation::magnetic_interaction::magnetic_solver::MagneticSolver;
-use stochasticsampling::simulation::mesh::grid_width::GridWidth;
-use stochasticsampling::simulation::particle::Particle;
-use stochasticsampling::simulation::vector::vorticity::vorticity3d_dispatch;
-use stochasticsampling::simulation::vector::VectorD;
+use stochasticsampling::distribution::Distribution;
+use stochasticsampling::flowfield::spectral_solver::SpectralSolver;
+use stochasticsampling::flowfield::stress::StressPrefactors;
+use stochasticsampling::flowfield::FlowField3D;
+use stochasticsampling::integrators::langevin_builder::modifiers::*;
+use stochasticsampling::integrators::langevin_builder::TimeStep;
+use stochasticsampling::integrators::LangevinBuilder;
+use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
+use stochasticsampling::mesh::grid_width::GridWidth;
+use stochasticsampling::particle::Particle;
+use stochasticsampling::vector::vorticity::vorticity3d_dispatch;
+use stochasticsampling::vector::VectorD;
 
 struct ParamCache {
     trans_diff: f64,

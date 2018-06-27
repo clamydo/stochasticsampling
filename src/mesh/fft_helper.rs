@@ -7,7 +7,7 @@ use super::mesh3d;
 use consts::TWOPI;
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
 use num_complex::Complex;
-use simulation::{BoxSize, GridSize};
+use {BoxSize, GridSize};
 
 /// Returns a sampling of k values along all grid axes in FFTW standard form.
 /// In this case 3D.

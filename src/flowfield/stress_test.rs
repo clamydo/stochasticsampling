@@ -1,16 +1,16 @@
 use super::*;
 // use ndarray::Array;
-// use simulation::mesh::grid_width::GridWidth;
+// use mesh::grid_width::GridWidth;
 use bincode;
 use ndarray::{Array, Ix4};
 // use num_complex::Complex;
-// use simulation::distribution::Distribution;
-// use simulation::flowfield::spectral_solver::SpectralSolver;
-// use simulation::integrators::langevin::{IntegrationParameter, Integrator};
-use simulation::mesh::grid_width::GridWidth;
-// use simulation::particle::Particle;
-use simulation::flowfield::stress::StressPrefactors;
-use simulation::{BoxSize, GridSize};
+// use distribution::Distribution;
+// use flowfield::spectral_solver::SpectralSolver;
+// use integrators::langevin::{IntegrationParameter, Integrator};
+use mesh::grid_width::GridWidth;
+// use particle::Particle;
+use flowfield::stress::StressPrefactors;
+use {BoxSize, GridSize};
 // use std::f64::consts::PI;
 use test_helper::equal_floats;
 

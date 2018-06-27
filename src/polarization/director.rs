@@ -7,10 +7,10 @@ use consts::TWOPI;
 use ndarray::{Array, Axis, Ix3, Ix4, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use simulation::distribution::Distribution;
-use simulation::mesh::grid_width::GridWidth;
-use simulation::particle::Orientation;
-use simulation::GridSize;
+use distribution::Distribution;
+use mesh::grid_width::GridWidth;
+use particle::Orientation;
+use GridSize;
 use std::f64::consts::PI;
 
 pub struct DirectorField {

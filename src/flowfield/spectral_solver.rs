@@ -8,14 +8,14 @@ use fftw3::fft::FFTPlan;
 use ndarray::{Array, Axis, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use simulation::distribution::Distribution;
-use simulation::flowfield::stress::{average_stress, stress_kernel};
-use simulation::flowfield::FlowField3D;
-use simulation::mesh::fft_helper::{
+use distribution::Distribution;
+use flowfield::stress::{average_stress, stress_kernel};
+use flowfield::FlowField3D;
+use mesh::fft_helper::{
     get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh,
 };
-use simulation::mesh::grid_width::GridWidth;
-use simulation::{BoxSize, GridSize};
+use mesh::grid_width::GridWidth;
+use {BoxSize, GridSize};
 use super::stress::StressPrefactors;
 use std::sync::Arc;
 

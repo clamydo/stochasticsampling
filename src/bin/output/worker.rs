@@ -12,7 +12,7 @@ use std::mem::transmute;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::thread::{self, JoinHandle};
-use stochasticsampling::simulation::output::OutputEntry;
+use stochasticsampling::output::OutputEntry;
 
 const COMPRESSION: u32 = 1;
 

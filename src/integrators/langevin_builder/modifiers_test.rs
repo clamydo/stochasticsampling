@@ -1,7 +1,7 @@
 use super::super::*;
 use super::*;
 use ndarray::arr2;
-use simulation::BoxSize;
+use BoxSize;
 
 const BS: BoxSize = BoxSize {
     x: 10.,

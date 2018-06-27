@@ -1,11 +1,11 @@
 use super::*;
 // use ndarray::Array;
-use simulation::distribution::Distribution;
-// use simulation::mesh::grid_width::GridWidth;
-use simulation::flowfield::spectral_solver::SpectralSolver;
-use simulation::magnetic_interaction::magnetic_solver::MagneticSolver;
-use simulation::particle::Particle;
-use simulation::settings::{MagneticDipolePrefactors, StressPrefactors};
+use distribution::Distribution;
+// use mesh::grid_width::GridWidth;
+use flowfield::spectral_solver::SpectralSolver;
+use magnetic_interaction::magnetic_solver::MagneticSolver;
+use particle::Particle;
+use settings::{MagneticDipolePrefactors, StressPrefactors};
 use test::Bencher;
 
 // /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
