@@ -126,17 +126,17 @@ pub mod stresses {
         let mut s = Array::zeros((3, 3));
 
         s[[0, 0]] = 0.;
-        s[[0, 1]] = phi.cos() * theta.sin();
-        s[[0, 2]] = 0.;
+        s[[0, 1]] = 0.;
+        s[[0, 2]] = phi.cos() + theta.sin();
 
-        s[[1, 0]] = (-1.) * phi.cos() * theta.sin();
+        s[[1, 0]] = 0.;
         s[[1, 1]] = 0.;
-        s[[1, 2]] = (-1.) * theta.cos();
+        s[[1, 2]] = theta.sin() * phi.sin();
 
-        s[[2, 0]] = 0.;
-        s[[2, 1]] = theta.cos();
+        s[[2, 0]] = -phi.cos() * theta.sin();
+        s[[2, 1]] = -theta.sin() * phi.sin();
         s[[2, 2]] = 0.;
 
-        s
+        s * 0.5
     }
 }
