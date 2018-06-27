@@ -3,20 +3,18 @@
 #[path = "./spectral_solver_test.rs"]
 mod spectral_solver_test;
 
+use distribution::Distribution;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
+use flowfield::stress::{average_stress, stress_kernel};
+use flowfield::FlowField3D;
+use mesh::fft_helper::{get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
+use mesh::grid_width::GridWidth;
 use ndarray::{Array, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use distribution::Distribution;
-use flowfield::stress::{average_stress, stress_kernel};
-use flowfield::FlowField3D;
-use mesh::fft_helper::{
-    get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh,
-};
-use mesh::grid_width::GridWidth;
-use {BoxSize, GridSize};
 use std::sync::Arc;
+use {BoxSize, GridSize};
 
 pub struct SpectralSolver {
     flow_field: Array<Complex<f64>, Ix4>,
@@ -31,11 +29,7 @@ pub struct SpectralSolver {
 }
 
 impl SpectralSolver {
-    pub fn new<F>(
-        grid_size: GridSize,
-        box_size: BoxSize,
-        stress: F,
-    ) -> SpectralSolver
+    pub fn new<F>(grid_size: GridSize, box_size: BoxSize, stress: F) -> SpectralSolver
     where
         F: Fn(f64, f64) -> Array<f64, Ix2>,
     {
@@ -85,7 +79,7 @@ impl SpectralSolver {
     ///     f_n = IDFT[DFT[f_n]]
     ///     = N/N 2 pi /T \sum_n^{N-1} F[f][2 pi / T * k] exp(i 2 pi k n / N)
     /// ```
-    #[deprecated(since="1.3.0", note="please use `update_flow_field` instead")]
+    #[deprecated(since = "1.3.0", note = "please use `update_flow_field` instead")]
     pub fn solve_flow_field(&mut self, dist: &Distribution) -> FlowField3D {
         let dist_sh = dist.dim();
         let stress_sh = self.stress_kernel.dim();

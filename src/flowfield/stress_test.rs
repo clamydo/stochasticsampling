@@ -1,5 +1,5 @@
-use super::*;
 use super::stresses::*;
+use super::*;
 // use ndarray::Array;
 // use mesh::grid_width::GridWidth;
 use bincode;
@@ -96,10 +96,7 @@ fn stress_kernel_test() {
 
     let gw = GridWidth::new(gs, bs);
 
-    let s = |phi, theta| {
-        1. * stress_active(phi, theta) +
-        1. * stress_magnetic(phi, theta)
-    };
+    let s = |phi, theta| 1. * stress_active(phi, theta) + 1. * stress_magnetic(phi, theta);
 
     let sk = stress_kernel(gs, gw, s);
 
