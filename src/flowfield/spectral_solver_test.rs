@@ -46,9 +46,8 @@ fn test_calculate_flow_field_against_cache() {
     d.sample_from(&p);
     d.dist *= bs.x * bs.y * bs.z;
 
-    ff_s.update_flow_field(&d);
-    let ff = ff_s.get_real_flow_field();
-    // let ff = ff_s.solve_flow_field(&d);
+    let (ff, _) = ff_s.mean_flow_field(&d);
+    let ff = ff.map(|v| v.re);
 
     // let mut f = File::create("test/flowfield/ff_test.bincode").unwrap();
     // bincode::serialize_into(&mut f, &ff).unwrap();
@@ -175,8 +174,8 @@ fn test_compare_implementations() {
     d.sample_from(&p);
 
     let ff = ff_s.solve_flow_field(&d);
-    ff_s.update_flow_field(&d);
-    let ff_new = ff_s.get_real_flow_field();
+    let (ff_new, _) = ff_s.mean_flow_field(&d);
+    let ff_new = ff_new.map(|v| v.re);
 
     for (a, b) in ff.indexed_iter().zip(ff_new.indexed_iter()) {
         let (ia, va) = a;
@@ -221,31 +220,31 @@ fn bench_calculate_flow(b: &mut Bencher) {
     })
 }
 
-#[bench]
-fn bench_calculate_flow_new(b: &mut Bencher) {
-    let bs = BoxSize {
-        x: 30.,
-        y: 30.,
-        z: 30.,
-    };
-    let gs = GridSize {
-        x: 30,
-        y: 30,
-        z: 30,
-        phi: 15,
-        theta: 15,
-    };
-    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
-
-    let mut ff_s = SpectralSolver::new(gs, bs, s);
-
-    let p = Particle::place_isotropic(10000, bs, [1, 1]);
-
-    let mut d = Distribution::new(gs, bs);
-    d.sample_from(&p);
-    d.dist *= bs.x * bs.y * bs.z;
-
-    b.iter(|| {
-        ::test::black_box(ff_s.update_flow_field(&d));
-    })
-}
+// #[bench]
+// fn bench_calculate_flow_new(b: &mut Bencher) {
+//     let bs = BoxSize {
+//         x: 30.,
+//         y: 30.,
+//         z: 30.,
+//     };
+//     let gs = GridSize {
+//         x: 30,
+//         y: 30,
+//         z: 30,
+//         phi: 15,
+//         theta: 15,
+//     };
+//     let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
+//
+//     let mut ff_s = SpectralSolver::new(gs, bs, s);
+//
+//     let p = Particle::place_isotropic(10000, bs, [1, 1]);
+//
+//     let mut d = Distribution::new(gs, bs);
+//     d.sample_from(&p);
+//     d.dist *= bs.x * bs.y * bs.z;
+//
+//     b.iter(|| {
+//         ::test::black_box(ff_s.update_flow_field(&d));
+//     })
+// }

@@ -10,7 +10,7 @@ use flowfield::stress::{average_stress, stress_kernel};
 use flowfield::FlowField3D;
 use mesh::fft_helper::{get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
 use mesh::grid_width::GridWidth;
-use ndarray::{Array, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
+use ndarray::{Array, ArrayView, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use std::sync::Arc;
@@ -26,6 +26,7 @@ pub struct SpectralSolver {
     k_normed_mesh: Array<Complex<f64>, Ix4>,
     stress_kernel: Array<f64, Ix4>,
     stress_field: Array<Complex<f64>, Ix5>,
+    gradient_meanf: Array<Complex<f64>, Ix5>,
 }
 
 impl SpectralSolver {
@@ -61,6 +62,7 @@ impl SpectralSolver {
             fft_plan_forward: Arc::new(plan_stress),
             fft_plan_backward: Arc::new(plan_ff),
             stress_field: Array::zeros((3, 3, grid_size.x, grid_size.y, grid_size.z)),
+            gradient_meanf: Array::default([3, 3, grid_size.x, grid_size.y, grid_size.z]),
         }
     }
 
@@ -126,7 +128,7 @@ impl SpectralSolver {
         u.map(|v| v.re / norm)
     }
 
-    pub fn update_flow_field(&mut self, dist: &Distribution) {
+    pub fn fft_mean_flow_field(&mut self, dist: &Distribution) {
         let dist_sh = dist.dim();
         let stress_sh = self.stress_kernel.dim();
         let n_stress = stress_sh.0 * stress_sh.1;
@@ -178,14 +180,67 @@ impl SpectralSolver {
                 sigmak *= Complex::new(0., 1.);
                 ff.assign(&sigmak)
             });
+    }
 
-        let mut ff = ff.into_shape([3, dist_sh.0, dist_sh.1, dist_sh.2]).unwrap();
+    /// Returns vector gradient of flow field.
+    fn update_gradient(&mut self) {
+        let sh = self.flow_field.dim();
+        let n = sh.1 * sh.2 * sh.3;
 
-        // transform back to real space
+        // Construct an outer product by making use of broadcasting
+        // a = [a1, a2, a3], b = [b1, b2, b3]
+        // ab =
+        // [[a1, a1, a1],    [[b1, b2, b3]
+        //  [a2, a2, a2], .*  [b1, b2, b3]
+        //  [a3, a3, a3]]     [b1, b2, b3]]
+
+        let k = self.k_mesh.view();
+        let k = k.into_shape([3, n]).unwrap();
+
+        // Yep. Magnetic field is in there. Very stupid.
+        let b = self.flow_field.view();
+        let b = b.into_shape([3, n]).unwrap();
+
+        let g = self.gradient_meanf.view_mut();
+        let mut g = g.into_shape([3, 3, n]).unwrap();
+
+        Zip::from(g.axis_iter_mut(Axis(2)))
+            .and(k.axis_iter(Axis(1)))
+            .and(b.axis_iter(Axis(1)))
+            .par_apply(|mut g, k, b| {
+                let k = k.broadcast([3, 3]).unwrap();
+                let k = k.t();
+                let e = (&k * &b) * Complex::new(0., 1.);
+                g.assign(&e)
+            });
+
+        let mut g = g.into_shape([9, sh.1, sh.2, sh.3]).unwrap();
+
         let fft = &self.fft_plan_backward;
-        ff.outer_iter_mut()
+        g.outer_iter_mut()
             .into_par_iter()
             .for_each(|mut v| fft.reexecute3d(&mut v));
+    }
+
+    /// Given a distribution `d`, it returns a view into the mean magnetic
+    /// field and the (flattened) vector gradient field of it.
+    pub fn mean_flow_field(
+        &mut self,
+        d: &Distribution,
+    ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
+        // calculate FFT of of flow field, which is stored in self.flow_field
+        self.fft_mean_flow_field(d);
+        // use stored value of FFT of magnetic field to calculate vector gradient and
+        // store it in self.gradient_meanb
+        self.update_gradient();
+
+        let fft = &self.fft_plan_backward;
+        self.flow_field
+            .outer_iter_mut()
+            .into_par_iter()
+            .for_each(|mut v| fft.reexecute3d(&mut v));
+
+        (self.flow_field.view(), self.gradient_meanf.view())
     }
 
     pub fn get_real_flow_field(&self) -> Array<f64, Ix4> {

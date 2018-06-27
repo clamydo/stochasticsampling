@@ -275,15 +275,17 @@ impl Simulation {
             });
 
         // Calculate flow field from distribution.
-        self.spectral_solver
-            .update_flow_field(&self.state.distribution);
-        let flow_field = self.spectral_solver.get_real_flow_field();
+        let (flow_field, grad_ff) = self
+            .spectral_solver
+            .mean_flow_field(&self.state.distribution);
+
+        let ff_tmp = flow_field.map(|v| v.re);
 
         let (b, grad_b) = self
             .magnetic_solver
             .mean_magnetic_field(&self.state.distribution);
 
-        let vorticity = vorticity3d_dispatch(self.pcache.grid_width, flow_field.view());
+        let vorticity = vorticity3d_dispatch(self.pcache.grid_width, ff_tmp.view());
         let sim = self.settings.simulation;
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
@@ -294,7 +296,7 @@ impl Simulation {
             .zip(self.state.random_samples.par_iter())
             .for_each(|(p, r)| {
                 let idx = get_cell_index(&p, &gw);
-                let flow = field_at_cell(&flow_field.view(), idx);
+                let flow = field_at_cell_c(&flow_field.view(), idx);
                 let vort = field_at_cell(&vorticity.view(), idx);
 
                 let b = field_at_cell_c(&b, idx) * param.magnetic_reorientation;
