@@ -139,4 +139,22 @@ pub mod stresses {
 
         s * 0.5
     }
+
+    /// Calculate magnetic stress tensor for polar angles `phi` and `theta`.
+    pub fn stress_magnetic_rods(phi: f64, theta: f64) -> Array<f64, Ix2> {
+        let mut s = Array::zeros((3, 3));
+
+        s[[0, 0]] = 2. * theta.cos() * phi.cos().powi(2) * theta.sin().powi(2);
+        s[[0, 1]] = theta.cos() * theta.sin().powi(2) * (2. * phi).cos();
+        s[[0, 2]] = (2. * theta).cos() * phi.cos() * theta.sin();
+        s[[1, 0]] = theta.cos() * theta.sin().powi(2) * (2. * phi).cos();
+        s[[1, 1]] = theta.sin() * (2. * theta).sin() * phi.sin().powi(2);
+        s[[1, 2]] = (2. * theta).cos() * theta.sin() * phi.sin();
+
+        s[[2, 0]] = (2. * theta).cos() * phi.cos() * theta.sin();
+        s[[2, 1]] = (2. * theta).cos() * theta.sin() * phi.sin();
+        s[[2, 2]] = -2. * theta.cos() * theta.sin().powi(2);
+
+        s * 0.5
+    }
 }
