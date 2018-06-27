@@ -8,8 +8,16 @@ use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 use simulation::distribution::Distribution;
 use simulation::mesh::grid_width::GridWidth;
-use simulation::settings::{GridSize, StressPrefactors};
+use simulation::GridSize;
 use std::f64::consts::PI;
+
+/// Holds prefactors for active and magnetic stress
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StressPrefactors {
+    pub active: f64,
+    pub magnetic: f64,
+}
 
 /// Calculates approximation of discretized stress kernel, to be used in ///
 /// the expectation value to obtain the stress tensor.

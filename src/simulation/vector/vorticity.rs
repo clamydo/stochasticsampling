@@ -421,7 +421,7 @@ mod tests {
     use super::*;
     use ndarray::Array;
     use simulation::mesh::grid_width::GridWidth;
-    use simulation::settings::{BoxSize, GridSize};
+    use simulation::{BoxSize, GridSize};
     use test_helper::equal_floats;
 
     #[test]

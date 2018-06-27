@@ -4,6 +4,8 @@ use errors::*;
 use lzma::LzmaWriter;
 use rmp_serde;
 use serde_cbor;
+use simulation::settings::{OutputFormat, Settings};
+use simulation::Snapshot;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::mem::transmute;
@@ -11,8 +13,6 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::thread::{self, JoinHandle};
 use stochasticsampling::simulation::output::OutputEntry;
-use stochasticsampling::simulation::settings::{OutputFormat, Settings};
-use stochasticsampling::simulation::Snapshot;
 
 const COMPRESSION: u32 = 1;
 

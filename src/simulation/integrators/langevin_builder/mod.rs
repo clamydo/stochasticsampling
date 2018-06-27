@@ -6,7 +6,7 @@ mod mod_test;
 pub mod modifiers;
 
 use simulation::particle::{CosSinOrientation, Particle, ParticleVector};
-use simulation::settings::BoxSize;
+use simulation::BoxSize;
 
 #[derive(Clone, Copy)]
 pub struct OriginalParticle {

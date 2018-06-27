@@ -4,12 +4,12 @@ use lzma::LzmaReader;
 use rmp_serde;
 use serde::de::DeserializeOwned;
 use serde_cbor;
+use simulation::settings::{InitDistribution, Settings};
+use simulation::Simulation;
 use std::fs::File;
 use std::io;
 use std::path::Path;
 use stochasticsampling::simulation::particle::Particle;
-use stochasticsampling::simulation::settings::{InitDistribution, Settings};
-use stochasticsampling::simulation::Simulation;
 
 /// Type of setting up initial condition.
 pub enum InitType {
@@ -25,17 +25,17 @@ fn read_from_file<T: DeserializeOwned>(fname: &Path) -> Result<T> {
     let mut r = LzmaReader::new_decompressor(f).chain_err(|| "LZMA reader cannot be created.")?;
 
     match Path::new(&fname).extension() {
-        Some(ext) => {
-            match ext.to_str().unwrap() {
-                "cbor-lzma" => Ok(serde_cbor::de::from_reader(r).chain_err(|| "CBOR, cannot decode given file.")?),
-                "bincode-lzma" => Ok(bincode::deserialize_from(&mut r)
-                    .chain_err(|| "Bincode, cannot decode given file.")?),
-                "msgpack-lzma" => {
-                    Ok(rmp_serde::from_read(r).chain_err(|| "MsgPack, cannot decode given file.")?)
-                }
-                _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),
+        Some(ext) => match ext.to_str().unwrap() {
+            "cbor-lzma" => {
+                Ok(serde_cbor::de::from_reader(r).chain_err(|| "CBOR, cannot decode given file.")?)
             }
-        }
+            "bincode-lzma" => Ok(bincode::deserialize_from(&mut r)
+                .chain_err(|| "Bincode, cannot decode given file.")?),
+            "msgpack-lzma" => {
+                Ok(rmp_serde::from_read(r).chain_err(|| "MsgPack, cannot decode given file.")?)
+            }
+            _ => bail!("Do not recognise file extension {}.", ext.to_str().unwrap()),
+        },
         None => bail!(
             "Missing file extension for initial condition, '{}'.
                            Cannot determine filetype.",

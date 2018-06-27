@@ -38,7 +38,6 @@ extern crate rayon;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate toml;
 
 pub mod consts;
 pub mod simulation;

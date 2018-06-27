@@ -8,7 +8,7 @@ mod distribution_test;
 use ndarray::{Array, Ix, Ix5};
 use simulation::mesh::grid_width::GridWidth;
 use simulation::particle::Particle;
-use simulation::settings::{BoxSize, GridSize};
+use simulation::{BoxSize, GridSize};
 use std::ops::Index;
 
 /// Holds a normalised sampled distribution function on a grid, assuming the
@@ -77,14 +77,18 @@ impl Distribution {
     /// excluding the right border.
     pub fn coord_to_grid(&self, p: &Particle) -> GridCoordinate {
         debug_assert!(
-            p.position.x >= 0. && p.position.y >= 0. && p.position.z >= 0.
-                && p.orientation.phi >= 0. && p.orientation.theta >= 0.,
+            p.position.x >= 0.
+                && p.position.y >= 0.
+                && p.position.z >= 0.
+                && p.orientation.phi >= 0.
+                && p.orientation.theta >= 0.,
             "Got negative position or orientation {:?}",
             p
         );
 
         debug_assert!(
-            p.position.x < self.box_size.x && p.position.y < self.box_size.y
+            p.position.x < self.box_size.x
+                && p.position.y < self.box_size.y
                 && p.position.z < self.box_size.z,
             "Position out of range {:?}",
             p

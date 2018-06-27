@@ -1,7 +1,7 @@
 use super::super::*;
 use super::*;
 use ndarray::arr2;
-use simulation::settings::BoxSize;
+use simulation::BoxSize;
 
 const BS: BoxSize = BoxSize {
     x: 10.,
@@ -57,7 +57,9 @@ fn translational_diffusion() {
 fn external_field_alignment() {
     let p = Particle::new(0., 0., 0., 0., ::std::f64::consts::PI / 2., BS);
     let l = LangevinBuilder::new(&p);
-    let p = l.with_param(super::external_field_alignment, 0.1).finalize(BS);
+    let p = l
+        .with_param(super::external_field_alignment, 0.1)
+        .finalize(BS);
     let expect = Particle::new(0., 0., 0., 0., 1.4711276743037345, BS);
 
     assert_eq!(p, expect);

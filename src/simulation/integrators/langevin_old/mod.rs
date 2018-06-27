@@ -34,9 +34,9 @@ use rayon::prelude::*;
 use simulation::magnetic_interaction::mean_force;
 use simulation::mesh::grid_width::GridWidth;
 use simulation::particle::{CosSinOrientation, OrientationVector, Particle, Position};
-use simulation::settings::{BoxSize, GridSize};
 use simulation::vector::vorticity::vorticity3d_dispatch;
 use simulation::vector::{Vector, VectorD};
+use simulation::{BoxSize, GridSize};
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
@@ -116,11 +116,8 @@ impl Integrator {
         let vort = field_at_cell(vorticity, idx);
 
         let (b, gradb) = match magnetic_field {
-            Some((v, m)) => (
-                field_at_cell_c(&v, idx),
-                vector_gradient_at_cell(&m, idx)
-            ),
-            None => (VectorD::default(), Array::default((3,3)))
+            Some((v, m)) => (field_at_cell_c(&v, idx), vector_gradient_at_cell(&m, idx)),
+            None => (VectorD::default(), Array::default((3, 3))),
         };
 
         // precompute trigonometric functions
@@ -134,7 +131,6 @@ impl Integrator {
 
         // Get force in magnetic field
         let fb = mean_force(gradb.view(), &vector) * param.drag;
-
 
         let mut new_position: Vector<Position> = p.position.to_vector();
         // convection + self-propulsion + magnetic drag force
@@ -173,7 +169,10 @@ impl Integrator {
         particles: &mut Vec<Particle>,
         random_samples: &[RandomVector],
         flow_field: ArrayView<'a, f64, Ix4>,
-        magnetic_field: Option<(ArrayView<'a, Complex<f64>, Ix4>, ArrayView<'a, Complex<f64>, Ix5>)>
+        magnetic_field: Option<(
+            ArrayView<'a, Complex<f64>, Ix4>,
+            ArrayView<'a, Complex<f64>, Ix5>,
+        )>,
     ) {
         // TODO move into caller
         // Calculate vorticity
@@ -183,13 +182,7 @@ impl Integrator {
             .par_iter_mut()
             .zip(random_samples.par_iter())
             .for_each(|(ref mut p, r)| {
-                self.evolve_particle_inplace(
-                    p,
-                    r,
-                    &flow_field,
-                    &vort.view(),
-                    magnetic_field,
-                )
+                self.evolve_particle_inplace(p, r, &flow_field, &vort.view(), magnetic_field)
             });
     }
 }
@@ -276,10 +269,7 @@ fn rotational_diffusion_quat_mut(
     quaternion::rotate_vector(q, vector.v).into()
 }
 
-fn jeffrey(
-    vector: &OrientationVector,
-    vort: VectorD,
-) -> VectorD {
+fn jeffrey(vector: &OrientationVector, vort: VectorD) -> VectorD {
     // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
 
     let mut r: VectorD = [
@@ -291,10 +281,7 @@ fn jeffrey(
     r
 }
 
-fn magnetic_dipole_rotation(
-    vector: &OrientationVector,
-    mut b: VectorD,
-) -> VectorD {
+fn magnetic_dipole_rotation(vector: &OrientationVector, mut b: VectorD) -> VectorD {
     b -= (*vector) * vector.dot(&b);
     b
 }

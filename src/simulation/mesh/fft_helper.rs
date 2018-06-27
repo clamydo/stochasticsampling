@@ -1,4 +1,3 @@
-
 // Move unit test into own file
 #[cfg(test)]
 #[path = "./fft_helper_test.rs"]
@@ -8,7 +7,7 @@ use super::mesh3d;
 use consts::TWOPI;
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
 use num_complex::Complex;
-use simulation::settings::{BoxSize, GridSize};
+use simulation::{BoxSize, GridSize};
 
 /// Returns a sampling of k values along all grid axes in FFTW standard form.
 /// In this case 3D.

@@ -15,7 +15,8 @@ use simulation::mesh::fft_helper::{
     get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh,
 };
 use simulation::mesh::grid_width::GridWidth;
-use simulation::settings::{BoxSize, GridSize, StressPrefactors};
+use simulation::{BoxSize, GridSize};
+use super::stress::StressPrefactors;
 use std::sync::Arc;
 
 pub struct SpectralSolver {

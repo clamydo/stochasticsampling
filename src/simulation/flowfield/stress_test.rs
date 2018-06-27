@@ -9,7 +9,8 @@ use ndarray::{Array, Ix4};
 // use simulation::integrators::langevin::{IntegrationParameter, Integrator};
 use simulation::mesh::grid_width::GridWidth;
 // use simulation::particle::Particle;
-use simulation::settings::{BoxSize, GridSize, StressPrefactors};
+use simulation::flowfield::stress::StressPrefactors;
+use simulation::{BoxSize, GridSize};
 // use std::f64::consts::PI;
 use test_helper::equal_floats;
 
@@ -121,5 +122,4 @@ fn stress_kernel_test() {
         let b = round(*b);
         assert!(equal_floats(a, b), "left: {} != right: {}", a, b);
     }
-
 }

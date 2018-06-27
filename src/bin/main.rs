@@ -15,8 +15,22 @@ extern crate pbr;
 extern crate rmp_serde;
 extern crate serde;
 extern crate serde_cbor;
+#[macro_use]
+extern crate serde_derive;
+extern crate extprim;
 extern crate stochasticsampling;
 extern crate time;
+extern crate toml;
+#[macro_use(s)]
+extern crate ndarray;
+extern crate fftw3;
+extern crate ndarray_parallel;
+extern crate num_complex;
+extern crate pcg_rand;
+extern crate quaternion;
+extern crate rand;
+extern crate rayon;
+// extern crate rustfft;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
@@ -24,8 +38,11 @@ mod errors {
 }
 mod init;
 mod output;
+mod simulation;
 mod timedisplay;
 
+use self::simulation::settings::{self, Settings};
+use self::simulation::Simulation;
 use clap::App;
 use colored::*;
 use errors::*;
@@ -35,8 +52,6 @@ use output::worker::Worker;
 use pbr::ProgressBar;
 use std::path::Path;
 use stochasticsampling::simulation::output::OutputEntry;
-use stochasticsampling::simulation::settings::{self, Settings};
-use stochasticsampling::simulation::Simulation;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
@@ -95,7 +110,8 @@ fn run() -> Result<()> {
 
     // TOML does not work well at the moment
     let param_name = path.with_extension("toml");
-    settings.save_to_file(param_name.to_str().unwrap())
+    settings
+        .save_to_file(param_name.to_str().unwrap())
         .chain_err(|| "Unable to save parameter file in simulation units.")?;
 
     settings.set_version(&version());

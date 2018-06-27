@@ -10,7 +10,7 @@ use num_complex::Complex;
 use simulation::distribution::Distribution;
 use simulation::mesh::grid_width::GridWidth;
 use simulation::particle::Orientation;
-use simulation::settings::GridSize;
+use simulation::GridSize;
 use std::f64::consts::PI;
 
 pub struct DirectorField {

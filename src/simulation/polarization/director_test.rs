@@ -1,6 +1,6 @@
 use super::*;
 use simulation::particle::Particle;
-use simulation::settings::{BoxSize, GridSize};
+use simulation::{BoxSize, GridSize};
 use test_helper::equal_floats;
 
 #[test]

@@ -3,6 +3,7 @@
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::prelude::*;
+use stochasticsampling::simulation::flowfield::stress::StressPrefactors;
 use toml;
 
 error_chain! {
@@ -113,11 +114,6 @@ fn check_settings(s: &SettingsSI) -> Result<()> {
 }
 
 impl SettingsSI {
-    pub fn set_version(&mut self, version: &str) {
-        // save version to metadata
-        self.environment.version = version.to_string();
-    }
-
     pub fn into_settings(&self) -> super::Settings {
         let number_density = volume_fraction_to_number_density(
             self.parameters.volume_fraction,
@@ -128,11 +124,13 @@ impl SettingsSI {
         let uc = self.parameters.particle.self_propulsion_speed;
         let tc = xc / uc;
 
-        let stressf = number_density.powf(2. / 3.) / self.parameters.particle.self_propulsion_speed
+        let stressf = number_density.powf(2. / 3.)
+            / self.parameters.particle.self_propulsion_speed
             / self.parameters.viscocity;
-        let stress = super::StressPrefactors {
+        let stress = StressPrefactors {
             active: stressf * self.parameters.particle.force_dipole,
-            magnetic: stressf * self.parameters.particle.magnetic_dipole_moment
+            magnetic: stressf
+                * self.parameters.particle.magnetic_dipole_moment
                 * self.parameters.external_field,
         };
 
@@ -156,7 +154,6 @@ impl SettingsSI {
             * self.parameters.external_field / rotfriction
             / (rotdiff_brown + rotdiff_active);
 
-
         let mut res = super::Settings {
             simulation: self.simulation,
             parameters: super::Parameters {
@@ -164,11 +161,14 @@ impl SettingsSI {
                 stress: stress,
                 magnetic_reorientation: alignment_parameter * diff.rotational,
                 magnetic_dipole: super::MagneticDipolePrefactors {
-                    magnetic_dipole_dipole: number_density.powf(2. / 3.) / uc / rotfriction * 4.0e-7
+                    magnetic_dipole_dipole: number_density.powf(2. / 3.) / uc / rotfriction
+                        * 4.0e-7
                         * PI
                         * self.parameters.particle.magnetic_dipole_moment.powi(2),
                 },
-                drag: number_density / uc / transfriction * 4.0e-7 * PI
+                drag: number_density / uc / transfriction
+                    * 4.0e-7
+                    * PI
                     * self.parameters.particle.magnetic_dipole_moment.powi(2),
             },
             environment: self.environment.clone(),
@@ -198,8 +198,8 @@ fn volume_fraction_to_number_density(volfrac: f64, radius: f64) -> f64 {
 //
 //     #[test]
 //     fn test_conversion() {
-//         let settings = read_parameter_file("./test/parameter_si.toml").unwrap();
-//         println!("{:?}", settings.into_settings());
-//         unimplemented!();
+// let settings =
+// read_parameter_file("./test/parameter_si.toml").unwrap(); println!("{:
+// ?}", settings.into_settings());         unimplemented!();
 //     }
 // }

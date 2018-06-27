@@ -12,7 +12,7 @@ use simulation::distribution::Distribution;
 use simulation::mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
 use simulation::mesh::grid_width::GridWidth;
 use simulation::polarization::director::DirectorField;
-use simulation::settings::{BoxSize, GridSize};
+use simulation::{BoxSize, GridSize};
 use std::sync::Arc;
 
 pub type MagneticField = Array<Complex<f64>, Ix4>;

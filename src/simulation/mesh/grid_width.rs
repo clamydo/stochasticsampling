@@ -1,7 +1,7 @@
 //! Data structure that holds the grid width's/
 
 use consts::TWOPI;
-use simulation::settings::{BoxSize, GridSize};
+use simulation::{BoxSize, GridSize};
 use std::f64::consts::PI;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

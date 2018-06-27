@@ -4,6 +4,8 @@ pub mod si;
 
 use std::fs::File;
 use std::io::prelude::*;
+use stochasticsampling::simulation::flowfield::stress::StressPrefactors;
+use stochasticsampling::simulation::{BoxSize, GridSize};
 use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 1;
@@ -25,39 +27,12 @@ pub struct Settings {
     pub environment: EnvironmentSettings,
 }
 
-/// Size of the simulation box an arbitary physical dimensions.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct BoxSize {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-}
-/// Size of the discrete grid.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct GridSize {
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
-    pub phi: usize,
-    pub theta: usize,
-}
-
 /// Holds rotational and translational diffusion constants
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiffusionConstants {
     pub translational: f64,
     pub rotational: f64,
-}
-
-/// Holds prefactors for active and magnetic stress
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StressPrefactors {
-    pub active: f64,
-    pub magnetic: f64,
 }
 
 /// Holds prefactors for active and magnetic stress
