@@ -295,8 +295,8 @@ impl Simulation {
         grad_ff_t.swap_axes(0, 1);
         let vorticity_mat = (&grad_ff - &grad_ff_t) * 0.5;
         let vorticity_mat = vorticity_mat.view();
-        // let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
-        // let strain_mat = strain_mat.view();
+        let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
+        let strain_mat = strain_mat.view();
 
         self.state
             .particles
@@ -306,7 +306,7 @@ impl Simulation {
                 let idx = get_cell_index(&p, &gw);
                 let flow = vector_field_at_cell_c(&flow_field.view(), idx);
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
-                // let strainm = matrix_field_at_cell(&strain_mat, idx);
+                let strainm = matrix_field_at_cell(&strain_mat, idx);
 
                 let dd = match mag_field {
                     Some((b, grad_b)) => {
