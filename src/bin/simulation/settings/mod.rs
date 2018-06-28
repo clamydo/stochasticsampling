@@ -47,11 +47,11 @@ pub struct MagneticDipolePrefactors {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     pub drag: f64,
+    #[serde(default)]
+    pub shape: f64,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
     pub diffusion: DiffusionConstants,
-    #[serde(default)]
-    pub shape: f64,
     pub stress: StressPrefactors,
     /// Magnetic moment of one particle including magnetic field constant
     /// `\mu_0` WARNING: at the moment independend variable
