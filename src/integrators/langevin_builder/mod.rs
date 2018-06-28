@@ -76,6 +76,40 @@ impl Modification {
         }
     }
 
+    pub fn conditional_with(
+        self,
+        condition: bool,
+        f: fn(OriginalParticle, ParticleVector) -> ParticleVector,
+    ) -> Modification {
+        if condition {
+            Modification {
+                old: self.old,
+                delta: f(self.old, self.delta),
+            }
+        } else {
+            self
+        }
+    }
+
+    pub fn conditional_with_param<T>(
+        self,
+        condition: bool,
+        f: fn(OriginalParticle, ParticleVector, T) -> ParticleVector,
+        p: Option<T>,
+    ) -> Modification {
+        if condition {
+            match p {
+                Some(p) => Modification {
+                    old: self.old,
+                    delta: f(self.old, self.delta, p),
+                },
+                None => self,
+            }
+        } else {
+            self
+        }
+    }
+
     pub fn step(self, timestep: TimeStep) -> Modification {
         Modification {
             old: self.old,
