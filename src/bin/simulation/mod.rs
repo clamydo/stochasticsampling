@@ -27,7 +27,6 @@ use stochasticsampling::integrators::LangevinBuilder;
 use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
 use stochasticsampling::mesh::grid_width::GridWidth;
 use stochasticsampling::particle::Particle;
-use stochasticsampling::vector::vorticity::vorticity3d_dispatch;
 use stochasticsampling::vector::VectorD;
 
 struct ParamCache {
@@ -86,10 +85,8 @@ impl Simulation {
 
         let stress = |phi, theta| {
             param.stress.active * stress_active(phi, theta)
-                + param.stress.magnetic
-                    * stress_magnetic(phi, theta)
-                    * param.shape
-                    * stress_magnetic_rods(phi, theta)
+                + param.stress.magnetic * stress_magnetic(phi, theta)
+                + param.shape * stress_magnetic_rods(phi, theta)
         };
 
         let spectral_solver = SpectralSolver::new(sim.grid_size, sim.box_size, stress);
@@ -279,13 +276,17 @@ impl Simulation {
             .spectral_solver
             .mean_flow_field(&self.state.distribution);
 
-        let ff_tmp = flow_field.map(|v| v.re);
-
         let (b, grad_b) = self
             .magnetic_solver
             .mean_magnetic_field(&self.state.distribution);
 
-        let vorticity = vorticity3d_dispatch(self.pcache.grid_width, ff_tmp.view());
+        let mut grad_ff_t = grad_ff.clone();
+        grad_ff_t.swap_axes(0, 1);
+        let vorticity_mat = (&grad_ff - &grad_ff_t) * 0.5;
+        let vorticity_mat = vorticity_mat.view();
+        let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
+        let strain_mat = strain_mat.view();
+
         let sim = self.settings.simulation;
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
@@ -296,11 +297,12 @@ impl Simulation {
             .zip(self.state.random_samples.par_iter())
             .for_each(|(p, r)| {
                 let idx = get_cell_index(&p, &gw);
-                let flow = field_at_cell_c(&flow_field.view(), idx);
-                let vort = field_at_cell(&vorticity.view(), idx);
+                let flow = vector_field_at_cell_c(&flow_field.view(), idx);
+                let vortm = matrix_field_at_cell(&vorticity_mat, idx);
+                let strainm = matrix_field_at_cell(&strain_mat, idx);
 
-                let b = field_at_cell_c(&b, idx) * param.magnetic_reorientation;
-                let grad_b = vector_gradient_at_cell(&grad_b, idx);
+                let b = vector_field_at_cell_c(&b, idx) * param.magnetic_reorientation;
+                let grad_b = matrix_field_at_cell(&grad_b, idx);
                 let dr = RotDiff {
                     axis_angle: r.axis_angle,
                     rotate_angle: r.rotate_angle,
@@ -311,7 +313,8 @@ impl Simulation {
                     .with_param(magnetic_dipole_dipole_force, (param.drag, grad_b.view()))
                     .with_param(external_field_alignment, param.magnetic_reorientation)
                     .with_param(magnetic_dipole_dipole_rotation, b)
-                    .with_param(jeffrey_vorticity, vort)
+                    .with_param(jeffrey_vorticity, vortm.view())
+                    .with_param(jeffrey_strain, (param.shape, strainm.view()))
                     .step(TimeStep(sim.timestep))
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
@@ -350,18 +353,10 @@ fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize)
     (ix, iy, iz)
 }
 
-fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> VectorD {
-    let f = unsafe {
-        [
-            *field.uget((0, idx.0, idx.1, idx.2)),
-            *field.uget((1, idx.0, idx.1, idx.2)),
-            *field.uget((2, idx.0, idx.1, idx.2)),
-        ]
-    };
-    f.into()
-}
-
-fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+fn vector_field_at_cell_c(
+    field: &ArrayView<Complex<f64>, Ix4>,
+    idx: (usize, usize, usize),
+) -> VectorD {
     let f = unsafe {
         [
             (*field.uget((0, idx.0, idx.1, idx.2))).re,
@@ -372,7 +367,7 @@ fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usi
     f.into()
 }
 
-fn vector_gradient_at_cell(
+fn matrix_field_at_cell(
     field: &ArrayView<Complex<f64>, Ix5>,
     idx: (usize, usize, usize),
 ) -> Array<f64, Ix2> {

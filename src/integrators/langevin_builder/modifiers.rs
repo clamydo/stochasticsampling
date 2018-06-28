@@ -14,7 +14,7 @@
 mod modifiers_test;
 
 use super::OriginalParticle;
-use ndarray::{ArrayView, Ix2};
+use ndarray::{Array, ArrayView, Ix2};
 use quaternion;
 use magnetic_interaction;
 use particle::{OrientationVector, ParticleVector, PositionVector};
@@ -88,27 +88,58 @@ pub fn external_field_alignment(
     }
 }
 
-/// Rotates the particle due to coupling to the flow's vorticiyt. Symmetric
+/// Rotates the particle due to coupling to the flow's vorticity. Anti-symmetric
 /// Jeffrey's term.
 pub fn jeffrey_vorticity(
     p: OriginalParticle,
     delta: ParticleVector,
-    vort: VectorD,
+    vortm: ArrayView<f64, Ix2>,
 ) -> ParticleVector {
-    // (1-nn) . (-W[u] . n) == 0.5 * Curl[u] x n
+    // (1-nn) . (-W[u] . n) == -W[u] . n == 0.5 * Curl[u] x n
 
     let n = p.vector.orientation;
 
-    let mut r: VectorD = [
-        vort[1] * n[2] - vort[2] * n[1],
-        vort[2] * n[0] - vort[0] * n[2],
-        vort[0] * n[1] - vort[1] * n[0],
-    ].into();
-    r *= 0.5;
+    let n = Array::from_vec(n.v.to_vec());
+    let f = vortm.dot(&n) * (-1.);
+
+    let r = unsafe{[
+        *f.uget(0),
+        *f.uget(1),
+        *f.uget(2),
+    ]}.into();
 
     delta + ParticleVector {
         position: PositionVector::zero(),
-        orientation: r.to(),
+        orientation: r,
+    }
+}
+
+/// Rotates the particle due to coupling to the flow's strain. Symmetric
+/// Jeffrey's term.
+pub fn jeffrey_strain(
+    p: OriginalParticle,
+    delta: ParticleVector,
+    (shape, strainm): (f64, ArrayView<f64, Ix2>),
+) -> ParticleVector {
+    // (1-nn) . (g E[u] . n)
+
+    let n = p.vector.orientation;
+
+    let n = Array::from_vec(n.v.to_vec());
+    let mut f = strainm.dot(&n);
+    f *= shape;
+    let nne = &n * f.dot(&n);
+    f -= &nne;
+
+    let r = unsafe{[
+        *f.uget(0),
+        *f.uget(1),
+        *f.uget(2),
+    ]}.into();
+
+    delta + ParticleVector {
+        position: PositionVector::zero(),
+        orientation: r,
     }
 }
 

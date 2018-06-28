@@ -67,7 +67,14 @@ fn external_field_alignment() {
 
 #[test]
 fn jeffrey_vorticity() {
-    quicktest_modifier!(jeffrey_vorticity; [0., 0.01, 0.].into(); (0., 0., 0., 0., 0.0049999583339581655));
+    let vortm = arr2(&[[0.0, 0.0, -0.01], [0.0, 0.0, 0.0], [0.01, 0.0, 0.0]]);
+    quicktest_modifier!(jeffrey_vorticity; vortm.view(); (0., 0., 0., 0., 0.009999666686665076));
+}
+
+#[test]
+fn jeffrey_strain() {
+    let strainm = arr2(&[[0.0, 0.0, 0.01], [0.0, 0.0, 0.02], [0.01, 0.02, 0.0]]);
+    quicktest_modifier!(jeffrey_vorticity; strainm.view(); (0., 0., 0., 4.2487413713838835, 0.022356954112670246));
 }
 
 #[test]
