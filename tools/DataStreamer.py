@@ -92,11 +92,13 @@ class Streamer(object):
             }
         )
 
-    def get_scaling(self, start=0, step=1, stop=None):
+    def get_scaling(self, gw, start=0, step=1, stop=None):
         vmax = 0
 
-        for data in self[start:stop:step]:
-            dist = dist_to_concentration(data_to_dist(data, gs), gw)
+        g = self.generator(start, step, stop)
+
+        for data in g:
+            dist = dist_to_concentration3d(data_to_dist(data), gw)
             m = np.max(dist)
 
             if m > vmax:
@@ -134,11 +136,13 @@ def data_to_flowfield(data):
     ff = np.array(ff['data']).reshape(ff['dim'])
     return ff
 
+
 def data_to_magneticfield(data):
     """ Return magnetic field with [component, x, y, z]. """
     mf = data['magneticfield']
     mf = np.array(mf['data']).reshape(mf['dim'])
     return mf
+
 
 def data_to_dist(data):
     """Takes data dictonary and returns numpy array of sampled
@@ -217,19 +221,3 @@ def get_bs_gs_gw(sim_settings):
     }
 
     return bs, gs, gw
-
-
-def get_scaling3d(source_fn, index, gw, start=0, step=1, stop=None):
-    sout = generator(source_fn, index, start, step, stop)
-
-    vmin = 0
-    vmax = 0
-
-    for data in sout:
-        dist = dist_to_concentration3d(data_to_dist(data), gw)
-        m = np.max(dist)
-
-        if m > vmax:
-            vmax = m
-
-    return vmin, vmax
