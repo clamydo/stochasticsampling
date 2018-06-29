@@ -40,7 +40,6 @@ extern crate serde;
 extern crate serde_derive;
 
 pub mod consts;
-mod test_helper;
 pub mod distribution;
 pub mod flowfield;
 pub mod integrators;
@@ -49,8 +48,8 @@ pub mod mesh;
 pub mod output;
 pub mod particle;
 pub mod polarization;
+mod test_helper;
 pub mod vector;
-
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
