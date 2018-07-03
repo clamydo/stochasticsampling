@@ -128,7 +128,7 @@ impl SpectralSolver {
         u.map(|v| v.re / norm)
     }
 
-    pub fn fft_mean_flow_field(&mut self, dist: &Distribution) {
+    pub fn fft_mean_flow_field(&mut self, screening: f64, dist: &Distribution) {
         let dist_sh = dist.dim();
         let stress_sh = self.stress_kernel.dim();
         let n_stress = stress_sh.0 * stress_sh.1;
@@ -155,28 +155,32 @@ impl SpectralSolver {
         let ff = self.flow_field.view_mut();
         let mut ff = ff.into_shape([3, n]).unwrap();
 
-        let k = self.k_normed_mesh.view();
+        let k = self.k_mesh.view();
         let k = k.into_shape([3, n]).unwrap();
 
-        let ik = self.k_invnorm.view();
-        let ik = ik.into_shape([n]).unwrap();
+        let knormed = self.k_normed_mesh.view();
+        let knormed = knormed.into_shape([3, n]).unwrap();
+
+        let ik2 = self.k_invnormsquared.view();
+        let ik2 = ik2.into_shape([n]).unwrap();
 
         let norm = n as f64;
 
         Zip::from(ff.axis_iter_mut(Axis(1)))
             .and(stress_field.axis_iter(Axis(2)))
             .and(k.axis_iter(Axis(1)))
-            .and(ik.outer_iter())
-            .par_apply(|mut ff, s, k, ik| {
+            .and(knormed.axis_iter(Axis(1)))
+            .and(ik2.outer_iter())
+            .par_apply(|mut ff, s, k, kn, ik2| {
                 // trick needed, because Zip cannot iterate over scalar array yet
-                let ik = unsafe { *ik.as_ptr() };
+                let ik2 = unsafe { *ik2.as_ptr() };
 
                 let mut sigmak = s.dot(&k);
-                let ksigmak = k.dot(&sigmak);
+                let ksigmak = kn.dot(&sigmak);
 
-                let kksigmak = &k * ksigmak;
+                let kksigmak = &kn * ksigmak;
                 sigmak -= &kksigmak;
-                sigmak *= ik / norm;
+                sigmak *= (ik2 + screening) / norm;
                 sigmak *= Complex::new(0., 1.);
                 ff.assign(&sigmak)
             });
@@ -226,10 +230,11 @@ impl SpectralSolver {
     /// field and the (flattened) vector gradient field of it.
     pub fn mean_flow_field(
         &mut self,
+        screening: f64,
         d: &Distribution,
     ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
         // calculate FFT of of flow field, which is stored in self.flow_field
-        self.fft_mean_flow_field(d);
+        self.fft_mean_flow_field(screening, d);
         // use stored value of FFT of magnetic field to calculate vector gradient and
         // store it in self.gradient_meanb
         self.update_gradient();

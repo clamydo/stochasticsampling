@@ -49,6 +49,8 @@ pub struct Parameters {
     pub drag: f64,
     #[serde(default)]
     pub shape: f64,
+    #[serde(default)]
+    pub hydro_screening: f64,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
     pub diffusion: DiffusionConstants,
@@ -256,6 +258,8 @@ mod tests {
         assert_eq!(settings.parameters.drag, 123.4);
         assert_eq!(settings_default.parameters.drag, 0.0);
         assert_eq!(settings.parameters.shape, 44.3);
+        assert_eq!(settings_default.parameters.hydro_screening, 0.0);
+        assert_eq!(settings.parameters.hydro_screening, 1.3);
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {

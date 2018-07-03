@@ -57,11 +57,12 @@ pub struct Particle {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub particle: Particle,
+    pub hydro_screening: f64,
     pub viscocity: f64,
     pub temperature: f64,
     pub volume_fraction: f64,
     pub external_field: f64,
+    pub particle: Particle,
 }
 
 /// Reads the content of a file `filename` into an string and return it.
@@ -169,6 +170,7 @@ impl SettingsSI {
                         * self.parameters.particle.magnetic_dipole_moment.powi(2),
                 },
                 shape: self.parameters.particle.shape,
+                hydro_screening: self.parameters.hydro_screening,
                 drag: number_density / uc / transfriction
                     * 4.0e-7
                     * PI

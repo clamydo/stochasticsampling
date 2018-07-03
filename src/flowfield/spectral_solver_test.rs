@@ -46,7 +46,7 @@ fn test_calculate_flow_field_against_cache() {
     d.sample_from(&p);
     d.dist *= bs.x * bs.y * bs.z;
 
-    let (ff, _) = ff_s.mean_flow_field(&d);
+    let (ff, _) = ff_s.mean_flow_field(1., &d);
     let ff = ff.map(|v| v.re);
 
     // let mut f = File::create("test/flowfield/ff_test.bincode").unwrap();
@@ -174,7 +174,7 @@ fn test_compare_implementations() {
     d.sample_from(&p);
 
     let ff = ff_s.solve_flow_field(&d);
-    let (ff_new, _) = ff_s.mean_flow_field(&d);
+    let (ff_new, _) = ff_s.mean_flow_field(1., &d);
     let ff_new = ff_new.map(|v| v.re);
 
     for (a, b) in ff.indexed_iter().zip(ff_new.indexed_iter()) {

@@ -280,7 +280,7 @@ impl Simulation {
         // Calculate flow field from distribution.
         let (flow_field, grad_ff) = self
             .spectral_solver
-            .mean_flow_field(&self.state.distribution);
+            .mean_flow_field(param.hydro_screening, &self.state.distribution);
 
         let mag_field = if b_mag {
             Some(
