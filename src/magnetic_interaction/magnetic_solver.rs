@@ -3,17 +3,17 @@
 #[path = "./magnetic_solver_test.rs"]
 mod magnetic_solver_test;
 
+use distribution::Distribution;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
+use mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
+use mesh::grid_width::GridWidth;
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use distribution::Distribution;
-use mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
-use mesh::grid_width::GridWidth;
 use polarization::director::DirectorField;
-use {BoxSize, GridSize};
 use std::sync::Arc;
+use {BoxSize, GridSize};
 
 pub type MagneticField = Array<Complex<f64>, Ix4>;
 
@@ -82,10 +82,10 @@ impl MagneticSolver {
         // FFT normalization
         let norm = (sh.1 * sh.2 * sh.3) as f64;
 
-        // set fft[p](k=0)=0, same as setting the magnetic dipole field operator to
-        // zero at k=0
+        // Set fft[p](k=0)=1, to include 'magnetization'. Otherwise an homogeneous
+        // anisotropic distribution would result in a zero magnetic field.
         p.slice_mut(s![.., 0, 0, 0])
-            .map_inplace(|v| *v = 0.0_f64.into());
+            .map_inplace(|v| *v = 1.0_f64.into());
 
         Zip::from(p.lanes_mut(Axis(0)))
             .and(self.k_norm_mesh.lanes(Axis(0)))
