@@ -8,7 +8,7 @@ use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use flowfield::stress::{average_stress, stress_kernel};
 use flowfield::FlowField3D;
-use mesh::fft_helper::{get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
+use mesh::fft_helper::{get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
 use mesh::grid_width::GridWidth;
 use ndarray::{Array, ArrayView, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
@@ -21,7 +21,6 @@ pub struct SpectralSolver {
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
     k_invnormsquared: Array<Complex<f64>, Ix3>,
-    k_invnorm: Array<Complex<f64>, Ix3>,
     k_mesh: Array<Complex<f64>, Ix4>,
     k_normed_mesh: Array<Complex<f64>, Ix4>,
     stress_kernel: Array<f64, Ix4>,
@@ -53,7 +52,6 @@ impl SpectralSolver {
         ).unwrap();
 
         SpectralSolver {
-            k_invnorm: get_inverse_norm(mesh.view()),
             k_invnormsquared: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
             k_normed_mesh: get_norm_k_mesh(grid_size, box_size),
