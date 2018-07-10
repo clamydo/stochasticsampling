@@ -328,6 +328,10 @@ impl Simulation {
                     None => None,
                 };
 
+                let mut rng2 = ::rand::thread_rng();
+
+                let mut rangef = || between.ind_sample(&mut rng2);
+
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
@@ -339,7 +343,14 @@ impl Simulation {
                     .step(TimeStep(sim.timestep))
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
-                    .finalize(&sim.box_size);
+                    .bizonne_jet_finalize(
+                        &mut rangef,
+                        (
+                            param.magnetic_reorientation / param.diffusion.rotational,
+                            &sim.box_size,
+                        ),
+                    );
+                // .finalize(&sim.box_size);
             });
 
         // increment timestep counter to keep a continous identifier when resuming

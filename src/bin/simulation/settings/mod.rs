@@ -96,6 +96,7 @@ fn default_initial_condition() -> bool {
 pub enum InitDistribution {
     Isotropic,
     Homogeneous,
+    Bizonne,
 }
 
 /// Holds simulation specific settings.

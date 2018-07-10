@@ -5,11 +5,11 @@ use rmp_serde;
 use serde::de::DeserializeOwned;
 use serde_cbor;
 use simulation::settings::{InitDistribution, Settings};
-use Simulation;
 use std::fs::File;
 use std::io;
 use std::path::Path;
 use stochasticsampling::particle::Particle;
+use Simulation;
 
 /// Type of setting up initial condition.
 pub enum InitType {
@@ -84,10 +84,20 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                     info!("Using spatial homogeneous initial condition.");
                     Particle::create_homogeneous(
                         settings.simulation.number_of_particles,
-                        settings.parameters.magnetic_reorientation
-                            / settings.parameters.diffusion.rotational,
                         &settings.simulation.box_size,
                         settings.simulation.seed,
+                        settings.parameters.magnetic_reorientation
+                            / settings.parameters.diffusion.rotational,
+                    )
+                }
+                InitDistribution::Bizonne => {
+                    info!("Using spatial homogeneous initial condition.");
+                    Particle::create_bizonne(
+                        settings.simulation.number_of_particles,
+                        &settings.simulation.box_size,
+                        settings.simulation.seed,
+                        settings.parameters.magnetic_reorientation
+                            / settings.parameters.diffusion.rotational,
                     )
                 }
             };

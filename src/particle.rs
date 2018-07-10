@@ -6,6 +6,7 @@ mod particle_test;
 
 use consts::TWOPI;
 use pcg_rand::Pcg64;
+use quaternion;
 use rand::distributions::{IndependentSample, Range};
 use rand::SeedableRng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -180,7 +181,11 @@ impl Particle {
 
     /// Returns a `Particle` from a given position and orientation.
     /// Automatically applies pbc.
-    pub fn from_position_orientation(pos: Position, o: Orientation, box_size: &BoxSize) -> Particle {
+    pub fn from_position_orientation(
+        pos: Position,
+        o: Orientation,
+        box_size: &BoxSize,
+    ) -> Particle {
         let mut p = Particle {
             position: pos,
             orientation: o,
@@ -229,22 +234,33 @@ impl Particle {
         particles
     }
 
-    pub fn place_homogeneous<F>(r: &mut F, kappa: f64, bs: &BoxSize) -> Particle
+    pub fn place_homogeneous<F>(r: &mut F, bs: &BoxSize, kappa: f64) -> Particle
     where
         F: FnMut() -> f64,
     {
-        Particle::new(
+        let mut p = Particle::new(
             bs.x * r(),
             bs.y * r(),
             bs.z * r(),
             TWOPI * r(),
             pdf_homogeneous_fixpoint(kappa, r()),
             bs,
-        )
+        );
+
+        let ax = [1., 0., 0.];
+
+        // quaternion encoding a rotation around `rotational_axis` with
+        // angle drawn from Rayleigh-distribution
+        let q = quaternion::axis_angle(ax, -PI / 2.);
+        let mut v = p.orientation.to_vector();
+
+        v = quaternion::rotate_vector(q, v.v).into();
+        p.orientation.from_vector_mut(&v);
+        p
     }
 
     /// Places n particles according the the spatial homogeneous distribution
-    pub fn create_homogeneous(n: usize, kappa: f64, bs: &BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+    pub fn create_homogeneous(n: usize, bs: &BoxSize, seed: [u64; 2], kappa: f64) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
@@ -254,12 +270,73 @@ impl Particle {
         let mut r = || range.ind_sample(&mut rng);
 
         for _ in 0..n {
-            let p = Particle::place_homogeneous(&mut r, kappa, bs);
+            let p = Particle::place_homogeneous(&mut r, bs, kappa);
             particles.push(p);
         }
 
         particles
     }
+
+    pub fn place_bizonne<F>(r: &mut F, bs: &BoxSize, kappa: f64) -> Particle
+    where
+        F: FnMut() -> f64,
+    {
+        let mut p = Particle::place_homogeneous(r, bs, kappa);
+
+        p.position.y = 0.0;
+        p.position.x /= bs.x * 5.;
+        p.position.z /= bs.z * 5.;
+
+        p.pbc(bs);
+
+        p
+    }
+
+    /// Places n particles according the the spatial homogeneous distribution
+    pub fn create_bizonne(n: usize, bs: &BoxSize, seed: [u64; 2], kappa: f64) -> Vec<Particle> {
+        let mut particles = Vec::with_capacity(n);
+
+        // initialise random particle position
+        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
+        let range = Range::new(0f64, 1.);
+
+        let mut r = || range.ind_sample(&mut rng);
+
+        for _ in 0..n {
+            let p = Particle::place_bizonne(&mut r, bs, kappa);
+            particles.push(p);
+        }
+
+        particles
+    }
+
+    // /// Places n particles according the the spatial homogeneous distribution
+    // pub fn create_random<F, T>(
+    //     n: usize,
+    //     bs: &BoxSize,
+    //     seed: [u64; 2],
+    //     mut f: F,
+    //     param: T,
+    // ) -> Vec<Particle>
+    // where
+    //     T: Copy,
+    //     F: FnMut(&mut FnMut() -> f64, &BoxSize, T) -> Particle,
+    // {
+    //     let mut particles = Vec::with_capacity(n);
+    //
+    //     // initialise random particle position
+    //     let mut rng: Pcg64 = SeedableRng::from_seed(seed);
+    //     let range = Range::new(0f64, 1.);
+    //
+    //     let mut r = || range.ind_sample(&mut rng);
+    //
+    //     for _ in 0..n {
+    //         let p = f(&mut r, bs, param);
+    //         particles.push(p);
+    //     }
+    //
+    //     particles
+    // }
 }
 
 #[derive(Debug, Clone, Copy, Add, Sub, Mul, Div, AddAssign)]
