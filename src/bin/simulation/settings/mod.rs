@@ -39,6 +39,7 @@ pub struct DiffusionConstants {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MagneticDipolePrefactors {
+    #[serde(default)]
     pub magnetic_dipole_dipole: f64,
 }
 
@@ -46,6 +47,7 @@ pub struct MagneticDipolePrefactors {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
+    #[serde(default)]
     pub drag: f64,
     #[serde(default)]
     pub shape: f64,
@@ -251,6 +253,10 @@ mod tests {
         assert_eq!(
             settings.parameters.magnetic_dipole.magnetic_dipole_dipole,
             5.0
+        );
+        assert_eq!(
+            settings_default.parameters.magnetic_dipole.magnetic_dipole_dipole,
+            0.0
         );
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
         assert_eq!(settings.parameters.drag, 123.4);
