@@ -167,7 +167,7 @@ impl Simulation {
                 p.position.z,
                 p.orientation.phi,
                 p.orientation.theta,
-                bs,
+                &bs,
             );
         }
 
@@ -339,7 +339,7 @@ impl Simulation {
                     .step(TimeStep(sim.timestep))
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
-                    .finalize(sim.box_size);
+                    .finalize(&sim.box_size);
             });
 
         // increment timestep counter to keep a continous identifier when resuming

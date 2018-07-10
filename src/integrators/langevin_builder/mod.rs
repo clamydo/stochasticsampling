@@ -117,7 +117,7 @@ impl Modification {
         }
     }
 
-    pub fn finalize(self, bs: BoxSize) -> Particle {
+    pub fn finalize(self, bs: &BoxSize) -> Particle {
         let mut p = Particle::from(self.old.vector + self.delta);
         p.pbc(bs);
         p
