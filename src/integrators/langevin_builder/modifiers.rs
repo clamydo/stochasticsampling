@@ -21,17 +21,20 @@ use particle::{OrientationVector, ParticleVector, PositionVector};
 use vector::VectorD;
 
 /// Does not change anything, just returns the given `delta`.
+#[inline(always)]
 pub fn identity(_p: OriginalParticle, delta: ParticleVector) -> ParticleVector {
     delta
 }
 
 /// Returns the delta given as a parameter `c`.
+#[inline(always)]
 pub fn constant(_p: OriginalParticle, _delta: ParticleVector, c: ParticleVector) -> ParticleVector {
     c
 }
 
 /// Translates particle due to self propulsion in the direction of its
 /// orentation.
+#[inline(always)]
 pub fn self_propulsion(p: OriginalParticle, delta: ParticleVector) -> ParticleVector {
     delta + ParticleVector {
         position: p.vector.orientation.to(),
@@ -40,6 +43,7 @@ pub fn self_propulsion(p: OriginalParticle, delta: ParticleVector) -> ParticleVe
 }
 
 /// Translates the particle in the convective local flow field.
+#[inline(always)]
 pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) -> ParticleVector {
     delta + ParticleVector {
         position: flow.to(),
@@ -48,6 +52,7 @@ pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) ->
 }
 
 /// Translates the particle due to magnetic dipole forces.
+#[inline(always)]
 pub fn magnetic_dipole_dipole_force(
     p: OriginalParticle,
     delta: ParticleVector,
@@ -62,6 +67,7 @@ pub fn magnetic_dipole_dipole_force(
 /// Translates according to translational diffusion. CAUTION: Must be called
 /// only after `.step`. The random vector should already include the timestep
 /// and translatinal diffusion constant.
+#[inline(always)]
 pub fn translational_diffusion(
     _p: OriginalParticle,
     delta: ParticleVector,
@@ -74,6 +80,7 @@ pub fn translational_diffusion(
 }
 
 /// Rotates particle to align with external magnetic field.
+#[inline(always)]
 pub fn external_field_alignment(
     p: OriginalParticle,
     delta: ParticleVector,
@@ -90,6 +97,7 @@ pub fn external_field_alignment(
 
 /// Rotates the particle due to coupling to the flow's vorticity. Anti-symmetric
 /// Jeffrey's term.
+#[inline(always)]
 pub fn jeffrey_vorticity(
     p: OriginalParticle,
     delta: ParticleVector,
@@ -116,6 +124,7 @@ pub fn jeffrey_vorticity(
 
 /// Rotates the particle due to coupling to the flow's strain. Symmetric
 /// Jeffrey's term.
+#[inline(always)]
 pub fn jeffrey_strain(
     p: OriginalParticle,
     delta: ParticleVector,
@@ -144,6 +153,7 @@ pub fn jeffrey_strain(
 }
 
 /// Rotates the particle in the mean magnetic field of all other particles.
+#[inline(always)]
 pub fn magnetic_dipole_dipole_rotation(
     p: OriginalParticle,
     delta: ParticleVector,
@@ -169,6 +179,7 @@ pub struct RotDiff {
 
 /// Rotates particle according to rotational diffusion. Needs to come after
 /// `.step`! Timestep must already be included in the rotation angle.
+#[inline(always)]
 pub fn rotational_diffusion(
     p: OriginalParticle,
     delta: ParticleVector,
