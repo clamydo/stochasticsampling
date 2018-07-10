@@ -283,9 +283,9 @@ impl Particle {
     {
         let mut p = Particle::place_homogeneous(r, bs, kappa);
 
-        p.position.y = 0.0;
-        p.position.x /= bs.x * 5.;
-        p.position.z /= bs.z * 5.;
+        p.position.y /= bs.y * 5.0;
+        p.position.x /= bs.x;
+        p.position.z /= bs.z;
 
         p.pbc(bs);
 

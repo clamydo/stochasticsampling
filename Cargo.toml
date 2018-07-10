@@ -54,10 +54,10 @@ members = ["crates/fftw3", "crates/external/rust-lzma"]
 
 [profile.release]
 opt-level = 3
-lto = true
-debug = false
-codegen-units = 1
-incremental = false
+#lto = true
+#debug = false
+#codegen-units = 1
+#incremental = false
 
 [profile.bench]
 lto = false

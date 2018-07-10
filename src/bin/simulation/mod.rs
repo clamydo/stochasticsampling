@@ -49,14 +49,14 @@ pub struct Simulation {
     spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
     settings: Settings,
-    state: SimulationState,
+    pub state: SimulationState,
     pcache: ParamCache,
 }
 
 /// Holds the current state of the simulation.
-struct SimulationState {
+pub struct SimulationState {
     distribution: Distribution,
-    particles: Vec<Particle>,
+    pub particles: Vec<Particle>,
     random_samples: Vec<RandomVector>,
     rng: Vec<Pcg64>,
     /// count timesteps
@@ -161,14 +161,7 @@ impl Simulation {
         // provided for user given input.
         for p in &mut particles {
             // this makes sure, the input is sanitized
-            *p = Particle::new(
-                p.position.x,
-                p.position.y,
-                p.position.z,
-                p.orientation.phi,
-                p.orientation.theta,
-                &bs,
-            );
+            (*p).pbc(&bs);
         }
 
         self.state.particles = particles;
@@ -254,6 +247,23 @@ impl Simulation {
 
         let dt = self.pcache.trans_diff;
         let dr = self.pcache.rot_diff;
+
+        self.state.random_samples = vec![
+            RandomVector {
+                x: 0.,
+                y: 0.,
+                z: 0.,
+                axis_angle: 0.,
+                rotate_angle: 0.,
+            };
+            self.state.particles.len()
+        ];
+        // let mut uninit: Vec<RandomVector> =
+        // Vec::with_capacity(self.state.particles.len());
+        // unsafe {
+        //     uninit.set_len(self.state.particles.len());
+        // }
+        // self.state.random_samples = uninit;
 
         self.state
             .random_samples
