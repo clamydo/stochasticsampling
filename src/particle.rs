@@ -9,10 +9,10 @@ use pcg_rand::Pcg64;
 use rand::distributions::{IndependentSample, Range};
 use rand::SeedableRng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use BoxSize;
-use vector::Vector;
 use std::convert::From;
 use std::f64::consts::PI;
+use vector::Vector;
+use BoxSize;
 
 const PIHALF: f64 = PI / 2.;
 
@@ -39,7 +39,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new(x: f64, y: f64, z: f64, bs: BoxSize) -> Position {
+    pub fn new(x: f64, y: f64, z: f64, bs: &BoxSize) -> Position {
         Position {
             x: modulo(x, bs.x),
             y: modulo(y, bs.y),
@@ -55,7 +55,7 @@ impl Position {
         }
     }
 
-    pub fn pbc(&mut self, bs: BoxSize) {
+    pub fn pbc(&mut self, bs: &BoxSize) {
         self.x = modulo(self.x, bs.x);
         self.y = modulo(self.y, bs.y);
         self.z = modulo(self.z, bs.z);
@@ -168,7 +168,7 @@ pub struct Particle {
 
 impl Particle {
     /// Returns a `Particle` with given coordinates. Automatically applies pbc.
-    pub fn new(x: f64, y: f64, z: f64, phi: f64, theta: f64, box_size: BoxSize) -> Particle {
+    pub fn new(x: f64, y: f64, z: f64, phi: f64, theta: f64, box_size: &BoxSize) -> Particle {
         let mut p = Particle {
             position: Position::new(x, y, z, box_size),
             orientation: Orientation::new(phi, theta),
@@ -180,7 +180,7 @@ impl Particle {
 
     /// Returns a `Particle` from a given position and orientation.
     /// Automatically applies pbc.
-    pub fn from_position_orientation(pos: Position, o: Orientation, box_size: BoxSize) -> Particle {
+    pub fn from_position_orientation(pos: Position, o: Orientation, box_size: &BoxSize) -> Particle {
         let mut p = Particle {
             position: pos,
             orientation: o,
@@ -190,53 +190,71 @@ impl Particle {
         p
     }
 
-    pub fn pbc(&mut self, bs: BoxSize) {
+    pub fn pbc(&mut self, bs: &BoxSize) {
         self.position.pbc(bs);
         self.orientation.pbc();
     }
 
+    pub fn place_isotropic<F>(r: &mut F, bs: &BoxSize) -> Particle
+    where
+        F: FnMut() -> f64,
+    {
+        Particle::new(
+            bs.x * r(),
+            bs.y * r(),
+            bs.z * r(),
+            TWOPI * r(),
+            // take care of the spherical geometry by drawing from sin
+            pdf_sin(2. * r()),
+            bs,
+        )
+    }
+
     /// Places n particles at random positions following an isotropic
     /// distribution
-    pub fn place_isotropic(n: usize, bs: BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+    pub fn create_isotropic(n: usize, bs: &BoxSize, seed: [u64; 2]) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
         let mut rng: Pcg64 = SeedableRng::from_seed(seed);
-        let between = Range::new(0f64, 1.);
+        let range = Range::new(0f64, 1.);
+
+        let mut r = || range.ind_sample(&mut rng);
 
         for _ in 0..n {
-            let p = Particle::new(
-                bs.x * between.ind_sample(&mut rng),
-                bs.y * between.ind_sample(&mut rng),
-                bs.z * between.ind_sample(&mut rng),
-                TWOPI * between.ind_sample(&mut rng),
-                // take care of the spherical geometry by drawing from sin
-                pdf_sin(2. * between.ind_sample(&mut rng)),
-                bs,
-            );
+            let p = Particle::place_isotropic(&mut r, bs);
             particles.push(p);
         }
 
         particles
     }
 
+    pub fn place_homogeneous<F>(r: &mut F, kappa: f64, bs: &BoxSize) -> Particle
+    where
+        F: FnMut() -> f64,
+    {
+        Particle::new(
+            bs.x * r(),
+            bs.y * r(),
+            bs.z * r(),
+            TWOPI * r(),
+            pdf_homogeneous_fixpoint(kappa, r()),
+            bs,
+        )
+    }
+
     /// Places n particles according the the spatial homogeneous distribution
-    pub fn place_homogeneous(n: usize, kappa: f64, bs: BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+    pub fn create_homogeneous(n: usize, kappa: f64, bs: &BoxSize, seed: [u64; 2]) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
         let mut rng: Pcg64 = SeedableRng::from_seed(seed);
-        let between = Range::new(0f64, 1.);
+        let range = Range::new(0f64, 1.);
+
+        let mut r = || range.ind_sample(&mut rng);
 
         for _ in 0..n {
-            let p = Particle::new(
-                bs.x * between.ind_sample(&mut rng),
-                bs.y * between.ind_sample(&mut rng),
-                bs.z * between.ind_sample(&mut rng),
-                TWOPI * between.ind_sample(&mut rng),
-                pdf_homogeneous_fixpoint(kappa, between.ind_sample(&mut rng)),
-                bs,
-            );
+            let p = Particle::place_homogeneous(&mut r, kappa, bs);
             particles.push(p);
         }
 
