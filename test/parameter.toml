@@ -34,6 +34,7 @@
     drag = 123.4
     shape = 44.3
     magnetic_reorientation = 1.0
+    hydro_screening = 1.3
     [parameters.magnetic_dipole]
         magnetic_dipole_dipole = 5.0
     [parameters.diffusion]
