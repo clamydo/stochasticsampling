@@ -74,19 +74,19 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             let p = match settings.simulation.init_distribution {
                 InitDistribution::Isotropic => {
                     info!("Using isotropic initial condition.");
-                    Particle::place_isotropic(
+                    Particle::create_isotropic(
                         settings.simulation.number_of_particles,
-                        settings.simulation.box_size,
+                        &settings.simulation.box_size,
                         settings.simulation.seed,
                     )
                 }
                 InitDistribution::Homogeneous => {
                     info!("Using spatial homogeneous initial condition.");
-                    Particle::place_homogeneous(
+                    Particle::create_homogeneous(
                         settings.simulation.number_of_particles,
                         settings.parameters.magnetic_reorientation
                             / settings.parameters.diffusion.rotational,
-                        settings.simulation.box_size,
+                        &settings.simulation.box_size,
                         settings.simulation.seed,
                     )
                 }
