@@ -86,7 +86,9 @@ pub fn external_field_alignment(
     delta: ParticleVector,
     realignment: f64,
 ) -> ParticleVector {
-    let mut b: VectorD = [0., 0., realignment].into();
+    // magnetic field points in y direction
+    // CAUTION, changing this requires a change of magnetic stress as well
+    let mut b: VectorD = [0., realignment, 0.].into();
     b -= p.vector.orientation * p.vector.orientation.dot(&b);
 
     delta + ParticleVector {

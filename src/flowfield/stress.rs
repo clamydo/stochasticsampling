@@ -72,15 +72,6 @@ pub fn average_stress<'a>(
 
     let dist = dist.dist.view().into_shape([n_dist, n_angle]).unwrap();
 
-    // let len = n_stress * n_dist;
-    // let mut uninit = Vec::with_capacity(len);
-    // unsafe {
-    //     uninit.set_len(len);
-    // }
-    //
-    // let mut stress_field = Array::from_vec(uninit)
-    //     .into_shape((n_stress, n_dist))
-    //     .unwrap();
     let mut stress_field = stress_field.into_shape((n_stress, n_dist)).unwrap();
 
     // integration measures and FFT normalization
@@ -122,19 +113,22 @@ pub mod stresses {
     }
 
     /// Calculate magnetic stress tensor for polar angles `phi` and `theta`.
+    /// Magnetic field points into y-direction to avoid binning instability in
+    /// spherical coordinates at the poles.
+    /// Calculates `0.5 (nb-bn)`, with `b = [0, 1, 0]` and orientation `n`.
     pub fn stress_magnetic(phi: f64, theta: f64) -> Array<f64, Ix2> {
         let mut s = Array::zeros((3, 3));
 
         s[[0, 0]] = 0.;
-        s[[0, 1]] = 0.;
-        s[[0, 2]] = phi.cos() + theta.sin();
+        s[[0, 1]] = phi.cos() * theta.sin();
+        s[[0, 2]] = 0.;
 
-        s[[1, 0]] = 0.;
+        s[[1, 0]] = -phi.cos() * theta.sin();
         s[[1, 1]] = 0.;
-        s[[1, 2]] = theta.sin() * phi.sin();
+        s[[1, 2]] = -theta.cos();
 
-        s[[2, 0]] = -phi.cos() * theta.sin();
-        s[[2, 1]] = -theta.sin() * phi.sin();
+        s[[2, 0]] = 0.;
+        s[[2, 1]] = theta.cos();
         s[[2, 2]] = 0.;
 
         s * 0.5

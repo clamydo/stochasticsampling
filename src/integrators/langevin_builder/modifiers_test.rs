@@ -60,7 +60,7 @@ fn external_field_alignment() {
     let p = l
         .with_param(super::external_field_alignment, 0.1)
         .finalize(BS);
-    let expect = Particle::new(0., 0., 0., 0., 1.4711276743037345, BS);
+    let expect = Particle::new(0., 0., 0., 0.09966865249116204, ::std::f64::consts::PI / 2., BS);
 
     assert_eq!(p, expect);
 }
