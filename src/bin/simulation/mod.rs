@@ -308,11 +308,18 @@ impl Simulation {
         let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
         let strain_mat = strain_mat.view();
 
+        let mut retain_particle = vec![true; self.state.particles.len()];
+
         self.state
-            .particles
-            .par_iter_mut()
-            .zip(self.state.random_samples.par_iter())
-            .for_each(|(p, r)| {
+            .random_samples
+            .par_iter()
+            .zip(
+                self.state
+                    .particles
+                    .par_iter_mut()
+                    .zip(retain_particle.par_iter_mut()),
+            )
+            .for_each(|(r, (p, c))| {
                 let idx = get_cell_index(&p, &gw);
                 let flow = vector_field_at_cell_c(&flow_field.view(), idx);
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
@@ -338,11 +345,7 @@ impl Simulation {
                     None => None,
                 };
 
-                let mut rng2 = ::rand::thread_rng();
-
-                let mut rangef = || between.ind_sample(&mut rng2);
-
-                *p = LangevinBuilder::new(&p)
+                let pp = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
                     .conditional_with_param(b_mag, magnetic_dipole_dipole_force, dd_f)
@@ -353,15 +356,29 @@ impl Simulation {
                     .step(TimeStep(sim.timestep))
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
-                    .bizonne_jet_finalize(
-                        &mut rangef,
-                        (
-                            param.magnetic_reorientation / param.diffusion.rotational,
-                            &sim.box_size,
-                        ),
-                    );
-                // .finalize(&sim.box_size);
+                    .bizonne_jet_finalize(&sim.box_size);
+
+                match pp {
+                    Some(updated) => {
+                        *c = true;
+                        *p = updated;
+                    }
+                    None => *c = false,
+                };
             });
+
+        // delete obsolete particles
+        // TODO find more efficient way to do this
+        let mut j = self.state.particles.len() - 1;
+        let mut i = 0;
+        while i <= j {
+            if !retain_particle[i] {
+                self.state.particles.swap(i, j);
+                j -= 1;
+            }
+            i += 1;
+        }
+        self.state.particles.truncate(i);
 
         // increment timestep counter to keep a continous identifier when resuming
         self.state.timestep += 1;

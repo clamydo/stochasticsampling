@@ -123,17 +123,17 @@ impl Modification {
         p
     }
 
-    pub fn bizonne_jet_finalize<F>(self, mut r: F, (kappa, bs): (f64, &BoxSize)) -> Particle where F: FnMut() -> f64
-     {
+    pub fn bizonne_jet_finalize(self, bs: &BoxSize) -> Option<Particle> {
         let new = self.old.vector + self.delta;
 
-        let mut p = if new.position[1] > bs.y {
-            Particle::place_bizonne(&mut r, bs, kappa)
+        let p = if new.position[1] > bs.y {
+            None
         } else {
-            Particle::from(new)
+            let mut n = Particle::from(new);
+            n.pbc(bs);
+            Some(n)
         };
 
-        p.pbc(bs);
         p
     }
 }

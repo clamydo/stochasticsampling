@@ -203,17 +203,14 @@ fn run_simulation(
         pb.inc();
         simulation.do_timestep();
 
-        if timestep < 200 {
-            let [sa, sb] = settings.simulation.seed;
-            let mut p = Particle::create_bizonne(
-                280,
-                &settings.simulation.box_size,
-                [sa + timestep as u64, sb],
-                settings.parameters.magnetic_reorientation
-                    / settings.parameters.diffusion.rotational,
-            );
-            simulation.state.particles.append(&mut p);
-        }
+        let [sa, sb] = settings.simulation.seed;
+        let mut p = Particle::create_bizonne(
+            settings.simulation.particle_creation_rate,
+            &settings.simulation.box_size,
+            [sa + timestep as u64, sb],
+            settings.parameters.magnetic_reorientation / settings.parameters.diffusion.rotational,
+        );
+        simulation.state.particles.append(&mut p);
 
         // TODO: Refactor this ugly code
 

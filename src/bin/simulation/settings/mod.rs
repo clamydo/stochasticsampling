@@ -104,6 +104,7 @@ pub enum InitDistribution {
 #[serde(deny_unknown_fields)]
 pub struct SimulationSettings {
     pub number_of_particles: usize,
+    pub particle_creation_rate: usize,
     pub number_of_timesteps: usize,
     pub timestep: f64,
     #[serde(default = "default_init_distribution")]
