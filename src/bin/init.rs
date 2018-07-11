@@ -92,13 +92,7 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
                 }
                 InitDistribution::Bizonne => {
                     info!("Using spatial homogeneous initial condition.");
-                    Particle::create_bizonne(
-                        settings.simulation.number_of_particles,
-                        &settings.simulation.box_size,
-                        settings.simulation.seed,
-                        settings.parameters.magnetic_reorientation
-                            / settings.parameters.diffusion.rotational,
-                    )
+                    vec![]
                 }
             };
 

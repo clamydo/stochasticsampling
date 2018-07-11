@@ -277,13 +277,18 @@ impl Particle {
         particles
     }
 
-    pub fn place_bizonne<F>(r: &mut F, bs: &BoxSize, kappa: f64) -> Particle
+    pub fn place_bizonne<F>(
+        r: &mut F,
+        bs: &BoxSize,
+        (kappa, width, ypos): (f64, f64, f64),
+    ) -> Particle
     where
         F: FnMut() -> f64,
     {
         let mut p = Particle::place_homogeneous(r, bs, kappa);
 
-        p.position.y /= bs.y * 5.0;
+        p.position.y /= bs.y / width;
+        p.position.y += ypos;
         p.position.x /= bs.x;
         p.position.z /= bs.z;
 
@@ -293,7 +298,12 @@ impl Particle {
     }
 
     /// Places n particles according the the spatial homogeneous distribution
-    pub fn create_bizonne(n: usize, bs: &BoxSize, seed: [u64; 2], kappa: f64) -> Vec<Particle> {
+    pub fn create_bizonne(
+        n: usize,
+        bs: &BoxSize,
+        seed: [u64; 2],
+        param: (f64, f64, f64),
+    ) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
@@ -303,7 +313,7 @@ impl Particle {
         let mut r = || range.ind_sample(&mut rng);
 
         for _ in 0..n {
-            let p = Particle::place_bizonne(&mut r, bs, kappa);
+            let p = Particle::place_bizonne(&mut r, bs, param);
             particles.push(p);
         }
 

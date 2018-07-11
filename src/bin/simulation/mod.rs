@@ -234,6 +234,25 @@ impl Simulation {
 
     /// Do the actual simulation timestep
     pub fn do_timestep(&mut self) -> usize {
+        let sim = self.settings.simulation;
+        let param = self.settings.parameters;
+        let gw = self.pcache.grid_width;
+
+        let [sa, sb] = sim.seed;
+        let mut p_new = Particle::create_bizonne(
+            sim.particle_creation_rate,
+            &sim.box_size,
+            [sa + self.state.timestep as u64, sb],
+            (
+                param.magnetic_reorientation
+                    / param.diffusion.rotational,
+                0.2,
+                20.,
+            ),
+        );
+        self.state.particles.append(&mut p_new);
+
+
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
@@ -280,10 +299,6 @@ impl Simulation {
                     };
                 }
             });
-
-        let sim = self.settings.simulation;
-        let param = self.settings.parameters;
-        let gw = self.pcache.grid_width;
 
         let b_mag = param.magnetic_dipole.magnetic_dipole_dipole != 0.0 || param.drag != 0.0;
 

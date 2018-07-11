@@ -52,7 +52,6 @@ use output::worker::Worker;
 use pbr::ProgressBar;
 use std::path::Path;
 use stochasticsampling::output::OutputEntry;
-use stochasticsampling::particle::Particle;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
@@ -202,15 +201,6 @@ fn run_simulation(
     for timestep in timestep_start..(n + 1) {
         pb.inc();
         simulation.do_timestep();
-
-        let [sa, sb] = settings.simulation.seed;
-        let mut p = Particle::create_bizonne(
-            settings.simulation.particle_creation_rate,
-            &settings.simulation.box_size,
-            [sa + timestep as u64, sb],
-            settings.parameters.magnetic_reorientation / settings.parameters.diffusion.rotational,
-        );
-        simulation.state.particles.append(&mut p);
 
         // TODO: Refactor this ugly code
 
