@@ -10,22 +10,22 @@ const BS: BoxSize = BoxSize {
 };
 
 fn prepare() -> LangevinBuilder {
-    let p = Particle::new(0., 0., 0., 0., 0., BS);
+    let p = Particle::new(0., 0., 0., 0., 0., &BS);
     LangevinBuilder::new(&p)
 }
 
 macro_rules! quicktest_modifier {
     ($name:ident; $x:expr; ($($y:expr),+)) => (
         let l = prepare();
-        let p = l.with_param(super::$name, $x).finalize(BS);
-        let expect = Particle::new($($y),*, BS);
+        let p = l.with_param(super::$name, $x).finalize(&BS);
+        let expect = Particle::new($($y),*, &BS);
 
         assert_eq!(p, expect);
     );
     ($name:ident; ($($y:expr),+)) => (
         let l = prepare();
-        let p = l.with(super::$name).finalize(BS);
-        let expect = Particle::new($($y),*, BS);
+        let p = l.with(super::$name).finalize(&BS);
+        let expect = Particle::new($($y),*, &BS);
 
         assert_eq!(p, expect);
     );
@@ -55,12 +55,12 @@ fn translational_diffusion() {
 
 #[test]
 fn external_field_alignment() {
-    let p = Particle::new(0., 0., 0., 0., ::std::f64::consts::PI / 2., BS);
+    let p = Particle::new(0., 0., 0., 0., ::std::f64::consts::PI / 2., &BS);
     let l = LangevinBuilder::new(&p);
     let p = l
         .with_param(super::external_field_alignment, 0.1)
-        .finalize(BS);
-    let expect = Particle::new(0., 0., 0., 0.09966865249116204, ::std::f64::consts::PI / 2., BS);
+        .finalize(&BS);
+    let expect = Particle::new(0., 0., 0., 0.09966865249116204, ::std::f64::consts::PI / 2., &BS);
 
     assert_eq!(p, expect);
 }

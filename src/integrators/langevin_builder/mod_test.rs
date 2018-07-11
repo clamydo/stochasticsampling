@@ -32,11 +32,11 @@ fn test_langevin_builder_conversion() {
     ];
 
     for (p, e) in coord.iter().zip(exp.iter()) {
-        let p = Particle::new(p[0], p[1], p[2], p[3], p[4], bs);
+        let p = Particle::new(p[0], p[1], p[2], p[3], p[4], &bs);
 
         let m = LangevinBuilder::new(&p).with(identity);
         let Modification { old: v, delta: _ } = m;
-        let pp = m.finalize(bs);
+        let pp = m.finalize(&bs);
 
         println!("IN: {:?}", p);
         println!("VEC: {:?}", v.vector);
@@ -60,14 +60,14 @@ fn test_langevin_builder_step() {
         y: 10.,
         z: 10.,
     };
-    let p = Particle::new(0., 0., 0., 0., 0., bs);
+    let p = Particle::new(0., 0., 0., 0., 0., &bs);
     let c: ParticleVector = Particle::new(
         1.,
         2.,
         3.,
         3. / 2. * ::std::f64::consts::PI,
         ::std::f64::consts::PI / 2.,
-        bs,
+        &bs,
     ).into();
     let e = [[2., 4., 6.], [0., -2., 0.]];
 
