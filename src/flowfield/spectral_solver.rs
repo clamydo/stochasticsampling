@@ -21,7 +21,6 @@ pub struct SpectralSolver {
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
     k_invnormsquared: Array<Complex<f64>, Ix3>,
-    k_invnorm: Array<Complex<f64>, Ix3>,
     k_mesh: Array<Complex<f64>, Ix4>,
     k_normed_mesh: Array<Complex<f64>, Ix4>,
     stress_kernel: Array<f64, Ix4>,
@@ -53,7 +52,6 @@ impl SpectralSolver {
         ).unwrap();
 
         SpectralSolver {
-            k_invnorm: get_inverse_norm(mesh.view()),
             k_invnormsquared: get_inverse_norm_squared(mesh.view()),
             k_mesh: mesh,
             k_normed_mesh: get_norm_k_mesh(grid_size, box_size),
