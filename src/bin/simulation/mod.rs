@@ -256,9 +256,10 @@ impl Simulation {
         // Sample probability distribution from ensemble.
         self.state.distribution.sample_from(&self.state.particles);
         // Renormalize distribution to keep number density constant.
-        self.state.distribution.dist *= self.settings.simulation.box_size.x
-            * self.settings.simulation.box_size.y
-            * self.settings.simulation.box_size.z;
+        // self.state.distribution.dist *= self.settings.simulation.box_size.x
+        //     * self.settings.simulation.box_size.y
+        //     * self.settings.simulation.box_size.z;
+        self.state.distribution.dist *= self.state.particles.len();
 
         let between = Range::new(0f64, 1.);
 
