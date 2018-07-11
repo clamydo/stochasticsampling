@@ -21,7 +21,7 @@ fn test_magnetic() {
         theta: 5,
     };
 
-    let p = Particle::new(0.0, 0.0, 0.0, PI, PI / 2., bs);
+    let p = Particle::new(0.0, 0.0, 0.0, PI, PI / 2., &bs);
     let mut d = Distribution::new(gs, bs);
 
     let p = vec![p];
@@ -59,7 +59,7 @@ fn test_magnetic_field_against_cache() {
         theta: 11,
     };
 
-    let p = Particle::new(0.0, 0.0, 0.0, PI, PI / 2., bs);
+    let p = Particle::new(0.0, 0.0, 0.0, PI, PI / 2., &bs);
     let mut d = Distribution::new(gs, bs);
 
     let p = vec![p];

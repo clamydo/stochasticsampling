@@ -37,7 +37,7 @@ fn histogram() {
         z: 1.,
     };
     let n = 1000;
-    let p = Particle::place_isotropic(n, box_size, [1, 1]);
+    let p = Particle::create_isotropic(n, &box_size, [1, 1]);
     let mut d = Distribution::new(grid_size, box_size);
 
     d.histogram_from(&p);
@@ -45,8 +45,8 @@ fn histogram() {
     let sum = d.dist.fold(0., |s, x| s + x);
     // Sum over all bins should be particle number
     assert_eq!(sum, n as f64);
-    let mut p2 = Particle::new(0.6, 0.3, 0., 4., 1., box_size);
-    p2.pbc(box_size);
+    let mut p2 = Particle::new(0.6, 0.3, 0., 4., 1., &box_size);
+    p2.pbc(&box_size);
     let p2v = vec![p2];
 
     d.histogram_from(&p2v);
@@ -72,7 +72,7 @@ fn sample_from() {
         theta: 2,
     };
     let n = 1000;
-    let p = Particle::place_isotropic(n, box_size, [1, 1]);
+    let p = Particle::create_isotropic(n, &box_size, [1, 1]);
     let mut d = Distribution::new(grid_size, box_size);
 
     d.sample_from(&p);
@@ -96,7 +96,7 @@ fn sample_from() {
         1.
     );
 
-    let p2 = vec![Particle::new(0.6, 0.3, 0., 0., 0., box_size)];
+    let p2 = vec![Particle::new(0.6, 0.3, 0., 0., 0., &box_size)];
 
     d.sample_from(&p2);
     println!("{}", d.dist);
@@ -171,7 +171,7 @@ fn coord_to_grid() {
     ];
 
     for (i, o) in input.iter().zip(result.iter()) {
-        let p = Particle::new(i[0], i[1], i[2], i[3], i[4], box_size);
+        let p = Particle::new(i[0], i[1], i[2], i[3], i[4], &box_size);
 
         check(i, o, p, grid_size, box_size);
     }

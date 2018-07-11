@@ -20,8 +20,8 @@ fn test_polarization_from_distribution() {
 
     let gw = GridWidth::new(gs, bs);
 
-    let p1 = Particle::new(0.0, 0.0, 0.0, PI, PI / 2., bs);
-    let p2 = Particle::new(1.5, 2.5, 0.0, 0.269279370307697, 0.942477796076938, bs);
+    let p1 = Particle::new(0.0, 0.0, 0.0, PI, PI / 2., &bs);
+    let p2 = Particle::new(1.5, 2.5, 0.0, 0.269279370307697, 0.942477796076938, &bs);
     let mut d = Distribution::new(gs, bs);
     let p = vec![p1, p2];
     let n = p.len() as f64;
