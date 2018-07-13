@@ -267,10 +267,6 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        // self.state.steady =
-        //     ((self.state.particles.len() - self.state.last_n) as f64).abs() as f64 / self.state.last_n as f64 <= 0.05
-        //     || self.state.steady;
-
         if 400 < self.state.timestep && self.state.timestep < 600 {
             self.state.distribution.dist *= (self.state.timestep as f64 - 400.) / 200.;
         }
