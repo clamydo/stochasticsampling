@@ -13,6 +13,7 @@ use std::convert::From;
 use std::f64::consts::PI;
 use vector::Vector;
 use BoxSize;
+use quaternion;
 
 const PIHALF: f64 = PI / 2.;
 
@@ -233,14 +234,21 @@ impl Particle {
     where
         F: FnMut() -> f64,
     {
-        Particle::new(
+        let mut p = Particle::new(
             bs.x * r(),
             bs.y * r(),
             bs.z * r(),
             TWOPI * r(),
             pdf_homogeneous_fixpoint(kappa, r()),
             bs,
-        )
+        );
+
+        let ax = [1., 0., 0.];
+        let q = quaternion::axis_angle(ax, -PIHALF);
+        let mut o = p.orientation.to_vector();
+        o = quaternion::rotate_vector(q, o.v).into();
+        p.orientation.from_vector_mut(&o);
+        p
     }
 
     /// Places n particles according the the spatial homogeneous distribution
