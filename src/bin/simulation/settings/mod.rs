@@ -48,7 +48,7 @@ pub struct MagneticDipolePrefactors {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(default)]
-    pub drag: f64,
+    pub magnetic_drag: f64,
     #[serde(default)]
     pub shape: f64,
     #[serde(default)]
@@ -261,8 +261,8 @@ mod tests {
             0.0
         );
         assert_eq!(settings.parameters.magnetic_reorientation, 1.0);
-        assert_eq!(settings.parameters.drag, 123.4);
-        assert_eq!(settings_default.parameters.drag, 0.0);
+        assert_eq!(settings.parameters.magnetic_drag, 123.4);
+        assert_eq!(settings_default.parameters.magnetic_drag, 0.0);
         assert_eq!(settings.parameters.shape, 44.3);
         assert_eq!(settings_default.parameters.hydro_screening, 0.0);
         assert_eq!(settings.parameters.hydro_screening, 1.3);

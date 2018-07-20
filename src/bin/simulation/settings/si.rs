@@ -171,7 +171,7 @@ impl SettingsSI {
                 },
                 shape: self.parameters.particle.shape,
                 hydro_screening: self.parameters.hydro_screening,
-                drag: number_density / uc / transfriction
+                magnetic_drag: number_density / uc / transfriction
                     * 4.0e-7
                     * PI
                     * self.parameters.particle.magnetic_dipole_moment.powi(2),
