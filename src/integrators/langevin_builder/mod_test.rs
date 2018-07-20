@@ -73,7 +73,7 @@ fn test_langevin_builder_step() {
 
     let m = LangevinBuilder::new(&p)
         .with_param(constant, c)
-        .step(TimeStep(2.));
+        .step(&TimeStep(2.));
     let Modification { old: _, delta: v } = m;
 
     println!("IN: {:?}", p);

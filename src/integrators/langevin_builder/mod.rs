@@ -110,7 +110,7 @@ impl Modification {
         }
     }
 
-    pub fn step(self, timestep: TimeStep) -> Modification {
+    pub fn step(self, timestep: &TimeStep) -> Modification {
         Modification {
             old: self.old,
             delta: self.delta * timestep.0,

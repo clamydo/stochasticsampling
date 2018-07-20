@@ -161,7 +161,7 @@ impl Integrator {
         p.orientation.theta -= param.magnetic_reorientation * cs.sin_theta * param.timestep;
 
         // IMPORTANT: apply periodic boundary condition
-        p.pbc(self.box_size);
+        p.pbc(&self.box_size);
     }
 
     pub fn evolve_particles_inplace<'a>(

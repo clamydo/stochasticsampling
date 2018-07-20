@@ -275,7 +275,7 @@ impl Simulation {
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
 
-        let b_mag = param.magnetic_dipole.magnetic_dipole_dipole != 0.0 || param.drag != 0.0;
+        let b_mag = param.magnetic_dipole.magnetic_dipole_dipole != 0.0 || param.magnetic_drag != 0.0;
 
         // Calculate flow field from distribution.
         let (flow_field, grad_ff) = self
@@ -313,7 +313,7 @@ impl Simulation {
                         let b = vector_field_at_cell_c(&b, idx)
                             * param.magnetic_dipole.magnetic_dipole_dipole;
                         let grad_b = matrix_field_at_cell(&grad_b, idx);
-                        (Some((param.drag, grad_b)), Some(b))
+                        (Some((param.magnetic_drag, grad_b)), Some(b))
                     }
                     None => (None, None),
                 };
@@ -336,7 +336,7 @@ impl Simulation {
                     .conditional_with_param(b_mag, magnetic_dipole_dipole_rotation, dd.1)
                     .with_param(jeffrey_vorticity, vortm.view())
                     .with_param(jeffrey_strain, (param.shape, strainm.view()))
-                    .step(TimeStep(sim.timestep))
+                    .step(&TimeStep(sim.timestep))
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
                     .finalize(&sim.box_size);

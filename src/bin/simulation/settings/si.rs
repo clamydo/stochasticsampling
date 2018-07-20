@@ -102,15 +102,14 @@ fn check_settings(s: &SettingsSI) -> Result<()> {
         bail!("Box size is invalid. Must be bigger than 0: {:?}", bs)
     }
 
-    if s.simulation.output_at_timestep.particles_head.is_some() {
-        if s.simulation.number_of_particles
+    if s.simulation.output_at_timestep.particles_head.is_some()
+        && s.simulation.number_of_particles
             < s.simulation.output_at_timestep.particles_head.unwrap()
-        {
-            bail!(
-                "Cannot output more particles than available. `particles_head`
+    {
+        bail!(
+            "Cannot output more particles than available. `particles_head`
                    must be smaller or equal to `number_of_particles`"
-            )
-        }
+        )
     }
 
     Ok(())
