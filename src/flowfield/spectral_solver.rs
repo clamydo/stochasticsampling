@@ -8,7 +8,7 @@ use fftw3::fft;
 use fftw3::fft::FFTPlan;
 use flowfield::stress::{average_stress, stress_kernel};
 use flowfield::FlowField3D;
-use mesh::fft_helper::{get_inverse_norm, get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
+use mesh::fft_helper::{get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
 use mesh::grid_width::GridWidth;
 use ndarray::{Array, ArrayView, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
