@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "1.5.3"
+version = "1.5.4"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 autobins = false
@@ -32,7 +32,7 @@ rand = "0.3.15"
 rayon = "1.0.0"
 rmp-serde = "0.13.6"
 # rustfft = "2.0.0"
-rust-lzma = { path = "crates/external/rust-lzma" }
+rust-lzma = "0.3.0"
 serde = "1.0.10"
 serde_cbor = "0.8.2"
 serde_derive = "1.0.10"
