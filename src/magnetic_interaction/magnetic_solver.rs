@@ -91,7 +91,7 @@ impl MagneticSolver {
             .and(self.k_norm_mesh.lanes(Axis(0)))
             .par_apply(|mut p, k| {
                 let kdotp = k.dot(&p);
-                let mag = (&p / 3. - &k * kdotp) / norm;
+                let mag = (&p - &k * kdotp) / norm;
                 p.assign(&mag);
             });
     }
