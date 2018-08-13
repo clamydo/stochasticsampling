@@ -82,11 +82,6 @@ impl MagneticSolver {
         // FFT normalization
         let norm = (sh.1 * sh.2 * sh.3) as f64;
 
-        // Set fft[p](k=0)=1, to include 'magnetization'. Otherwise an homogeneous
-        // anisotropic distribution would result in a zero magnetic field.
-        p.slice_mut(s![.., 0, 0, 0])
-            .map_inplace(|v| *v = 1.0_f64.into());
-
         Zip::from(p.lanes_mut(Axis(0)))
             .and(self.k_norm_mesh.lanes(Axis(0)))
             .par_apply(|mut p, k| {
