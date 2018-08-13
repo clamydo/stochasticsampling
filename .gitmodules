@@ -1,7 +1,3 @@
 [submodule "crates/external/pcg_rand"]
 	path = crates/external/pcg_rand
 	url = ../../fkoessel/pcg_rand.git
-[submodule "crates/external/rust-lzma"]
-	path = crates/external/rust-lzma
-	url = ../../fkoessel/rust-lzma.git
-	branch = patch
