@@ -538,13 +538,6 @@ dependencies = [
 
 [[package]]
 name = "rust-lzma"
-version = "0.2.1"
-dependencies = [
- "pkg-config 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "rust-lzma"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [

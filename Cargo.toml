@@ -50,7 +50,7 @@ ndarray-rand = "0.7.0"
 vergen = "0.1.1"
 
 [workspace]
-members = ["crates/fftw3", "crates/external/rust-lzma"]
+members = ["crates/fftw3"]
 
 [profile.release]
 opt-level = 3
