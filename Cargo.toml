@@ -5,6 +5,9 @@ authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 autobins = false
 
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
 [features]
 fftw-threaded = ["fftw3/fftw-threaded"]
 fftw-static = ["fftw3/fftw-static"]
@@ -41,6 +44,7 @@ time = "0.1.35"
 toml = { git = "https://github.com/alexcrichton/toml-rs", rev = "2be7ce9079fa02d9dd42958410ba1c40cef9811c" }
 extprim = "1.4.0"
 derive_more = "0.11.0"
+ctrlc = "3.1.1"
 
 [dev-dependencies]
 quickcheck = "0.6"
