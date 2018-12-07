@@ -1,3 +1,4 @@
+#![allow(clippy::float_cmp,clippy::unreadable_literal)]
 use super::*;
 use ndarray::{Array, Ix1, Ix4};
 use distribution::Distribution;

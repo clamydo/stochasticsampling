@@ -64,14 +64,12 @@ struct SimulationState {
     timestep: usize,
 }
 
-/// Seed of PCG PRNG
-type Pcg64Seed = u64;
 
 /// Captures the full state of the simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     particles: Vec<Particle>,
-    rng_seed: Vec<Pcg64Seed>,
+    rng_state: Vec<Pcg64Mcg>,
     /// current timestep number
     timestep: usize,
 }
@@ -111,8 +109,7 @@ impl Simulation {
         fft::fftw_init(Some(num_threads)).unwrap();
 
         let rng = (0..num_threads)
-            .into_iter()
-            .map(|i| SeedableRng::seed_from_u64(seed))
+            .map(|_| SeedableRng::seed_from_u64(seed))
             .collect();
 
         // initialize state with zeros
@@ -188,23 +185,18 @@ impl Simulation {
 
         // Reset timestep
         self.state.timestep = snapshot.timestep;
-        for (&mut r, s) in self.state.rng.iter_mut().zip(snapshot.rng_seed) {
-            r = Pcg64Mcg::seed_from_u64(s);
+        for (r, s) in self.state.rng.iter_mut().zip(snapshot.rng_state) {
+            *r = s.clone();
         }
     }
 
     /// Returns a fill Snapshot
     pub fn get_snapshot(&self) -> Snapshot {
-        let seed: Vec<Pcg64Seed> =
-            self.state.rng.iter().map(|r| r.extract_seed()).collect();
 
         Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
-            rng_seed: seed
-                .iter()
-                .map(|s| [s[0].lo, s[0].hi, s[1].lo, s[1].hi])
-                .collect(),
+            rng_state: self.state.rng.clone(),
             timestep: self.state.timestep,
         }
     }
@@ -249,7 +241,7 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        let between = Uniform::new(0f64, 1.);
+        let range = Uniform::new(0f64, 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
@@ -260,14 +252,14 @@ impl Simulation {
             .random_samples
             .par_chunks_mut(chunksize)
             .zip(self.state.rng.par_iter_mut())
-            .for_each(|(c, mut rng)| {
+            .for_each(|(c, rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: StandardNormal::rand(&mut rng).0 * dt,
-                        y: StandardNormal::rand(&mut rng).0 * dt,
-                        z: StandardNormal::rand(&mut rng).0 * dt,
-                        axis_angle: TWOPI * between.ind_sample(&mut rng),
-                        rotate_angle: rayleigh_pdf(dr, between.ind_sample(&mut rng)),
+                        x: rng.sample(StandardNormal) * dt,
+                        y: rng.sample(StandardNormal) * dt,
+                        z: rng.sample(StandardNormal) * dt,
+                        axis_angle: TWOPI * rng.sample(range),
+                        rotate_angle: rayleigh_pdf(dr, rng.sample(range)),
                     };
                 }
             });

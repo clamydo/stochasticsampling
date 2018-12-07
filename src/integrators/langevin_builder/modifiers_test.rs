@@ -1,3 +1,4 @@
+#![allow(clippy::unreadable_literal,clippy::excessive_precision)]
 use super::super::*;
 use super::*;
 use ndarray::arr2;

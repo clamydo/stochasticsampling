@@ -6,6 +6,7 @@ pub type ScalarField3D = Array<f64, Ix3>;
 
 /// Calculates the vorticity on a given discretized flow field
 /// `u=(ux, uy, uz)`, curl of u.
+#[allow(clippy::deref_addrof)]
 pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
@@ -29,13 +30,13 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
     let hzy = hz / hy;
     let hxz = hx / hz;
 
-    let ux = u.subview(Axis(0), 0);
-    let uy = u.subview(Axis(0), 1);
-    let uz = u.subview(Axis(0), 2);
+    let ux = u.index_axis(Axis(0), 0);
+    let uy = u.index_axis(Axis(0), 1);
+    let uz = u.index_axis(Axis(0), 2);
 
     {
         // calculate dy uz
-        let mut vx = res.subview_mut(Axis(0), 0);
+        let mut vx = res.index_axis_mut(Axis(0), 0);
         // bulk
         {
             let mut s = vx.slice_mut(s![.., 1..-1, ..]);
@@ -80,7 +81,7 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
         }
     }
     {
-        let mut vy = res.subview_mut(Axis(0), 1);
+        let mut vy = res.index_axis_mut(Axis(0), 1);
         // calculate dz ux
         // bulk
         {
@@ -126,7 +127,7 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
         }
     }
     {
-        let mut vz = res.subview_mut(Axis(0), 2);
+        let mut vz = res.index_axis_mut(Axis(0), 2);
         // calculate dx uy
         // bulk
         {
@@ -206,13 +207,13 @@ pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
 
     let hxz = hx / hz;
 
-    let ux = u.subview(Axis(0), 0);
-    let uy = u.subview(Axis(0), 1);
-    let uz = u.subview(Axis(0), 2);
+    let ux = u.index_axis(Axis(0), 0);
+    let uy = u.index_axis(Axis(0), 1);
+    let uz = u.index_axis(Axis(0), 2);
 
     {
         // calculate dy uz
-        let mut vx = res.subview_mut(Axis(0), 0);
+        let mut vx = res.index_axis_mut(Axis(0), 0);
         // calculate -dz uy, mind the switched signes
         // bulk
         {
@@ -236,7 +237,7 @@ pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
         }
     }
     {
-        let mut vy = res.subview_mut(Axis(0), 1);
+        let mut vy = res.index_axis_mut(Axis(0), 1);
         // calculate dz ux
         // bulk
         {
@@ -282,7 +283,7 @@ pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
         }
     }
     {
-        let mut vz = res.subview_mut(Axis(0), 2);
+        let mut vz = res.index_axis_mut(Axis(0), 2);
         // calculate dx uy
         // bulk
         {
@@ -333,11 +334,11 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
 
     let hz = 2. * grid_width.z;
 
-    let ux = u.subview(Axis(0), 0);
-    let uy = u.subview(Axis(0), 1);
+    let ux = u.index_axis(Axis(0), 0);
+    let uy = u.index_axis(Axis(0), 1);
 
     {
-        let mut vx = res.subview_mut(Axis(0), 0);
+        let mut vx = res.index_axis_mut(Axis(0), 0);
         // calculate -dz uy, mind the switched signes
         // bulk
         // dz uy(z) = (uy(z + h) - u(z - h)) / 2h
@@ -372,7 +373,7 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
     }
 
     {
-        let mut vy = res.subview_mut(Axis(0), 1);
+        let mut vy = res.index_axis_mut(Axis(0), 1);
         // calculate dz ux
         // bulk
         {
@@ -452,7 +453,7 @@ mod tests {
         let mut should = Array::zeros((3, 3, 3, 3));
 
         {
-            let mut sx = should.subview_mut(Axis(0), 0);
+            let mut sx = should.index_axis_mut(Axis(0), 0);
             let x = arr3(&[
                 [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
                 [[-1., -2.5, -1.], [3.5, 2., 3.5], [-1., -2.5, -1.]],
@@ -462,7 +463,7 @@ mod tests {
         }
 
         {
-            let mut sy = should.subview_mut(Axis(0), 1);
+            let mut sy = should.index_axis_mut(Axis(0), 1);
             let y = arr3(&[
                 [[4., 5.5, 4.], [4., 5.5, 4.], [4., 5.5, 4.]],
                 [[-9.5, -8., -9.5], [-9.5, -8., -9.5], [-21.5, 4., -9.5]],
@@ -472,7 +473,7 @@ mod tests {
         }
 
         {
-            let mut sz = should.subview_mut(Axis(0), 2);
+            let mut sz = should.index_axis_mut(Axis(0), 2);
             let z = arr3(&[
                 [[-3., -3., -3.], [-7.5, -7.5, -7.5], [-3., -3., -3.]],
                 [[10.5, 10.5, 22.5], [6., 6., -6.], [10.5, 10.5, 10.5]],

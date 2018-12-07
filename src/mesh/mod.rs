@@ -12,21 +12,21 @@ pub fn mesh3d<T: Clone + Default>(k: &[Array<T, Ix1>]) -> Array<T, Ix4> {
 
     // first component varies along first axis of field
     for (kx, mut x) in k[0].iter()
-        .zip(res.subview_mut(Axis(0), 0).axis_iter_mut(Axis(0)))
+        .zip(res.index_axis_mut(Axis(0), 0).axis_iter_mut(Axis(0)))
     {
         x.fill(kx.clone());
     }
 
     // second component varies along second axis of field
     for (ky, mut y) in k[1].iter()
-        .zip(res.subview_mut(Axis(0), 1).axis_iter_mut(Axis(1)))
+        .zip(res.index_axis_mut(Axis(0), 1).axis_iter_mut(Axis(1)))
     {
         y.fill(ky.clone());
     }
 
     // third component varies along third axis of field
     for (kz, mut z) in k[2].iter()
-        .zip(res.subview_mut(Axis(0), 2).axis_iter_mut(Axis(2)))
+        .zip(res.index_axis_mut(Axis(0), 2).axis_iter_mut(Axis(2)))
     {
         z.fill(kz.clone());
     }

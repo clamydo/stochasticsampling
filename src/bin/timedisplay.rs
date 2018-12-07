@@ -36,7 +36,7 @@ mod tests {
             pretty_print_duration(d)
         );
 
-        let d = Duration::seconds(12345678);
+        let d = Duration::seconds(12_345_678);
         assert_eq!(
             "142 days 21 hours 21 minutes 18 seconds",
             pretty_print_duration(d)

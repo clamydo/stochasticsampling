@@ -12,7 +12,7 @@ error_chain! {
     }
 }
 
-const BOLTZMANN: f64 = 1.38064852e-23;
+const BOLTZMANN: f64 = 1.380_648_52e-23;
 
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,7 +116,7 @@ fn check_settings(s: &SettingsSI) -> Result<()> {
 }
 
 impl SettingsSI {
-    pub fn into_settings(&self) -> super::Settings {
+    pub fn into_settings(self) -> super::Settings {
         let number_density = volume_fraction_to_number_density(
             self.parameters.volume_fraction,
             self.parameters.particle.radius,

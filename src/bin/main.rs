@@ -25,15 +25,15 @@ extern crate ndarray;
 extern crate fftw3;
 extern crate ndarray_parallel;
 extern crate num_complex;
-extern crate rand_pcg;
 extern crate quaternion;
 extern crate rand;
+extern crate rand_pcg;
 extern crate rayon;
 // extern crate rustfft;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
-    error_chain!{}
+    error_chain! {}
 }
 mod init;
 mod output;
@@ -52,7 +52,7 @@ use pbr::ProgressBar;
 use std::path::Path;
 use stochasticsampling::output::OutputEntry;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn version() -> String {
     format!("{}-{}", VERSION, env!("VERGEN_SHA_SHORT"))
@@ -138,7 +138,8 @@ fn run() -> Result<()> {
         settings.environment.io_queue_size,
         &path,
         settings.environment.output_format,
-    ).chain_err(|| "Unable to create output thread.")?;
+    )
+    .chain_err(|| "Unable to create output thread.")?;
 
     worker
         .write_metadata(settings.clone())
@@ -196,7 +197,7 @@ fn run_simulation(
     let start_time = time::now();
 
     // Run the simulation and send data to asynchronous to the IO-thread.
-    for timestep in timestep_start..(n + 1) {
+    for timestep in timestep_start..=n {
         pb.inc();
         simulation.do_timestep();
 

@@ -1,3 +1,4 @@
+#![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::*;
 use std::f64::consts::PI;
 use test_helper::equal_floats;
@@ -53,6 +54,7 @@ fn test_modulo() {
 }
 
 #[test]
+#[allow(clippy::approx_constant)]
 fn test_ang_pbc() {
     let input = [
         [1., 0.],

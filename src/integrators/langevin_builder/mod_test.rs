@@ -35,7 +35,7 @@ fn test_langevin_builder_conversion() {
         let p = Particle::new(p[0], p[1], p[2], p[3], p[4], &bs);
 
         let m = LangevinBuilder::new(&p).with(identity);
-        let Modification { old: v, delta: _ } = m;
+        let Modification { old: v, .. } = m;
         let pp = m.finalize(&bs);
 
         println!("IN: {:?}", p);

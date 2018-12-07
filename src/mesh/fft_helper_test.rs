@@ -1,3 +1,4 @@
+#![allow(clippy::unreadable_literal, clippy::excessive_precision)]
 use super::*;
 
 #[cfg(test)]
@@ -7,6 +8,7 @@ mod tests {
     use test_helper::equal_floats;
 
     #[test]
+    #[allow(clippy::approx_constant)]
     fn test_get_k_sampling() {
         let bs = BoxSize {
             x: 6.,

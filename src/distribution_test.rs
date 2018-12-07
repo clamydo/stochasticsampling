@@ -1,3 +1,4 @@
+#![allow(clippy::float_cmp)]
 use super::*;
 use mesh::grid_width::GridWidth;
 use particle::Particle;
@@ -152,7 +153,7 @@ fn coord_to_grid() {
         [0.5, 0.5, 0., -1., 0.],
         [0.5, 0.5, 0., 0., 0.],
         [0., 0., 0., 2. * ::std::f64::consts::PI, 0.],
-        [0.51000000000000005, 0.5, 0., 6.283185307179584, 0.],
+        [0.510_000_000_000_000_05, 0.5, 0., 6.283_185_307_179_584, 0.],
     ];
 
     let result = [

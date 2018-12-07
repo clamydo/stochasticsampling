@@ -1,7 +1,8 @@
+#![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::*;
 use particle::Particle;
-use {BoxSize, GridSize};
 use test_helper::equal_floats;
+use {BoxSize, GridSize};
 
 #[test]
 fn test_polarization_from_distribution() {
@@ -40,9 +41,18 @@ fn test_polarization_from_distribution() {
         .slice_mut(s![.., 0, 0, 0])
         .map_inplace(|v| *v = 0.0_f64.into());
 
-    assert!(equal_floats(p.field[[0, 1, 2, 0]].re, 0.7798623362492354 / n));
-    assert!(equal_floats(p.field[[1, 1, 2, 0]].re, 0.2152283291933436 / n));
-    assert!(equal_floats(p.field[[2, 1, 2, 0]].re, 0.5877852522924731 / n));
+    assert!(equal_floats(
+        p.field[[0, 1, 2, 0]].re,
+        0.7798623362492354 / n
+    ));
+    assert!(equal_floats(
+        p.field[[1, 1, 2, 0]].re,
+        0.2152283291933436 / n
+    ));
+    assert!(equal_floats(
+        p.field[[2, 1, 2, 0]].re,
+        0.5877852522924731 / n
+    ));
 
     // set singular entry to zero
     p.field

@@ -1,3 +1,4 @@
+#![allow(clippy::float_cmp,clippy::unreadable_literal)]
 use super::super::stress::stresses::*;
 use super::*;
 

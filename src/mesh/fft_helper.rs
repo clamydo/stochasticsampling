@@ -33,7 +33,6 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 
             let values: Array<Complex<f64>, Ix1> = Array::from_vec(
                 (-(a as i64)..(b as i64))
-                    .into_iter()
                     .map(|i| Complex::new((i as f64) * step, 0.))
                     .collect(),
             );
