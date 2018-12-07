@@ -3,18 +3,18 @@
 #[path = "./spectral_solver_test.rs"]
 mod spectral_solver_test;
 
-use distribution::Distribution;
+use crate::distribution::Distribution;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use flowfield::stress::{average_stress, stress_kernel};
-use flowfield::FlowField3D;
-use mesh::fft_helper::{get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
-use mesh::grid_width::GridWidth;
+use crate::flowfield::stress::{average_stress, stress_kernel};
+use crate::flowfield::FlowField3D;
+use crate::mesh::fft_helper::{get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
+use crate::mesh::grid_width::GridWidth;
 use ndarray::{Array, ArrayView, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use std::sync::Arc;
-use {BoxSize, GridSize};
+use crate::{BoxSize, GridSize};
 
 pub struct SpectralSolver {
     flow_field: Array<Complex<f64>, Ix4>,

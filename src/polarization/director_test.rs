@@ -1,8 +1,8 @@
 #![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::*;
-use particle::Particle;
-use test_helper::equal_floats;
-use {BoxSize, GridSize};
+use crate::particle::Particle;
+use crate::test_helper::equal_floats;
+use crate::{BoxSize, GridSize};
 
 #[test]
 fn test_polarization_from_distribution() {

@@ -31,12 +31,12 @@ use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use quaternion;
 use rayon::prelude::*;
-use magnetic_interaction::mean_force;
-use mesh::grid_width::GridWidth;
-use particle::{CosSinOrientation, OrientationVector, Particle, Position};
-use vector::vorticity::vorticity3d_dispatch;
-use vector::{Vector, VectorD};
-use {BoxSize, GridSize};
+use crate::magnetic_interaction::mean_force;
+use crate::mesh::grid_width::GridWidth;
+use crate::particle::{CosSinOrientation, OrientationVector, Particle, Position};
+use crate::vector::vorticity::vorticity3d_dispatch;
+use crate::vector::{Vector, VectorD};
+use crate::{BoxSize, GridSize};
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {

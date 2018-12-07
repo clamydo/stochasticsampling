@@ -5,8 +5,8 @@ mod mod_test;
 
 pub mod modifiers;
 
-use particle::{CosSinOrientation, Particle, ParticleVector};
-use BoxSize;
+use crate::particle::{CosSinOrientation, Particle, ParticleVector};
+use crate::BoxSize;
 
 #[derive(Clone, Copy)]
 pub struct OriginalParticle {

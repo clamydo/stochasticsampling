@@ -1,9 +1,9 @@
 #![allow(clippy::float_cmp)]
 use super::*;
-use mesh::grid_width::GridWidth;
-use particle::Particle;
-use {BoxSize, GridSize};
-use test_helper::equal_floats;
+use crate::mesh::grid_width::GridWidth;
+use crate::particle::Particle;
+use crate::{BoxSize, GridSize};
+use crate::test_helper::equal_floats;
 
 #[test]
 fn new() {

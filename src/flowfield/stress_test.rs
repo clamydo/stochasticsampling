@@ -8,11 +8,11 @@ use ndarray::{Array, Ix4};
 // use distribution::Distribution;
 // use flowfield::spectral_solver::SpectralSolver;
 // use integrators::langevin::{IntegrationParameter, Integrator};
-use mesh::grid_width::GridWidth;
+use crate::mesh::grid_width::GridWidth;
 // use particle::Particle;
-use {BoxSize, GridSize};
+use crate::{BoxSize, GridSize};
 // use std::f64::consts::PI;
-use test_helper::equal_floats;
+use crate::test_helper::equal_floats;
 
 // #[test]
 // fn test_stress_expectation_value() {

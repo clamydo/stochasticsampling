@@ -3,14 +3,14 @@
 #[path = "./director_test.rs"]
 mod director_test;
 
-use consts::TWOPI;
+use crate::consts::TWOPI;
 use ndarray::{Array, Axis, Ix3, Ix4, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use distribution::Distribution;
-use mesh::grid_width::GridWidth;
-use particle::Orientation;
-use GridSize;
+use crate::distribution::Distribution;
+use crate::mesh::grid_width::GridWidth;
+use crate::particle::Orientation;
+use crate::GridSize;
 use std::f64::consts::PI;
 
 pub struct DirectorField {
@@ -50,7 +50,7 @@ impl DirectorField {
         Zip::from(field.axis_iter_mut(Axis(1)))
             .and(dist.outer_iter())
             .par_apply(|mut f, d| {
-                for (mut f, kern) in f.iter_mut().zip(kernel.outer_iter()) {
+                for (f, kern) in f.iter_mut().zip(kernel.outer_iter()) {
                     *f = Complex::from(kern.dot(&d) * measure);
                 }
             });

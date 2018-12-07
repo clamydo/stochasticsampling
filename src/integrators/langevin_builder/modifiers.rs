@@ -16,9 +16,9 @@ mod modifiers_test;
 use super::OriginalParticle;
 use ndarray::{Array, ArrayView, Ix2};
 use quaternion;
-use magnetic_interaction;
-use particle::{OrientationVector, ParticleVector, PositionVector};
-use vector::VectorD;
+use crate::magnetic_interaction;
+use crate::particle::{OrientationVector, ParticleVector, PositionVector};
+use crate::vector::VectorD;
 
 /// Does not change anything, just returns the given `delta`.
 #[inline(always)]

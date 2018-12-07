@@ -3,13 +3,13 @@
 #[path = "./stress_test.rs"]
 mod langevin_test;
 
-use consts::TWOPI;
-use distribution::Distribution;
-use mesh::grid_width::GridWidth;
+use crate::consts::TWOPI;
+use crate::distribution::Distribution;
+use crate::mesh::grid_width::GridWidth;
 use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 use std::f64::consts::PI;
-use GridSize;
+use crate::GridSize;
 
 /// Holds prefactors for active and magnetic stress
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

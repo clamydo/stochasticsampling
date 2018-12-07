@@ -1,6 +1,6 @@
 use super::modifiers::*;
 use super::*;
-use test_helper::{equal_floats, equal_floats_eps};
+use crate::test_helper::{equal_floats, equal_floats_eps};
 
 #[test]
 fn test_langevin_builder_conversion() {

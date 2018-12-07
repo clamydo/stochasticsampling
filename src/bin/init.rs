@@ -1,11 +1,11 @@
 use bincode;
-use errors::*;
+use crate::errors::*;
 use lzma::LzmaReader;
 use rmp_serde;
 use serde::de::DeserializeOwned;
 use serde_cbor;
-use simulation::settings::{InitDistribution, Settings};
-use Simulation;
+use crate::simulation::settings::{InitDistribution, Settings};
+use crate::Simulation;
 use std::fs::File;
 use std::io;
 use std::path::Path;

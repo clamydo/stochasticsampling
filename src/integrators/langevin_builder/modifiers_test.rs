@@ -2,7 +2,7 @@
 use super::super::*;
 use super::*;
 use ndarray::arr2;
-use BoxSize;
+use crate::BoxSize;
 
 const BS: BoxSize = BoxSize {
     x: 10.,

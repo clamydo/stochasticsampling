@@ -1,4 +1,4 @@
-use errors::*;
+use crate::errors::*;
 use std::fs::DirBuilder;
 use std::path::{Path, PathBuf};
 use time;
@@ -44,7 +44,7 @@ impl OutputPath {
 fn create_output_id(prefix: &str) -> String {
     // Need to introduce placeholder `.msgpack`, since otherwise the patch version
     // number is chopped of later, when using `.with_extension()` method later.
-    let v = ::version().replace(".", "_");
+    let v = crate::version().replace(".", "_");
     format!(
         "{prefix}-{time}_v{version}",
         prefix = prefix,

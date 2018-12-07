@@ -3,17 +3,17 @@
 #[path = "./magnetic_solver_test.rs"]
 mod magnetic_solver_test;
 
-use distribution::Distribution;
+use crate::distribution::Distribution;
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
-use mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
-use mesh::grid_width::GridWidth;
+use crate::mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
+use crate::mesh::grid_width::GridWidth;
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use polarization::director::DirectorField;
+use crate::polarization::director::DirectorField;
 use std::sync::Arc;
-use {BoxSize, GridSize};
+use crate::{BoxSize, GridSize};
 
 pub type MagneticField = Array<Complex<f64>, Ix4>;
 

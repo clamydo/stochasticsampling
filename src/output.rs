@@ -1,6 +1,6 @@
-use distribution::Distribution;
-use flowfield::FlowField3D;
-use particle::Particle;
+use crate::distribution::Distribution;
+use crate::flowfield::FlowField3D;
+use crate::particle::Particle;
 use ndarray::{Array, Ix4};
 
 /// Captures values that can be outputed during simulation.

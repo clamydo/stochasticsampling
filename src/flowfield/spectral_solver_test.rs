@@ -2,10 +2,10 @@
 use super::super::stress::stresses::*;
 use super::*;
 
-use distribution::Distribution;
-use particle::Particle;
+use crate::distribution::Distribution;
+use crate::particle::Particle;
 use test::Bencher;
-use test_helper::equal_floats;
+use crate::test_helper::equal_floats;
 
 #[test]
 #[ignore]

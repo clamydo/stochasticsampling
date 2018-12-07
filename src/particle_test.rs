@@ -1,7 +1,7 @@
 #![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::*;
 use std::f64::consts::PI;
-use test_helper::equal_floats;
+use crate::test_helper::equal_floats;
 
 #[test]
 fn test_random_particles() {

@@ -1,11 +1,11 @@
 use super::path::OutputPath;
 use bincode;
-use errors::*;
+use crate::errors::*;
 use lzma::LzmaWriter;
 use rmp_serde;
 use serde_cbor;
-use simulation::settings::{OutputFormat, Settings};
-use simulation::Snapshot;
+use crate::simulation::settings::{OutputFormat, Settings};
+use crate::simulation::Snapshot;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::mem::transmute;

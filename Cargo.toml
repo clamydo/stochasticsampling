@@ -4,6 +4,7 @@ version = "2.0.0"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 autobins = false
+edition = "2018"
 
 # [build]
 # rustflags = ["-C", "target-cpu=native"]

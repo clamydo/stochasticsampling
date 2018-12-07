@@ -4,7 +4,7 @@
 #[path = "./particle_test.rs"]
 mod particle_test;
 
-use consts::TWOPI;
+use crate::consts::TWOPI;
 use rand_pcg::Pcg64Mcg;
 use rand::distributions::Uniform;
 use rand::SeedableRng;
@@ -12,8 +12,8 @@ use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::From;
 use std::f64::consts::PI;
-use vector::Vector;
-use BoxSize;
+use crate::vector::Vector;
+use crate::BoxSize;
 use quaternion;
 
 const PIHALF: f64 = PI / 2.;

@@ -5,7 +5,7 @@ use super::*;
 mod tests {
     use super::*;
     use ndarray::arr3;
-    use test_helper::equal_floats;
+    use crate::test_helper::equal_floats;
 
     #[test]
     #[allow(clippy::approx_constant)]
