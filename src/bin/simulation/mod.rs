@@ -4,14 +4,15 @@
 pub mod settings;
 
 use self::settings::Settings;
-use extprim;
 use fftw3::fft;
 use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use num_complex::Complex;
-use pcg_rand::Pcg64;
-use rand::distributions::normal::StandardNormal;
-use rand::distributions::{IndependentSample, Range};
-use rand::{Rand, SeedableRng};
+
+use rand_pcg::Pcg64Mcg;
+use rand::distributions::Uniform;
+use rand::distributions::StandardNormal;
+use rand::SeedableRng;
+use rand::Rng;
 use rayon;
 use rayon::prelude::*;
 use std::env;
@@ -58,13 +59,13 @@ struct SimulationState {
     distribution: Distribution,
     particles: Vec<Particle>,
     random_samples: Vec<RandomVector>,
-    rng: Vec<Pcg64>,
+    rng: Vec<Pcg64Mcg>,
     /// count timesteps
     timestep: usize,
 }
 
 /// Seed of PCG PRNG
-type Pcg64Seed = [u64; 4];
+type Pcg64Seed = u64;
 
 /// Captures the full state of the simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,7 +95,7 @@ impl Simulation {
         let magnetic_solver = MagneticSolver::new(sim.grid_size, sim.box_size);
 
         // normal distribution with variance timestep
-        let seed = [sim.seed[0], sim.seed[1]];
+        let seed = sim.seed;
 
         let num_threads = env::var("RAYON_NUM_THREADS")
             .ok()
@@ -111,7 +112,7 @@ impl Simulation {
 
         let rng = (0..num_threads)
             .into_iter()
-            .map(|i| SeedableRng::from_seed([seed[0] + i as u64, seed[1] + i as u64]))
+            .map(|i| SeedableRng::seed_from_u64(seed))
             .collect();
 
         // initialize state with zeros
@@ -187,14 +188,14 @@ impl Simulation {
 
         // Reset timestep
         self.state.timestep = snapshot.timestep;
-        for (r, s) in self.state.rng.iter_mut().zip(snapshot.rng_seed) {
-            r.reseed(s);
+        for (&mut r, s) in self.state.rng.iter_mut().zip(snapshot.rng_seed) {
+            r = Pcg64Mcg::seed_from_u64(s);
         }
     }
 
     /// Returns a fill Snapshot
     pub fn get_snapshot(&self) -> Snapshot {
-        let seed: Vec<[extprim::u128::u128; 2]> =
+        let seed: Vec<Pcg64Seed> =
             self.state.rng.iter().map(|r| r.extract_seed()).collect();
 
         Snapshot {
@@ -248,7 +249,7 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        let between = Range::new(0f64, 1.);
+        let between = Uniform::new(0f64, 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 

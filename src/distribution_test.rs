@@ -37,7 +37,7 @@ fn histogram() {
         z: 1.,
     };
     let n = 1000;
-    let p = Particle::create_isotropic(n, &box_size, [1, 1]);
+    let p = Particle::create_isotropic(n, &box_size, 1);
     let mut d = Distribution::new(grid_size, box_size);
 
     d.histogram_from(&p);
@@ -72,7 +72,7 @@ fn sample_from() {
         theta: 2,
     };
     let n = 1000;
-    let p = Particle::create_isotropic(n, &box_size, [1, 1]);
+    let p = Particle::create_isotropic(n, &box_size, 1);
     let mut d = Distribution::new(grid_size, box_size);
 
     d.sample_from(&p);

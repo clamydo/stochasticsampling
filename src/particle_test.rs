@@ -10,7 +10,7 @@ fn test_random_particles() {
         z: 3.,
     };
 
-    let particles = Particle::create_isotropic(1000, &bs, [1, 1]);
+    let particles = Particle::create_isotropic(1000, &bs, 1);
 
     for p in &particles {
         let Position { x, y, z } = p.position;

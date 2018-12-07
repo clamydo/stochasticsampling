@@ -17,7 +17,6 @@ extern crate serde;
 extern crate serde_cbor;
 #[macro_use]
 extern crate serde_derive;
-extern crate extprim;
 extern crate stochasticsampling;
 extern crate time;
 extern crate toml;
@@ -26,7 +25,7 @@ extern crate ndarray;
 extern crate fftw3;
 extern crate ndarray_parallel;
 extern crate num_complex;
-extern crate pcg_rand;
+extern crate rand_pcg;
 extern crate quaternion;
 extern crate rand;
 extern crate rayon;
@@ -54,10 +53,9 @@ use std::path::Path;
 use stochasticsampling::output::OutputEntry;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 pub fn version() -> String {
-    format!("{}-{}", VERSION, short_sha())
+    format!("{}-{}", VERSION, env!("VERGEN_SHA_SHORT"))
 }
 
 fn main() {

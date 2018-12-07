@@ -1,6 +1,7 @@
 from io import SEEK_CUR
 import lzma
 import msgpack
+import cbor
 import numpy as np
 import os
 
@@ -12,6 +13,14 @@ class Streamer(object):
 
     def __init__(self, source_fn, index_fn=None, index=None):
         self.source_fn = source_fn
+        ext = os.path.splitext(source_fn)
+        if ext is 'msgpack-lzma':
+            self.type = 'Msgpack'
+        elif ext is 'cbor-lzma':
+            self.type = 'CBOR'
+        else:
+            self.type = None
+
         if index is None:
             # if index_fn is None:
             #     self.index = self.build_index()
@@ -26,6 +35,14 @@ class Streamer(object):
 
     def __del__(self):
         self.__file.close()
+
+
+    def parse(buffer):
+        if self.type is 'Msgpack':
+            return msgpack.unpackb(buf, encoding='utf-8')
+        elif self.type is 'CBOR':
+            return cbor.loads(buf)
+
 
     def __getitem__(self, given):
         if isinstance(given, slice):

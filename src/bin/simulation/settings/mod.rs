@@ -107,7 +107,7 @@ pub struct SimulationSettings {
     pub timestep: f64,
     #[serde(default = "default_init_distribution")]
     pub init_distribution: InitDistribution,
-    pub seed: [u64; 2],
+    pub seed: u64,
     pub output_at_timestep: Output,
     pub box_size: BoxSize,
     pub grid_size: GridSize,
@@ -297,7 +297,7 @@ mod tests {
         assert_eq!(settings.simulation.number_of_particles, 100);
         assert_eq!(settings.simulation.number_of_timesteps, 500);
         assert_eq!(settings.simulation.timestep, 0.1);
-        assert_eq!(settings.simulation.seed, [1, 1]);
+        assert_eq!(settings.simulation.seed, 1);
 
         assert_eq!(
             settings.simulation.output_at_timestep.distribution,

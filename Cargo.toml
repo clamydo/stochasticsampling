@@ -5,8 +5,8 @@ authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 autobins = false
 
-[build]
-rustflags = ["-C", "target-cpu=native"]
+# [build]
+# rustflags = ["-C", "target-cpu=native"]
 
 [features]
 fftw-threaded = ["fftw3/fftw-threaded"]
@@ -18,40 +18,41 @@ path = "src/bin/main.rs"
 
 [dependencies]
 bincode = "1.0.0"
-clap = { version = "2.30.0", features = ["yaml"] }
-colored = "1.5.2"
+clap = { version = "2.32.0", features = ["yaml"] }
+colored = "1.6.1"
 env_logger = "0.5"
 error-chain = "0.12.0"
 fftw3 = { path = "crates/fftw3" }
 itertools = "0.7"
 log = "0.4"
-ndarray = { version = "0.11.0", features = ["serde-1"] }
-ndarray-parallel = "0.8.0"
-num-complex = "0.1"
+ndarray = { version = "0.12.1", features = ["serde-1"] }
+ndarray-parallel = "0.9.0"
+num-complex = "0.2"
 pbr = "1.0.0"
-pcg_rand = { path = "crates/external/pcg_rand" }
+# pcg_rand = { path = "crates/external/pcg_rand" }
 quaternion = "0.3.0"
-rand = "0.3.15"
+rand = "0.6.1"
+rand_pcg = "0.1.1"
 rayon = "1.0.0"
 rmp-serde = "0.13.6"
 # rustfft = "2.0.0"
-rust-lzma = "0.3.0"
-serde = "1.0.10"
-serde_cbor = "0.8.2"
+rust-lzma = "0.4.0"
+serde = "1.0.80"
+serde_cbor = "0.9.0"
 serde_derive = "1.0.10"
 serde_json = "1.0"
 time = "0.1.35"
-toml = { git = "https://github.com/alexcrichton/toml-rs", rev = "2be7ce9079fa02d9dd42958410ba1c40cef9811c" }
-extprim = "1.4.0"
+toml = "0.4"
+# extprim = "1.4.0"
 derive_more = "0.11.0"
 ctrlc = "3.1.1"
 
 [dev-dependencies]
-quickcheck = "0.6"
-ndarray-rand = "0.7.0"
+quickcheck = "0.7"
+ndarray-rand = "0.9.0"
 
 [build-dependencies]
-vergen = "0.1.1"
+vergen = "2.0"
 
 [workspace]
 members = ["crates/fftw3"]

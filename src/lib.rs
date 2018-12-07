@@ -22,7 +22,6 @@ extern crate derive_more;
 extern crate test;
 #[macro_use]
 extern crate error_chain;
-extern crate extprim;
 extern crate fftw3;
 #[macro_use]
 extern crate itertools;
@@ -30,7 +29,7 @@ extern crate itertools;
 extern crate ndarray;
 extern crate ndarray_parallel;
 extern crate num_complex;
-extern crate pcg_rand;
+extern crate rand_pcg;
 extern crate quaternion;
 extern crate rand;
 extern crate rayon;

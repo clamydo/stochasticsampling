@@ -168,7 +168,7 @@ fn test_compare_implementations() {
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
-    let p = Particle::create_isotropic(100000, &bs, [1, 1]);
+    let p = Particle::create_isotropic(100000, &bs, 1);
 
     let mut d = Distribution::new(gs, bs);
     d.sample_from(&p);
@@ -209,7 +209,7 @@ fn bench_calculate_flow(b: &mut Bencher) {
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
-    let p = Particle::create_isotropic(10000, &bs, [1, 1]);
+    let p = Particle::create_isotropic(10000, &bs, 1);
 
     let mut d = Distribution::new(gs, bs);
     d.sample_from(&p);

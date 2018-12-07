@@ -5,9 +5,10 @@
 mod particle_test;
 
 use consts::TWOPI;
-use pcg_rand::Pcg64;
-use rand::distributions::{IndependentSample, Range};
+use rand_pcg::Pcg64Mcg;
+use rand::distributions::Uniform;
 use rand::SeedableRng;
+use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::From;
 use std::f64::consts::PI;
@@ -213,14 +214,14 @@ impl Particle {
 
     /// Places n particles at random positions following an isotropic
     /// distribution
-    pub fn create_isotropic(n: usize, bs: &BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+    pub fn create_isotropic(n: usize, bs: &BoxSize, seed: u64) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
-        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
-        let range = Range::new(0f64, 1.);
+        let mut rng = Pcg64Mcg::seed_from_u64(seed);
+        let range = Uniform::new(0f64, 1.);
 
-        let mut r = || range.ind_sample(&mut rng);
+        let mut r = || rng.sample(range);
 
         for _ in 0..n {
             let p = Particle::place_isotropic(&mut r, bs);
@@ -252,14 +253,14 @@ impl Particle {
     }
 
     /// Places n particles according the the spatial homogeneous distribution
-    pub fn create_homogeneous(n: usize, kappa: f64, bs: &BoxSize, seed: [u64; 2]) -> Vec<Particle> {
+    pub fn create_homogeneous(n: usize, kappa: f64, bs: &BoxSize, seed: u64) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
-        let mut rng: Pcg64 = SeedableRng::from_seed(seed);
-        let range = Range::new(0f64, 1.);
+        let mut rng = Pcg64Mcg::seed_from_u64(seed);
+        let range = Uniform::new(0f64, 1.);
 
-        let mut r = || range.ind_sample(&mut rng);
+        let mut r = || rng.sample(range);
 
         for _ in 0..n {
             let p = Particle::place_homogeneous(&mut r, kappa, bs);
