@@ -53,6 +53,8 @@ pub struct Parameters {
     pub shape: f64,
     #[serde(default)]
     pub hydro_screening: f64,
+    #[serde(default)]
+    pub interaction_threshold: Option<f64>,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
     pub diffusion: DiffusionConstants,
@@ -207,8 +209,8 @@ impl Settings {
     }
     /// Saves `Settings` to TOML file
     pub fn save_to_file(&self, filename: &str) -> Result<()> {
-        let mut f =
-            File::create(filename).chain_err(|| format!("Unable to create file '{}'.", filename))?;
+        let mut f = File::create(filename)
+            .chain_err(|| format!("Unable to create file '{}'.", filename))?;
 
         let s = toml::to_string_pretty(&self)
             .chain_err(|| "Failed to transform stettings into TOML format.")?;
@@ -269,6 +271,8 @@ mod tests {
         assert_eq!(settings.parameters.shape, 44.3);
         assert_eq!(settings_default.parameters.hydro_screening, 0.0);
         assert_eq!(settings.parameters.hydro_screening, 1.3);
+        assert_eq!(settings_default.parameters.interaction_threshold, None);
+        assert_eq!(settings.parameters.interaction_threshold, Some(465.6));
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {

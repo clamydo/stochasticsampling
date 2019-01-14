@@ -58,6 +58,7 @@ pub struct Particle {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     pub hydro_screening: f64,
+    pub interaction_threshold: Option<f64>,
     pub viscocity: f64,
     pub temperature: f64,
     pub volume_fraction: f64,
@@ -153,7 +154,8 @@ impl SettingsSI {
         };
 
         let alignment_parameter = self.parameters.particle.magnetic_dipole_moment
-            * self.parameters.external_field / rotfriction
+            * self.parameters.external_field
+            / rotfriction
             / (rotdiff_brown + rotdiff_active);
 
         let mut res = super::Settings {
@@ -168,6 +170,7 @@ impl SettingsSI {
                         * PI
                         * self.parameters.particle.magnetic_dipole_moment.powi(2),
                 },
+                interaction_threshold: self.parameters.interaction_threshold,
                 shape: self.parameters.particle.shape,
                 hydro_screening: self.parameters.hydro_screening,
                 magnetic_drag: number_density / uc / transfriction

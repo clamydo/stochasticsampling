@@ -1,10 +1,10 @@
-#![allow(clippy::float_cmp,clippy::unreadable_literal)]
+#![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::*;
-use ndarray::{Array, Ix1, Ix4};
 use crate::distribution::Distribution;
 use crate::particle::Particle;
-use std::f64::consts::PI;
 use crate::test_helper::equal_floats;
+use ndarray::{Array, Ix1, Ix4};
+use std::f64::consts::PI;
 
 #[test]
 #[ignore]
@@ -29,7 +29,7 @@ fn test_magnetic() {
     d.sample_from(&p);
 
     let mut solver = MagneticSolver::new(gs, bs);
-    let (_b, _gb) = solver.mean_magnetic_field(&d);
+    let (_b, _gb) = solver.mean_magnetic_field(&d, None);
 
     // println!("{:?}", b);
     // println!("{:?}", gb);
@@ -68,7 +68,7 @@ fn test_magnetic_field_against_cache() {
     d.dist *= bs.x * bs.y * bs.z;
 
     let mut solver = MagneticSolver::new(gs, bs);
-    let (b, _) = solver.mean_magnetic_field(&d);
+    let (b, _) = solver.mean_magnetic_field(&d, None);
 
     let b = b.map(|v| v.re);
 
@@ -124,9 +124,10 @@ fn test_magnetic_vector_gradient() {
         -0.30901699437494745,
         0.30901699437494745,
         0.8090169943749475,
-    ].iter()
-        .map(|v| v.into())
-        .collect();
+    ]
+    .iter()
+    .map(|v| v.into())
+    .collect();
 
     let expected = Array::from_vec(expected);
 

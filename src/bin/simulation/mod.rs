@@ -8,11 +8,11 @@ use fftw3::fft;
 use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 
-use rand_pcg::Pcg64Mcg;
-use rand::distributions::Uniform;
 use rand::distributions::StandardNormal;
-use rand::SeedableRng;
+use rand::distributions::Uniform;
 use rand::Rng;
+use rand::SeedableRng;
+use rand_pcg::Pcg64Mcg;
 use rayon;
 use rayon::prelude::*;
 use std::env;
@@ -63,7 +63,6 @@ struct SimulationState {
     /// count timesteps
     timestep: usize,
 }
-
 
 /// Captures the full state of the simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -192,7 +191,6 @@ impl Simulation {
 
     /// Returns a fill Snapshot
     pub fn get_snapshot(&self) -> Snapshot {
-
         Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
@@ -268,21 +266,15 @@ impl Simulation {
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
 
-        let b_mag = param.magnetic_dipole.magnetic_dipole_dipole != 0.0 || param.magnetic_drag != 0.0;
+        let (b, grad_b) = self.magnetic_solver.mean_magnetic_field(
+            &self.state.distribution,
+            self.settings.parameters.interaction_threshold,
+        );
 
         // Calculate flow field from distribution.
         let (flow_field, grad_ff) = self
             .spectral_solver
             .mean_flow_field(param.hydro_screening, &self.state.distribution);
-
-        let mag_field = if b_mag {
-            Some(
-                self.magnetic_solver
-                    .mean_magnetic_field(&self.state.distribution),
-            )
-        } else {
-            None
-        };
 
         let mut grad_ff_t = grad_ff.clone();
         grad_ff_t.swap_axes(0, 1);
@@ -301,32 +293,24 @@ impl Simulation {
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
 
-                let dd = match mag_field {
-                    Some((b, grad_b)) => {
-                        let b = vector_field_at_cell_c(&b, idx)
-                            * param.magnetic_dipole.magnetic_dipole_dipole;
-                        let grad_b = matrix_field_at_cell(&grad_b, idx);
-                        (Some((param.magnetic_drag, grad_b)), Some(b))
-                    }
-                    None => (None, None),
-                };
+                let b =
+                    vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
+                let grad_b = matrix_field_at_cell(&grad_b, idx);
 
                 let dr = RotDiff {
                     axis_angle: r.axis_angle,
                     rotate_angle: r.rotate_angle,
                 };
 
-                let dd_f = match dd.0 {
-                    Some((p, ref g)) => Some((p, g.view())),
-                    None => None,
-                };
-
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
-                    .conditional_with_param(b_mag, magnetic_dipole_dipole_force, dd_f)
+                    .with_param(
+                        magnetic_dipole_dipole_force,
+                        (param.magnetic_drag, grad_b.view()),
+                    )
                     .with_param(external_field_alignment, param.magnetic_reorientation)
-                    .conditional_with_param(b_mag, magnetic_dipole_dipole_rotation, dd.1)
+                    .with_param(magnetic_dipole_dipole_rotation, b)
                     .with_param(jeffrey_vorticity, vortm.view())
                     .with_param(jeffrey_strain, (param.shape, strainm.view()))
                     .step(&TimeStep(sim.timestep))

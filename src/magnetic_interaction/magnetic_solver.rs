@@ -4,16 +4,16 @@
 mod magnetic_solver_test;
 
 use crate::distribution::Distribution;
-use fftw3::fft;
-use fftw3::fft::FFTPlan;
 use crate::mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
 use crate::mesh::grid_width::GridWidth;
+use crate::polarization::director::DirectorField;
+use crate::{BoxSize, GridSize};
+use fftw3::fft;
+use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use crate::polarization::director::DirectorField;
 use std::sync::Arc;
-use crate::{BoxSize, GridSize};
 
 pub type MagneticField = Array<Complex<f64>, Ix4>;
 
@@ -40,13 +40,15 @@ impl MagneticSolver {
             &mut dummy.view_mut(),
             fft::FFTDirection::Forward,
             fft::FFTFlags::Patient,
-        ).unwrap();
+        )
+        .unwrap();
 
         let plan_backward = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Backward,
             fft::FFTFlags::Patient,
-        ).unwrap();
+        )
+        .unwrap();
 
         MagneticSolver {
             k_mesh: mesh,
@@ -65,11 +67,11 @@ impl MagneticSolver {
     /// deal with that.
     ///
     /// Set k=0 mode to zero, since an constant offset field is unphysical.
-    fn fft_mean_magnetic_field(&mut self, dist: &Distribution) {
+    fn fft_mean_magnetic_field(&mut self, dist: &Distribution, threshold: Option<f64>) {
         // let dist_sh = dist.dim();
 
         // calculate FFT of averaged stress field
-        self.director_field.from_distribution(dist);
+        self.director_field.from_distribution(dist, threshold);
         let mut p = self.director_field.field.view_mut();
 
         let sh = p.dim();
@@ -136,10 +138,11 @@ impl MagneticSolver {
     pub fn mean_magnetic_field(
         &mut self,
         d: &Distribution,
+        threshold: Option<f64>,
     ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
         // TODO refactor to make it more explicit and readable
         // calculate FFT of magnetic field and store result in self.director_field.field
-        self.fft_mean_magnetic_field(d);
+        self.fft_mean_magnetic_field(d, threshold);
         // use stored value of FFT of magnetic field to calculate vector gradient and
         // store it in self.gradient_meanb
         self.update_gradient();
