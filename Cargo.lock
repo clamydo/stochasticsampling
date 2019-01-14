@@ -766,7 +766,7 @@ dependencies = [
 
 [[package]]
 name = "stochasticsampling"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "bincode 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
