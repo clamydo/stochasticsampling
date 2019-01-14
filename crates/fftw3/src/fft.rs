@@ -1,13 +1,13 @@
 use ndarray::{ArrayViewMut, Ix2, Ix3, IxDyn};
 use num_complex::Complex;
 use std;
-use std::ptr::Unique;
+use std::ptr::NonNull;
 
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 
 /// Wrapper to manage the state of an FFTW3 plan.
 pub struct FFTPlan {
-    plan: Unique<::fftw3_ffi::fftw_plan_s>,
+    plan:  NonNull<::fftw3_ffi::fftw_plan_s>,
 }
 
 unsafe impl Send for FFTPlan {}
@@ -55,7 +55,7 @@ impl FFTPlan {
             );
         }
 
-        Unique::new(plan).map(|p| FFTPlan { plan: p })
+        NonNull::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -84,7 +84,7 @@ impl FFTPlan {
             );
         }
 
-        Unique::new(plan).map(|p| FFTPlan { plan: p })
+        NonNull::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan.
@@ -116,7 +116,7 @@ impl FFTPlan {
             );
         }
 
-        Unique::new(plan).map(|p| FFTPlan { plan: p })
+        NonNull::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -146,7 +146,7 @@ impl FFTPlan {
             );
         }
 
-        Unique::new(plan).map(|p| FFTPlan { plan: p })
+        NonNull::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Create a new FFTW3 complex to complex plan for an inplace
@@ -176,7 +176,7 @@ impl FFTPlan {
             );
         }
 
-        Unique::new(plan).map(|p| FFTPlan { plan: p })
+        NonNull::new(plan).map(|p| FFTPlan { plan: p })
     }
 
     /// Execute FFTW# plan for associated given input and output.
