@@ -19,7 +19,7 @@ use quaternion;
 const PIHALF: f64 = PI / 2.;
 
 pub fn modulo(f: f64, m: f64) -> f64 {
-    f.mod_euc(m)
+    f.rem_euclid(m)
 }
 
 pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
