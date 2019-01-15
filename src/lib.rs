@@ -4,7 +4,7 @@
 //! `simulation::integrator` module. TODO Missing docs.
 
 #![crate_type = "staticlib"]
-#![feature(euclidean_division)]
+// #![feature(euclidean_division)]
 #![recursion_limit = "1024"]
 #![cfg_attr(test, feature(test))]
 
