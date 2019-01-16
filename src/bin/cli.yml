@@ -12,7 +12,7 @@ args:
         default_value: ./
     - parameter_file:
         value_name: PARAMETER_FILE
-        help: Path to a parameter file in YAML format
+        help: Path to a parameter file in TOML format
         takes_value: true
         required: true
         index: 1
