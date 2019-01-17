@@ -20,8 +20,6 @@ use std::str::FromStr;
 use stochasticsampling::consts::TWOPI;
 use stochasticsampling::distribution::density_gradient::DensityGradient;
 use stochasticsampling::distribution::Distribution;
-use stochasticsampling::flowfield::spectral_solver::SpectralSolver;
-use stochasticsampling::flowfield::stress::stresses::*;
 use stochasticsampling::flowfield::FlowField3D;
 use stochasticsampling::integrators::langevin_builder::modifiers::*;
 use stochasticsampling::integrators::langevin_builder::TimeStep;
@@ -48,7 +46,6 @@ pub struct RandomVector {
 
 /// Main data structure representing the simulation.
 pub struct Simulation {
-    spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
     density_gradient: DensityGradient,
     settings: Settings,
@@ -83,13 +80,7 @@ impl Simulation {
         let sim = settings.simulation;
         let param = settings.parameters;
 
-        let stress = |phi, theta| {
-            param.stress.active * stress_active(phi, theta)
-                + param.stress.magnetic * stress_magnetic(phi, theta)
-                + param.shape * stress_magnetic_rods(phi, theta)
-        };
 
-        let spectral_solver = SpectralSolver::new(sim.grid_size, sim.box_size, stress);
         let magnetic_solver = MagneticSolver::new(sim.grid_size, sim.box_size);
         let density_gradient = DensityGradient::new(sim.grid_size, sim.box_size);
 
@@ -132,7 +123,6 @@ impl Simulation {
         };
 
         Simulation {
-            spectral_solver: spectral_solver,
             magnetic_solver: magnetic_solver,
             density_gradient: density_gradient,
             settings: settings,
@@ -220,7 +210,7 @@ impl Simulation {
 
     /// Returns sampled flow field
     pub fn get_flow_field(&self) -> FlowField3D {
-        self.spectral_solver.get_real_flow_field()
+        unimplemented!()
     }
 
     /// Returns magnetic field
@@ -273,18 +263,6 @@ impl Simulation {
             .magnetic_solver
             .mean_magnetic_field(&self.state.distribution);
 
-        // Calculate flow field from distribution.
-        let (flow_field, grad_ff) = self
-            .spectral_solver
-            .mean_flow_field(param.hydro_screening, &self.state.distribution);
-
-        let mut grad_ff_t = grad_ff.clone();
-        grad_ff_t.swap_axes(0, 1);
-        let vorticity_mat = (&grad_ff - &grad_ff_t) * 0.5;
-        let vorticity_mat = vorticity_mat.view();
-        let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
-        let strain_mat = strain_mat.view();
-
         let dens_grad = self.density_gradient.get_gradient(&self.state.distribution);
 
         self.state
@@ -293,9 +271,6 @@ impl Simulation {
             .zip(self.state.random_samples.par_iter())
             .for_each(|(p, r)| {
                 let idx = get_cell_index(&p, &gw);
-                let flow = vector_field_at_cell_c(&flow_field.view(), idx);
-                let vortm = matrix_field_at_cell(&vorticity_mat, idx);
-                let strainm = matrix_field_at_cell(&strain_mat, idx);
 
                 let densg = vector_field_at_cell_c(&dens_grad, idx);
 
@@ -310,7 +285,6 @@ impl Simulation {
 
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
-                    .with_param(convection, flow)
                     .with_param(
                         magnetic_dipole_dipole_force,
                         (param.magnetic_drag, grad_b.view()),
@@ -318,8 +292,6 @@ impl Simulation {
                     .with_param(volume_exclusion_force, (param.volume_exclusion, densg))
                     .with_param(external_field_alignment, param.magnetic_reorientation)
                     .with_param(magnetic_dipole_dipole_rotation, b)
-                    .with_param(jeffrey_vorticity, vortm.view())
-                    .with_param(jeffrey_strain, (param.shape, strainm.view()))
                     .step(&TimeStep(sim.timestep))
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
