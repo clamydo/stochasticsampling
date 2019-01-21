@@ -12,7 +12,7 @@ use rand::distributions::StandardNormal;
 use rand::distributions::Uniform;
 use rand::Rng;
 use rand::SeedableRng;
-use rand_pcg::Pcg64Mcg;
+use rand_pcg::Pcg32;
 use rayon;
 use rayon::prelude::*;
 use std::env;
@@ -59,7 +59,7 @@ struct SimulationState {
     distribution: Distribution,
     particles: Vec<Particle>,
     random_samples: Vec<RandomVector>,
-    rng: Vec<Pcg64Mcg>,
+    rng: Vec<Pcg32>,
     /// count timesteps
     timestep: usize,
 }
@@ -68,7 +68,7 @@ struct SimulationState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     particles: Vec<Particle>,
-    rng_state: Vec<Pcg64Mcg>,
+    rng_state: Vec<Pcg32>,
     /// current timestep number
     timestep: usize,
 }
