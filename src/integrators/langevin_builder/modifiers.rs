@@ -14,11 +14,11 @@
 mod modifiers_test;
 
 use super::OriginalParticle;
-use ndarray::{Array, ArrayView, Ix2};
-use quaternion;
 use crate::magnetic_interaction;
 use crate::particle::{OrientationVector, ParticleVector, PositionVector};
 use crate::vector::VectorD;
+use ndarray::{Array, ArrayView, Ix2};
+use quaternion;
 
 /// Does not change anything, just returns the given `delta`.
 #[inline(always)]
@@ -36,19 +36,21 @@ pub fn constant(_p: OriginalParticle, _delta: ParticleVector, c: ParticleVector)
 /// orentation.
 #[inline(always)]
 pub fn self_propulsion(p: OriginalParticle, delta: ParticleVector) -> ParticleVector {
-    delta + ParticleVector {
-        position: p.vector.orientation.to(),
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: p.vector.orientation.to(),
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Translates the particle in the convective local flow field.
 #[inline(always)]
 pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) -> ParticleVector {
-    delta + ParticleVector {
-        position: flow.to(),
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: flow.to(),
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Translates the particle due to magnetic dipole forces.
@@ -58,10 +60,25 @@ pub fn magnetic_dipole_dipole_force(
     delta: ParticleVector,
     (drag, grad_b): (f64, ArrayView<f64, Ix2>),
 ) -> ParticleVector {
-    delta + ParticleVector {
-        position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to() * drag,
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to() * drag,
+            orientation: OrientationVector::zero(),
+        }
+}
+
+/// Translates the particle due to magnetic dipole forces.
+#[inline(always)]
+pub fn volume_exclusion_force(
+    _p: OriginalParticle,
+    delta: ParticleVector,
+    (f, grad_d): (f64, VectorD),
+) -> ParticleVector {
+    delta
+        + ParticleVector {
+            position: grad_d.to() * f,
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Translates according to translational diffusion. CAUTION: Must be called
@@ -73,10 +90,11 @@ pub fn translational_diffusion(
     delta: ParticleVector,
     random_vector: VectorD,
 ) -> ParticleVector {
-    delta + ParticleVector {
-        position: random_vector.to(),
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: random_vector.to(),
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Rotates particle to align with external magnetic field.
@@ -91,10 +109,11 @@ pub fn external_field_alignment(
     let mut b: VectorD = [0., realignment, 0.].into();
     b -= p.vector.orientation * p.vector.orientation.dot(&b);
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: b.to(),
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: b.to(),
+        }
 }
 
 /// Rotates the particle due to coupling to the flow's vorticity. Anti-symmetric
@@ -112,16 +131,13 @@ pub fn jeffrey_vorticity(
     let n = Array::from_vec(n.v.to_vec());
     let f = vortm.dot(&n) * (-1.);
 
-    let r = unsafe{[
-        *f.uget(0),
-        *f.uget(1),
-        *f.uget(2),
-    ]}.into();
+    let r = unsafe { [*f.uget(0), *f.uget(1), *f.uget(2)] }.into();
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: r,
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: r,
+        }
 }
 
 /// Rotates the particle due to coupling to the flow's strain. Symmetric
@@ -142,16 +158,13 @@ pub fn jeffrey_strain(
     let nne = &n * f.dot(&n);
     f -= &nne;
 
-    let r = unsafe{[
-        *f.uget(0),
-        *f.uget(1),
-        *f.uget(2),
-    ]}.into();
+    let r = unsafe { [*f.uget(0), *f.uget(1), *f.uget(2)] }.into();
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: r,
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: r,
+        }
 }
 
 /// Rotates the particle in the mean magnetic field of all other particles.
@@ -164,10 +177,11 @@ pub fn magnetic_dipole_dipole_rotation(
     let mut b = b;
     b -= p.vector.orientation * p.vector.orientation.dot(&b);
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: b.to(),
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: b.to(),
+        }
 }
 
 /// Parameters for rotational diffusion
@@ -207,9 +221,10 @@ pub fn rotational_diffusion(
     let v = p.vector.orientation.v;
     let new: OrientationVector = quaternion::rotate_vector(q, v).into();
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        // required to make order of modifiers independent
-        orientation: new - p.vector.orientation,
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            // required to make order of modifiers independent
+            orientation: new - p.vector.orientation,
+        }
 }

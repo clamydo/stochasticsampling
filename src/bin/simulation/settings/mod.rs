@@ -55,6 +55,8 @@ pub struct Parameters {
     pub hydro_screening: f64,
     #[serde(default)]
     pub interaction_threshold: Option<f64>,
+    #[serde(default)]
+    pub volume_exclusion: f64,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
     pub diffusion: DiffusionConstants,

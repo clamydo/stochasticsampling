@@ -18,6 +18,7 @@ use rayon::prelude::*;
 use std::env;
 use std::str::FromStr;
 use stochasticsampling::consts::TWOPI;
+use stochasticsampling::distribution::density_gradient::DensityGradient;
 use stochasticsampling::distribution::Distribution;
 use stochasticsampling::flowfield::spectral_solver::SpectralSolver;
 use stochasticsampling::flowfield::stress::stresses::*;
@@ -49,6 +50,7 @@ pub struct RandomVector {
 pub struct Simulation {
     spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
+    density_gradient: DensityGradient,
     settings: Settings,
     state: SimulationState,
     pcache: ParamCache,
@@ -88,8 +90,8 @@ impl Simulation {
         };
 
         let spectral_solver = SpectralSolver::new(sim.grid_size, sim.box_size, stress);
-
         let magnetic_solver = MagneticSolver::new(sim.grid_size, sim.box_size);
+        let density_gradient = DensityGradient::new(sim.grid_size, sim.box_size);
 
         // normal distribution with variance timestep
         let seed = sim.seed;
@@ -132,6 +134,7 @@ impl Simulation {
         Simulation {
             spectral_solver: spectral_solver,
             magnetic_solver: magnetic_solver,
+            density_gradient: density_gradient,
             settings: settings,
             state: state,
             pcache: ParamCache {
@@ -283,6 +286,8 @@ impl Simulation {
         let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
         let strain_mat = strain_mat.view();
 
+        let dens_grad = self.density_gradient.get_gradient(&self.state.distribution);
+
         self.state
             .particles
             .par_iter_mut()
@@ -292,6 +297,8 @@ impl Simulation {
                 let flow = vector_field_at_cell_c(&flow_field.view(), idx);
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
+
+                let densg = vector_field_at_cell_c(&dens_grad, idx);
 
                 let b =
                     vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
@@ -309,6 +316,7 @@ impl Simulation {
                         magnetic_dipole_dipole_force,
                         (param.magnetic_drag, grad_b.view()),
                     )
+                    .with_param(volume_exclusion_force, (param.volume_exclusion, densg))
                     .with_param(external_field_alignment, param.magnetic_reorientation)
                     .with_param(magnetic_dipole_dipole_rotation, b)
                     .with_param(jeffrey_vorticity, vortm.view())

@@ -59,6 +59,7 @@ pub struct Particle {
 pub struct Parameters {
     pub hydro_screening: f64,
     pub interaction_threshold: Option<f64>,
+    pub volume_exclusion: f64,
     pub viscocity: f64,
     pub temperature: f64,
     pub volume_fraction: f64,
@@ -171,6 +172,7 @@ impl SettingsSI {
                         * self.parameters.particle.magnetic_dipole_moment.powi(2),
                 },
                 interaction_threshold: self.parameters.interaction_threshold,
+                volume_exclusion: self.parameters.volume_exclusion,
                 shape: self.parameters.particle.shape,
                 hydro_screening: self.parameters.hydro_screening,
                 magnetic_drag: number_density / uc / transfriction
