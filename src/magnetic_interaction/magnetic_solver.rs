@@ -67,11 +67,11 @@ impl MagneticSolver {
     /// deal with that.
     ///
     /// Set k=0 mode to zero, since an constant offset field is unphysical.
-    fn fft_mean_magnetic_field(&mut self, dist: &Distribution, threshold: Option<f64>) {
+    fn fft_mean_magnetic_field(&mut self, dist: &Distribution) {
         // let dist_sh = dist.dim();
 
         // calculate FFT of averaged stress field
-        self.director_field.from_distribution(dist, threshold);
+        self.director_field.from_distribution(dist);
         let mut p = self.director_field.field.view_mut();
 
         let sh = p.dim();
@@ -138,11 +138,10 @@ impl MagneticSolver {
     pub fn mean_magnetic_field(
         &mut self,
         d: &Distribution,
-        threshold: Option<f64>,
     ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
         // TODO refactor to make it more explicit and readable
         // calculate FFT of magnetic field and store result in self.director_field.field
-        self.fft_mean_magnetic_field(d, threshold);
+        self.fft_mean_magnetic_field(d);
         // use stored value of FFT of magnetic field to calculate vector gradient and
         // store it in self.gradient_meanb
         self.update_gradient();

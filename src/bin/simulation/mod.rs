@@ -269,10 +269,9 @@ impl Simulation {
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
 
-        let (b, grad_b) = self.magnetic_solver.mean_magnetic_field(
-            &self.state.distribution,
-            self.settings.parameters.interaction_threshold,
-        );
+        let (b, grad_b) = self
+            .magnetic_solver
+            .mean_magnetic_field(&self.state.distribution);
 
         // Calculate flow field from distribution.
         let (flow_field, grad_ff) = self

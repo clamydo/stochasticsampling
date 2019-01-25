@@ -54,8 +54,6 @@ pub struct Parameters {
     #[serde(default)]
     pub hydro_screening: f64,
     #[serde(default)]
-    pub interaction_threshold: Option<f64>,
-    #[serde(default)]
     pub volume_exclusion: f64,
     /// Assumes that b points in y-direction
     pub magnetic_reorientation: f64,
@@ -273,8 +271,8 @@ mod tests {
         assert_eq!(settings.parameters.shape, 44.3);
         assert_eq!(settings_default.parameters.hydro_screening, 0.0);
         assert_eq!(settings.parameters.hydro_screening, 1.3);
-        assert_eq!(settings_default.parameters.interaction_threshold, None);
-        assert_eq!(settings.parameters.interaction_threshold, Some(465.6));
+        assert_eq!(settings_default.parameters.volume_exclusion, 0.0);
+        assert_eq!(settings.parameters.volume_exclusion, 465.6);
         assert_eq!(
             settings.simulation.box_size,
             BoxSize {
