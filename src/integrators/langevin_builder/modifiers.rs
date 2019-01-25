@@ -76,7 +76,7 @@ pub fn volume_exclusion_force(
 ) -> ParticleVector {
     delta
         + ParticleVector {
-            position: grad_d.to() * f,
+            position: grad_d.to() * (-f),
             orientation: OrientationVector::zero(),
         }
 }

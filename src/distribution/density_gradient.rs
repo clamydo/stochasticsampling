@@ -68,7 +68,7 @@ impl DensityGradient {
             .zip(dist.axis_iter(Axis(0)))
             .for_each(|(dens, dist)| *dens = Complex::from(dist.sum()) * dthph);
 
-        let mut density = density.into_shape([sh.0, sh.1, sh.0]).unwrap();
+        let mut density = density.into_shape([sh.0, sh.1, sh.2]).unwrap();
         let fft = &self.fft_plan_forward;
         fft.reexecute3d(&mut density.view_mut());
 
@@ -82,7 +82,7 @@ impl DensityGradient {
 
         // FFT normalization
         let norm = (sh.1 * sh.2 * sh.3) as f64;
-        let norm = Complex::new(0., -1.) / norm;
+        let norm = Complex::new(0., 1.) / norm;
 
         Zip::from(g.axis_iter_mut(Axis(1)))
             .and(k.axis_iter(Axis(1)))
@@ -104,5 +104,9 @@ impl DensityGradient {
     pub fn get_gradient(&mut self, dist: &Distribution) -> ArrayView<Complex<f64>, Ix4> {
         self.update_gradient(dist);
         self.gradient.view()
+    }
+
+    pub fn get_real_gradient(&self) -> Array<f64, Ix4> {
+        self.gradient.map(|v| v.re)
     }
 }
