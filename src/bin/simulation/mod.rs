@@ -297,7 +297,7 @@ impl Simulation {
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
 
-                let densg = vector_field_at_cell_c(&dens_grad, idx);
+                let densg = vector_field_at_cell_c(&dens_grad, idx) * (-param.volume_exclusion);
 
                 let b =
                     vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
@@ -315,7 +315,7 @@ impl Simulation {
                         magnetic_dipole_dipole_force,
                         (param.magnetic_drag, grad_b.view()),
                     )
-                    .with_param(volume_exclusion_force, (param.volume_exclusion, densg))
+                    .with_param(volume_exclusion_force, densg)
                     .with_param(external_field_alignment, param.magnetic_reorientation)
                     .with_param(magnetic_dipole_dipole_rotation, b)
                     .with_param(jeffrey_vorticity, vortm.view())

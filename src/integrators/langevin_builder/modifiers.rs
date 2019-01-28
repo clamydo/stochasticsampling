@@ -72,11 +72,11 @@ pub fn magnetic_dipole_dipole_force(
 pub fn volume_exclusion_force(
     _p: OriginalParticle,
     delta: ParticleVector,
-    (f, grad_d): (f64, VectorD),
+    grad_d: VectorD,
 ) -> ParticleVector {
     delta
         + ParticleVector {
-            position: grad_d.to() * (-f),
+            position: grad_d.to(),
             orientation: OrientationVector::zero(),
         }
 }
