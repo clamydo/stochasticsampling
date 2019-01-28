@@ -29,7 +29,7 @@ impl DirectorField {
         }
     }
 
-    pub fn from_distribution(&mut self, dist: &Distribution) {
+    pub fn from_distribution(&mut self, dist: &Distribution, threshold: Option<f64>) {
         let dist_sh = dist.dim();
         let n_angle = dist_sh.3 * dist_sh.4;
         let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
@@ -51,7 +51,17 @@ impl DirectorField {
             .and(dist.outer_iter())
             .par_apply(|mut f, d| {
                 for (f, kern) in f.iter_mut().zip(kernel.outer_iter()) {
-                *f =  Complex::from(kern.dot(&d) * measure)
+                    *f = match threshold {
+                        Some(t) => {
+                            let c = d.sum() * measure;
+                            if c > t {
+                                Complex::from(kern.dot(&(&d * (t / c))) * measure)
+                            } else {
+                                Complex::from(kern.dot(&d) * measure)
+                            }
+                        }
+                        None => Complex::from(kern.dot(&d) * measure),
+                    }
                 }
             });
     }

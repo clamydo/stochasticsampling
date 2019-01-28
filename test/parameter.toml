@@ -33,7 +33,8 @@
 [parameters]
     magnetic_drag = 123.4
     shape = 44.3
-    volume_exclusion = 465.6
+    interaction_threshold = 465.6
+    volume_exclusion = 265.6
     magnetic_reorientation = 1.0
     hydro_screening = 1.3
     [parameters.magnetic_dipole]
