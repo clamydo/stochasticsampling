@@ -81,7 +81,7 @@ impl DensityGradient {
         let density = density.into_shape([n]).unwrap();
 
         // FFT normalization
-        let norm = (sh.1 * sh.2 * sh.3) as f64;
+        let norm = n as f64;
         let norm = Complex::new(0., 1.) / norm;
 
         Zip::from(g.axis_iter_mut(Axis(1)))
