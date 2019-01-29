@@ -11,15 +11,15 @@ fn test_langevin_builder_conversion() {
     };
     let coord = [
         [0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., ::std::f64::consts::PI / 2.],
-        [0., 0., 0., 0., ::std::f64::consts::PI],
+        [0., 0., 0., 0., ::std::f32::consts::PI / 2.],
+        [0., 0., 0., 0., ::std::f32::consts::PI],
         [1., 2., 3., 0., 0.],
         [
             0.,
             5.,
             0.,
-            ::std::f64::consts::PI / 2.,
-            ::std::f64::consts::PI / 2.,
+            ::std::f32::consts::PI / 2.,
+            ::std::f32::consts::PI / 2.,
         ],
     ];
 
@@ -65,8 +65,8 @@ fn test_langevin_builder_step() {
         1.,
         2.,
         3.,
-        3. / 2. * ::std::f64::consts::PI,
-        ::std::f64::consts::PI / 2.,
+        3. / 2. * ::std::f32::consts::PI,
+        ::std::f32::consts::PI / 2.,
         &bs,
     ).into();
     let e = [[2., 4., 6.], [0., -2., 0.]];
@@ -84,7 +84,7 @@ fn test_langevin_builder_step() {
     }
     for (a, b) in e[1].iter().zip(v.orientation.iter()) {
         assert!(
-            equal_floats_eps(*a, *b, 2. * ::std::f64::EPSILON),
+            equal_floats_eps(*a, *b, 2. * ::std::f32::EPSILON),
             "left: {}, right: {}",
             *a,
             *b

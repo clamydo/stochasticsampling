@@ -58,9 +58,9 @@ mod errors {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BoxSize {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 /// Size of the discrete grid.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

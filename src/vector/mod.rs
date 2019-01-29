@@ -12,12 +12,12 @@ pub type VectorD = Vector<Default>;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Vector<T> {
-    pub v: [f64; 3],
+    pub v: [f32; 3],
     t: PhantomData<T>,
 }
 
 impl<T> Vector<T> {
-    pub fn iter(&self) -> ::std::slice::Iter<f64> {
+    pub fn iter(&self) -> ::std::slice::Iter<f32> {
         self.v.iter()
     }
 
@@ -35,7 +35,7 @@ impl<T> Vector<T> {
         }
     }
 
-    pub fn dot<D>(&self, rhs: &Vector<D>) -> f64 {
+    pub fn dot<D>(&self, rhs: &Vector<D>) -> f32 {
         self.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
     }
 
@@ -119,16 +119,16 @@ impl<T, R> MulAssign<Vector<R>> for Vector<T> {
     }
 }
 
-impl<T> Mul<f64> for Vector<T> {
+impl<T> Mul<f32> for Vector<T> {
     type Output = Self;
 
-    fn mul(self, rhs: f64) -> Self {
+    fn mul(self, rhs: f32) -> Self {
         [self[0] * rhs, self[1] * rhs, self[2] * rhs].into()
     }
 }
 
-impl<T> MulAssign<f64> for Vector<T> {
-    fn mul_assign(&mut self, rhs: f64) {
+impl<T> MulAssign<f32> for Vector<T> {
+    fn mul_assign(&mut self, rhs: f32) {
         self.v.iter_mut().for_each(|v| *v *= rhs);
     }
 }
@@ -157,30 +157,30 @@ impl<T, R> DivAssign<Vector<R>> for Vector<T> {
     }
 }
 
-impl<T> Div<f64> for Vector<T> {
+impl<T> Div<f32> for Vector<T> {
     type Output = Self;
 
-    fn div(self, rhs: f64) -> Self {
+    fn div(self, rhs: f32) -> Self {
         [self[0] / rhs, self[1] / rhs, self[2] / rhs].into()
     }
 }
 
-impl<T> DivAssign<f64> for Vector<T> {
-    fn div_assign(&mut self, rhs: f64) {
+impl<T> DivAssign<f32> for Vector<T> {
+    fn div_assign(&mut self, rhs: f32) {
         self.v.iter_mut().for_each(|v| *v /= rhs);
     }
 }
 
 impl<T> Index<usize> for Vector<T> {
-    type Output = f64;
+    type Output = f32;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.v[index]
     }
 }
 
-impl<T> From<[f64; 3]> for Vector<T> {
-    fn from(a: [f64; 3]) -> Self {
+impl<T> From<[f32; 3]> for Vector<T> {
+    fn from(a: [f32; 3]) -> Self {
         Vector::<T> {
             v: a,
             t: PhantomData,
@@ -188,8 +188,8 @@ impl<T> From<[f64; 3]> for Vector<T> {
     }
 }
 
-impl<T> From<Vector<T>> for [f64; 3] {
-    fn from(a: Vector<T>) -> [f64; 3] {
+impl<T> From<Vector<T>> for [f32; 3] {
+    fn from(a: Vector<T>) -> [f32; 3] {
         a.v
     }
 }

@@ -1,6 +1,6 @@
 //! This module handles a TOML settings file.
 
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::prelude::*;
 use stochasticsampling::flowfield::stress::StressPrefactors;
@@ -12,7 +12,7 @@ error_chain! {
     }
 }
 
-const BOLTZMANN: f64 = 1.380_648_52e-23;
+const BOLTZMANN: f32 = 1.380_648_52e-23;
 
 /// Structure that holds settings, which are defined externally in a TOML file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,43 +27,43 @@ pub struct SettingsSI {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BoxSize {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 /// Holds rotational and translational diffusion constants
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiffusionConstants {
-    pub translational: f64,
-    pub rotational: f64,
+    pub translational: f32,
+    pub rotational: f32,
 }
 
 /// Holds prefactors for active and magnetic stress
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Particle {
-    pub radius: f64,
+    pub radius: f32,
     #[serde(default)]
-    pub shape: f64,
-    pub self_propulsion_speed: f64,
-    pub force_dipole: f64,
-    pub magnetic_dipole_moment: f64,
-    pub persistance_time: f64,
+    pub shape: f32,
+    pub self_propulsion_speed: f32,
+    pub force_dipole: f32,
+    pub magnetic_dipole_moment: f32,
+    pub persistance_time: f32,
 }
 
 /// Holds phyiscal parameters
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub hydro_screening: f64,
-    pub interaction_threshold: Option<f64>,
-    pub volume_exclusion: f64,
-    pub viscocity: f64,
-    pub temperature: f64,
-    pub volume_fraction: f64,
-    pub external_field: f64,
+    pub hydro_screening: f32,
+    pub interaction_threshold: Option<f32>,
+    pub volume_exclusion: f32,
+    pub viscocity: f32,
+    pub temperature: f32,
+    pub volume_fraction: f32,
+    pub external_field: f32,
     pub particle: Particle,
 }
 
@@ -195,7 +195,7 @@ impl SettingsSI {
     }
 }
 
-fn volume_fraction_to_number_density(volfrac: f64, radius: f64) -> f64 {
+fn volume_fraction_to_number_density(volfrac: f32, radius: f32) -> f32 {
     let volp = 4. / 3. * PI * radius.powi(3);
 
     volfrac / volp

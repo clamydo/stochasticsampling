@@ -45,7 +45,7 @@ fn histogram() {
 
     let sum = d.dist.fold(0., |s, x| s + x);
     // Sum over all bins should be particle number
-    assert_eq!(sum, n as f64);
+    assert_eq!(sum, n as f32);
     let mut p2 = Particle::new(0.6, 0.3, 0., 4., 1., &box_size);
     p2.pbc(&box_size);
     let p2v = vec![p2];
@@ -125,7 +125,7 @@ fn coord_to_grid() {
         theta: 1,
     };
 
-    fn check(i: &[f64; 5], o: &[usize; 5], p: Particle, gs: GridSize, bs: BoxSize) {
+    fn check(i: &[f32; 5], o: &[usize; 5], p: Particle, gs: GridSize, bs: BoxSize) {
         let dist = Distribution::new(gs, bs);
 
         let g = dist.coord_to_grid(&p);
@@ -142,7 +142,7 @@ fn coord_to_grid() {
     };
 
     let input = [
-        // [0., 0., 2. * ::std::f64::consts::PI - ::std::f64::EPSILON],
+        // [0., 0., 2. * ::std::f32::consts::PI - ::std::f32::EPSILON],
         [0., 0., 0., 0., 0.],
         [1., 0., 0., 0., 0.],
         [0., 1., 0., 0., 0.],
@@ -152,7 +152,7 @@ fn coord_to_grid() {
         [0.96, 0., 0., 0., 0.],
         [0.5, 0.5, 0., -1., 0.],
         [0.5, 0.5, 0., 0., 0.],
-        [0., 0., 0., 2. * ::std::f64::consts::PI, 0.],
+        [0., 0., 0., 2. * ::std::f32::consts::PI, 0.],
         [0.510_000_000_000_000_05, 0.5, 0., 6.283_185_307_179_584, 0.],
     ];
 

@@ -1,13 +1,13 @@
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4};
 use crate::mesh::grid_width::GridWidth;
 
-pub type VectorField3D = Array<f64, Ix4>;
-pub type ScalarField3D = Array<f64, Ix3>;
+pub type VectorField3D = Array<f32, Ix4>;
+pub type ScalarField3D = Array<f32, Ix3>;
 
 /// Calculates the vorticity on a given discretized flow field
 /// `u=(ux, uy, uz)`, curl of u.
 #[allow(clippy::deref_addrof)]
-pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f32, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
     let sy = sh[2];
@@ -187,7 +187,7 @@ pub fn vorticity3d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField
 /// $v_y = \partial_z u_x - \partial_x u_z$
 /// $v_z = \partial_x u_y$
 ///
-pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f32, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
     let sy = sh[2];
@@ -321,7 +321,7 @@ pub fn vorticity3d_quasi2d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
 /// $v_y = \partial_z u_x$
 /// $v_z = 0$
 ///
-pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f32, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
     let sy = sh[2];
@@ -400,7 +400,7 @@ pub fn vorticity3d_quasi1d(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> Vec
     res
 }
 
-pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f64, Ix4>) -> VectorField3D {
+pub fn vorticity3d_dispatch(grid_width: GridWidth, u: ArrayView<f32, Ix4>) -> VectorField3D {
     let sh = u.shape();
     let sx = sh[1];
     let sy = sh[2];
@@ -443,7 +443,7 @@ mod tests {
         };
         let gw = GridWidth::new(gs, bs);
 
-        let mut u: Array<f64, Ix4> = Array::linspace(1., 81., 81)
+        let mut u: Array<f32, Ix4> = Array::linspace(1., 81., 81)
             .into_shape((3, 3, 3, 3))
             .unwrap();
         u[[0, 1, 2, 2]] = 42.;

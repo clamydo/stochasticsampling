@@ -616,7 +616,7 @@ impl ::std::default::Default for __va_list_tag {
         unsafe { ::std::mem::zeroed() }
     }
 }
-#[link(name = "fftw3", kind = "dylib")]
+#[link(name = "fftw3f", kind = "dylib")]
 extern "C" {
     pub static mut _IO_2_1_stdin_: _IO_FILE_plus;
     pub static mut _IO_2_1_stdout_: _IO_FILE_plus;
@@ -636,7 +636,7 @@ extern "C" {
     pub static mut fftwl_cc: [::std::os::raw::c_char; 0usize];
     pub static mut fftwl_codelet_optim: [::std::os::raw::c_char; 0usize];
 }
-#[link(name = "fftw3", kind = "dylib")]
+#[link(name = "fftw3f", kind = "dylib")]
 extern "C" {
     pub fn __underflow(arg1: *mut _IO_FILE) -> ::std::os::raw::c_int;
     pub fn __uflow(arg1: *mut _IO_FILE) -> ::std::os::raw::c_int;

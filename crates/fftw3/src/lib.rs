@@ -19,7 +19,7 @@ mod tests {
     use fftw_ndarray::{FFTData2D, FFTData3D};
     use ndarray;
     use num_complex::Complex;
-    use std::f64::EPSILON;
+    use std::f32::EPSILON;
 
     /// Transforming for and back should be an identity operation (except for
     /// normalization factors)
@@ -67,7 +67,7 @@ mod tests {
 
             // Since transform is not normalized, we have to divide by the number of
             // elements to get back the original input
-            let diff = *left - *right / (shape[0] * shape[1]) as f64;
+            let diff = *left - *right / (shape[0] * shape[1]) as f32;
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.
@@ -133,7 +133,7 @@ mod tests {
 
             // Since transform is not normalized, we have to divide by the number of
             // elements to get back the original input
-            let diff = *left - *right / (shape[0] * shape[1] * shape[2]) as f64;
+            let diff = *left - *right / (shape[0] * shape[1] * shape[2]) as f32;
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.

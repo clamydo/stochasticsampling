@@ -11,13 +11,13 @@ use crate::GridSize;
 use ndarray::{Array, Axis, Ix3, Ix4, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 pub struct DirectorField {
-    pub field: Array<Complex<f64>, Ix4>,
+    pub field: Array<Complex<f32>, Ix4>,
     pub grid_width: GridWidth,
     /// precomputed kernel for angular expectation value
-    kernel: Array<f64, Ix3>,
+    kernel: Array<f32, Ix3>,
 }
 
 impl DirectorField {
@@ -29,7 +29,7 @@ impl DirectorField {
         }
     }
 
-    pub fn from_distribution(&mut self, dist: &Distribution, threshold: Option<f64>) {
+    pub fn from_distribution(&mut self, dist: &Distribution, threshold: Option<f32>) {
         let dist_sh = dist.dim();
         let n_angle = dist_sh.3 * dist_sh.4;
         let n_dist = dist_sh.0 * dist_sh.1 * dist_sh.2;
@@ -72,8 +72,8 @@ impl DirectorField {
 ///
 /// It returns n(theta, sin) = [sin(theta) cos(phi), sin(theta) sin(phi),
 /// cos(theta)] as a discrete field over angles.
-fn orientation_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<f64, Ix3> {
-    let mut s = Array::<f64, _>::zeros((3, grid_size.phi, grid_size.theta));
+fn orientation_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<f32, Ix3> {
+    let mut s = Array::<f32, _>::zeros((3, grid_size.phi, grid_size.theta));
     // Calculate discrete angles, considering the cell centered sample points of
     // the distribution
     let gw_half_phi = grid_width.phi / 2.;

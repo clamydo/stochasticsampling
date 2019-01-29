@@ -1,8 +1,8 @@
 #[cfg(test)]
-use std::f64::{EPSILON, MAX};
+use std::f32::{EPSILON, MAX};
 
 #[cfg(test)]
-pub fn equal_floats(a: f64, b: f64) -> bool {
+pub fn equal_floats(a: f32, b: f32) -> bool {
     if a == 0. && b == 0. {
         return true;
     }
@@ -17,7 +17,7 @@ pub fn equal_floats(a: f64, b: f64) -> bool {
 }
 
 #[cfg(test)]
-pub fn equal_floats_eps(a: f64, b: f64, eps: f64) -> bool {
+pub fn equal_floats_eps(a: f32, b: f32, eps: f32) -> bool {
     if a == 0. && b == 0. {
         return true;
     }

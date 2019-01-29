@@ -39,8 +39,8 @@ fn test_calculate_flow_field_against_cache() {
         0.0,
         0.0,
         0.0,
-        ::std::f64::consts::PI / 2.,
-        ::std::f64::consts::PI / 2.,
+        ::std::f32::consts::PI / 2.,
+        ::std::f32::consts::PI / 2.,
         &bs,
     )];
     let mut d = Distribution::new(gs, bs);
@@ -57,7 +57,7 @@ fn test_calculate_flow_field_against_cache() {
         let (ia, va) = a;
         let (_, vb) = b;
 
-        let f = 2.0f64.powi(51);
+        let f = 2.0f32.powi(51);
 
         let va = (va * f).round() / f;
         let vb = (vb * f).round() / f;
@@ -95,14 +95,14 @@ fn test_calculate_flow_field_against_cache() {
 //
 //     let i = Integrator::new(gs, bs, int_param);
 //
-// let p = vec![Particle::new(0.0, 0.0, 0.0, 0.0, ::std::f64::consts::PI /
+// let p = vec![Particle::new(0.0, 0.0, 0.0, 0.0, ::std::f32::consts::PI /
 // 2., 1.5707963267948966, bs)];
 //     let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
 //     d.sample_from(&p);
 //
 //     let u = i.calculate_flow_field(&d);
 //
-//     let theory = |x1: f64, x2: f64| {
+//     let theory = |x1: f32, x2: f32| {
 //         [
 // (x1 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 *
 // x2).powf(5. / 2.)),
@@ -182,7 +182,7 @@ fn test_compare_implementations() {
         let (ia, va) = a;
         let (_, vb) = b;
 
-        let f = 2.0f64.powi(51);
+        let f = 2.0f32.powi(51);
 
         let va = (va * f).round() / f;
         let vb = (vb * f).round() / f;

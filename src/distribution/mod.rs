@@ -22,7 +22,7 @@ use std::ops::Index;
 pub struct Distribution {
     /// `dist` contains the probability for a particle in the box at position of
     /// first two axis and the direction of the last axis.
-    pub dist: Array<f64, Ix5>,
+    pub dist: Array<f32, Ix5>,
     /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
     box_size: BoxSize,
@@ -97,12 +97,12 @@ impl Distribution {
         );
 
         debug_assert!(
-            p.orientation.phi <= 2. * ::std::f64::consts::PI,
+            p.orientation.phi <= 2. * ::std::f32::consts::PI,
             "Theta is not in range> {:?}",
             p
         );
         debug_assert!(
-            p.orientation.theta <= ::std::f64::consts::PI,
+            p.orientation.theta <= ::std::f32::consts::PI,
             "Theta is not in range> {:?}",
             p
         );
@@ -160,7 +160,7 @@ impl Distribution {
     /// Estimates the approximate values for the distribution function at the
     /// grid points using grid cell averages.
     pub fn sample_from(&mut self, particles: &[Particle]) {
-        let n = self.histogram_from(particles) as f64;
+        let n = self.histogram_from(particles) as f32;
 
         // Scale by grid cell volume, in order to arrive at a sampled function,
         // averaged over a grid cell. Missing this would result into the
@@ -184,9 +184,9 @@ impl Distribution {
 
 /// Implement index operator that wraps around for periodic boundaries.
 impl Index<[i32; 5]> for Distribution {
-    type Output = f64;
+    type Output = f32;
 
-    fn index(&self, index: [i32; 5]) -> &f64 {
+    fn index(&self, index: [i32; 5]) -> &f32 {
         fn wrap(i: i32, b: i32) -> usize {
             (((i % b) + b) % b) as usize
         }

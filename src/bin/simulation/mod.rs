@@ -30,20 +30,21 @@ use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
 use stochasticsampling::mesh::grid_width::GridWidth;
 use stochasticsampling::particle::Particle;
 use stochasticsampling::vector::VectorD;
+use stochasticsampling::GridSize;
 
 struct ParamCache {
-    trans_diff: f64,
-    rot_diff: f64,
+    trans_diff: f32,
+    rot_diff: f32,
     grid_width: GridWidth,
 }
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub axis_angle: f64,
-    pub rotate_angle: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub axis_angle: f32,
+    pub rotate_angle: f32,
 }
 
 /// Main data structure representing the simulation.
@@ -220,11 +221,11 @@ impl Simulation {
 
     /// Returns sampled flow field
     pub fn get_flow_field(&self) -> FlowField3D {
-        self.spectral_solver.get_real_flow_field()
+        unimplemented!()
     }
 
     /// Returns magnetic field
-    pub fn get_magnetic_field(&self) -> Array<f64, Ix4> {
+    pub fn get_magnetic_field(&self) -> Array<f32, Ix4> {
         self.magnetic_solver.get_real_magnet_field()
     }
 
@@ -242,7 +243,7 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        let range = Uniform::new(0f64, 1.);
+        let range = Uniform::new(0f32, 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
@@ -256,11 +257,11 @@ impl Simulation {
             .for_each(|(c, rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: rng.sample(StandardNormal) * dt,
-                        y: rng.sample(StandardNormal) * dt,
-                        z: rng.sample(StandardNormal) * dt,
-                        axis_angle: TWOPI * rng.sample(range),
-                        rotate_angle: rayleigh_pdf(dr, rng.sample(range)),
+                        x: rng.sample(StandardNormal) as f32 * dt,
+                        y: rng.sample(StandardNormal) as f32 * dt,
+                        z: rng.sample(StandardNormal) as f32 * dt,
+                        axis_angle: TWOPI * rng.sample(range) as f32,
+                        rotate_angle: rayleigh_pdf(dr, rng.sample(range)) as f32,
                     };
                 }
             });
@@ -268,6 +269,7 @@ impl Simulation {
         let sim = self.settings.simulation;
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
+        let gs = self.settings.simulation.grid_size;
 
         let (b, grad_b) = self.magnetic_solver.mean_magnetic_field(
             &self.state.distribution,
@@ -293,7 +295,7 @@ impl Simulation {
             .par_iter_mut()
             .zip(self.state.random_samples.par_iter())
             .for_each(|(p, r)| {
-                let idx = get_cell_index(&p, &gw);
+                let idx = get_cell_index(&p, &gw, &gs);
                 let flow = vector_field_at_cell_c(&flow_field.view(), idx);
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
@@ -335,12 +337,12 @@ impl Simulation {
 
 impl Drop for Simulation {
     fn drop(&mut self) {
-        fft::fttw_finalize();
+        fft::fftw_finalize();
     }
 }
 
-fn rayleigh_pdf(sigma: f64, x: f64) -> f64 {
-    sigma * f64::sqrt(-2. * f64::ln(1. - x))
+fn rayleigh_pdf(sigma: f32, x: f32) -> f32 {
+    sigma * f32::sqrt(-2. * f32::ln(1. - x))
 }
 
 impl Iterator for Simulation {
@@ -351,16 +353,32 @@ impl Iterator for Simulation {
     }
 }
 
-fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize) {
-    let ix = (p.position.x / grid_width.x).floor() as usize;
-    let iy = (p.position.y / grid_width.y).floor() as usize;
-    let iz = (p.position.z / grid_width.z).floor() as usize;
+fn get_cell_index(
+    p: &Particle,
+    grid_width: &GridWidth,
+    grid_size: &GridSize,
+) -> (usize, usize, usize) {
+    let mut ix = (p.position.x / grid_width.x).floor() as usize;
+    let mut iy = (p.position.y / grid_width.y).floor() as usize;
+    let mut iz = (p.position.z / grid_width.z).floor() as usize;
+
+    if ix == grid_size.x {
+        ix -= 1;
+    }
+
+    if iy == grid_size.y {
+        iy -= 1;
+    }
+
+    if iz == grid_size.z {
+        iz -= 1;
+    }
 
     (ix, iy, iz)
 }
 
 fn vector_field_at_cell_c(
-    field: &ArrayView<Complex<f64>, Ix4>,
+    field: &ArrayView<Complex<f32>, Ix4>,
     idx: (usize, usize, usize),
 ) -> VectorD {
     let f = unsafe {
@@ -374,8 +392,8 @@ fn vector_field_at_cell_c(
 }
 
 fn matrix_field_at_cell(
-    field: &ArrayView<Complex<f64>, Ix5>,
+    field: &ArrayView<Complex<f32>, Ix5>,
     idx: (usize, usize, usize),
-) -> Array<f64, Ix2> {
+) -> Array<f32, Ix2> {
     field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }

@@ -12,10 +12,10 @@ use std::sync::Arc;
 pub struct DensityGradient {
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
-    k_mesh: Array<Complex<f64>, Ix4>,
-    gradient: Array<Complex<f64>, Ix4>,
+    k_mesh: Array<Complex<f32>, Ix4>,
+    gradient: Array<Complex<f32>, Ix4>,
     grid_width: GridWidth,
-    density: Array<Complex<f64>, Ix3>,
+    density: Array<Complex<f32>, Ix3>,
 }
 
 impl DensityGradient {
@@ -24,7 +24,7 @@ impl DensityGradient {
 
         let mesh = get_k_mesh(grid_size, box_size);
 
-        let mut dummy: Array<Complex<f64>, Ix3> =
+        let mut dummy: Array<Complex<f32>, Ix3> =
             Array::default([grid_size.x, grid_size.y, grid_size.z]);
         let plan_forward = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
@@ -81,7 +81,7 @@ impl DensityGradient {
         let density = density.into_shape([n]).unwrap();
 
         // FFT normalization
-        let norm = n as f64;
+        let norm = n as f32;
         let norm = Complex::new(0., 1.) / norm;
 
         Zip::from(g.axis_iter_mut(Axis(1)))
@@ -101,12 +101,12 @@ impl DensityGradient {
             .for_each(|mut v| fft.reexecute3d(&mut v));
     }
 
-    pub fn get_gradient(&mut self, dist: &Distribution) -> ArrayView<Complex<f64>, Ix4> {
+    pub fn get_gradient(&mut self, dist: &Distribution) -> ArrayView<Complex<f32>, Ix4> {
         self.update_gradient(dist);
         self.gradient.view()
     }
 
-    pub fn get_real_gradient(&self) -> Array<f64, Ix4> {
+    pub fn get_real_gradient(&self) -> Array<f32, Ix4> {
         self.gradient.map(|v| v.re)
     }
 }

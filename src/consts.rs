@@ -1,3 +1,3 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
-pub const TWOPI: f64 = 2. * PI;
+pub const TWOPI: f32 = 2. * PI;

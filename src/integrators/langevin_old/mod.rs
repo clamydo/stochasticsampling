@@ -40,11 +40,11 @@ use crate::{BoxSize, GridSize};
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub axis_angle: f64,
-    pub rotate_angle: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub axis_angle: f32,
+    pub rotate_angle: f32,
 }
 
 impl RandomVector {
@@ -56,12 +56,12 @@ impl RandomVector {
 /// Holds parameter needed for time step
 #[derive(Debug, Clone, Copy)]
 pub struct IntegrationParameter {
-    pub rot_diffusion: f64,
-    pub timestep: f64,
-    pub trans_diffusion: f64,
-    pub magnetic_reorientation: f64,
-    pub drag: f64,
-    pub magnetic_dipole_dipole: f64,
+    pub rot_diffusion: f32,
+    pub timestep: f32,
+    pub trans_diffusion: f32,
+    pub magnetic_reorientation: f32,
+    pub drag: f32,
+    pub magnetic_dipole_dipole: f32,
 }
 
 /// Holds precomuted values
@@ -104,9 +104,9 @@ impl Integrator {
         &self,
         p: &mut Particle,
         rv: &RandomVector,
-        flow_field: &ArrayView<f64, Ix4>,
-        vorticity: &ArrayView<f64, Ix4>,
-        magnetic_field: Option<(ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>)>,
+        flow_field: &ArrayView<f32, Ix4>,
+        vorticity: &ArrayView<f32, Ix4>,
+        magnetic_field: Option<(ArrayView<Complex<f32>, Ix4>, ArrayView<Complex<f32>, Ix5>)>,
     ) {
         let param = &self.parameter;
 
@@ -168,10 +168,10 @@ impl Integrator {
         &self,
         particles: &mut Vec<Particle>,
         random_samples: &[RandomVector],
-        flow_field: ArrayView<'a, f64, Ix4>,
+        flow_field: ArrayView<'a, f32, Ix4>,
         magnetic_field: Option<(
-            ArrayView<'a, Complex<f64>, Ix4>,
-            ArrayView<'a, Complex<f64>, Ix5>,
+            ArrayView<'a, Complex<f32>, Ix4>,
+            ArrayView<'a, Complex<f32>, Ix5>,
         )>,
     ) {
         // TODO move into caller
@@ -214,7 +214,7 @@ fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize)
     (ix, iy, iz)
 }
 
-fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+fn field_at_cell(field: &ArrayView<f32, Ix4>, idx: (usize, usize, usize)) -> VectorD {
     let f = unsafe {
         [
             *field.uget((0, idx.0, idx.1, idx.2)),
@@ -225,7 +225,7 @@ fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> Vec
     f.into()
 }
 
-fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+fn field_at_cell_c(field: &ArrayView<Complex<f32>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
     let f = unsafe {
         [
             (*field.uget((0, idx.0, idx.1, idx.2))).re,
@@ -237,9 +237,9 @@ fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usi
 }
 
 fn vector_gradient_at_cell(
-    field: &ArrayView<Complex<f64>, Ix5>,
+    field: &ArrayView<Complex<f32>, Ix5>,
     idx: (usize, usize, usize),
-) -> Array<f64, Ix2> {
+) -> Array<f32, Ix2> {
     field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }
 
@@ -248,7 +248,7 @@ fn rotational_diffusion_quat_mut(
     cs: &CosSinOrientation,
     r: &RandomVector,
 ) -> OrientationVector {
-    let rotational_axis = |alpha: f64| {
+    let rotational_axis = |alpha: f32| {
         let cos_ax = alpha.cos();
         let sin_ax = alpha.sin();
         // axis perpendicular to orientation vector

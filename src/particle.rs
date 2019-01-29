@@ -11,14 +11,14 @@ use rand::SeedableRng;
 use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::From;
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 use crate::vector::Vector;
 use crate::BoxSize;
 use quaternion;
 
-const PIHALF: f64 = PI / 2.;
+const PIHALF: f32 = PI / 2.;
 
-pub fn modulo(f: f64, m: f64) -> f64 {
+pub fn modulo(f: f32, m: f32) -> f32 {
     let r = f % m;
     if r < 0.0 {
         r + m.abs()
@@ -29,7 +29,7 @@ pub fn modulo(f: f64, m: f64) -> f64 {
     // f.rem_euclid(m)
 }
 
-pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
+pub fn ang_pbc(phi: f32, theta: f32) -> (f32, f32) {
     let theta = modulo(theta, TWOPI);
     if theta > PI {
         (modulo(phi + PI, TWOPI), TWOPI - theta)
@@ -42,13 +42,13 @@ pub type PositionVector = Vector<Position>;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Position {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 impl Position {
-    pub fn new(x: f64, y: f64, z: f64, bs: &BoxSize) -> Position {
+    pub fn new(x: f32, y: f32, z: f32, bs: &BoxSize) -> Position {
         Position {
             x: modulo(x, bs.x),
             y: modulo(y, bs.y),
@@ -85,12 +85,12 @@ pub type OrientationVector = Vector<Orientation>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Orientation {
-    pub phi: f64,
-    pub theta: f64,
+    pub phi: f32,
+    pub theta: f32,
 }
 
 impl Orientation {
-    pub fn new(phi: f64, theta: f64) -> Orientation {
+    pub fn new(phi: f32, theta: f32) -> Orientation {
         let (phi, theta) = ang_pbc(phi, theta);
         Orientation {
             phi: phi,
@@ -141,10 +141,10 @@ impl Orientation {
 
 #[derive(Clone, Copy)]
 pub struct CosSinOrientation {
-    pub cos_phi: f64,
-    pub sin_phi: f64,
-    pub cos_theta: f64,
-    pub sin_theta: f64,
+    pub cos_phi: f32,
+    pub sin_phi: f32,
+    pub cos_theta: f32,
+    pub sin_theta: f32,
 }
 
 impl CosSinOrientation {
@@ -177,7 +177,7 @@ pub struct Particle {
 
 impl Particle {
     /// Returns a `Particle` with given coordinates. Automatically applies pbc.
-    pub fn new(x: f64, y: f64, z: f64, phi: f64, theta: f64, box_size: &BoxSize) -> Particle {
+    pub fn new(x: f32, y: f32, z: f32, phi: f32, theta: f32, box_size: &BoxSize) -> Particle {
         let mut p = Particle {
             position: Position::new(x, y, z, box_size),
             orientation: Orientation::new(phi, theta),
@@ -206,7 +206,7 @@ impl Particle {
 
     pub fn place_isotropic<F>(r: &mut F, bs: &BoxSize) -> Particle
     where
-        F: FnMut() -> f64,
+        F: FnMut() -> f32,
     {
         Particle::new(
             bs.x * r(),
@@ -226,7 +226,7 @@ impl Particle {
 
         // initialise random particle position
         let mut rng = Pcg64Mcg::seed_from_u64(seed);
-        let range = Uniform::new(0f64, 1.);
+        let range = Uniform::new(0f32, 1.);
 
         let mut r = || rng.sample(range);
 
@@ -238,9 +238,9 @@ impl Particle {
         particles
     }
 
-    pub fn place_homogeneous<F>(r: &mut F, kappa: f64, bs: &BoxSize) -> Particle
+    pub fn place_homogeneous<F>(r: &mut F, kappa: f32, bs: &BoxSize) -> Particle
     where
-        F: FnMut() -> f64,
+        F: FnMut() -> f32,
     {
         let mut p = Particle::new(
             bs.x * r(),
@@ -260,12 +260,12 @@ impl Particle {
     }
 
     /// Places n particles according the the spatial homogeneous distribution
-    pub fn create_homogeneous(n: usize, kappa: f64, bs: &BoxSize, seed: u64) -> Vec<Particle> {
+    pub fn create_homogeneous(n: usize, kappa: f32, bs: &BoxSize, seed: u64) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
         let mut rng = Pcg64Mcg::seed_from_u64(seed);
-        let range = Uniform::new(0f64, 1.);
+        let range = Uniform::new(0f32, 1.);
 
         let mut r = || rng.sample(range);
 
@@ -320,19 +320,19 @@ impl From<ParticleVector> for Particle {
     }
 }
 
-pub fn pdf_sin(x: f64) -> f64 {
+pub fn pdf_sin(x: f32) -> f32 {
     (1. - x).acos()
 }
 
 /// Samples the polar angle of the spatial homogeneous distribution, given by
 /// $\sin(\theta) \psi(\kappa, \theta)$.
 /// Including the measure of spherical coordinates $\sin(\theta)$ is crucial.
-pub fn pdf_homogeneous_fixpoint(kappa: f64, x: f64) -> f64 {
+pub fn pdf_homogeneous_fixpoint(kappa: f32, x: f32) -> f32 {
     assert!(
         kappa != 0.0,
         "Alignment of zero is the isotropic state. Please use that instead."
     );
-    let r = f64::acos(f64::ln(f64::exp(kappa) - 2. * x * f64::sinh(kappa)) / kappa);
+    let r = f32::acos(f32::ln(f32::exp(kappa) - 2. * x * f32::sinh(kappa)) / kappa);
 
     assert!(
         !(r.is_nan()),

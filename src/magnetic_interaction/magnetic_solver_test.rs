@@ -4,7 +4,7 @@ use crate::distribution::Distribution;
 use crate::particle::Particle;
 use crate::test_helper::equal_floats;
 use ndarray::{Array, Ix1, Ix4};
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 #[test]
 #[ignore]
@@ -45,7 +45,7 @@ fn test_magnetic_field_against_cache() {
     use std::fs::File;
 
     let mut f = File::open("test/magneticfield/b_test.bincode").unwrap();
-    let cache_b: Array<f64, Ix4> = bincode::deserialize_from(&mut f).unwrap();
+    let cache_b: Array<f32, Ix4> = bincode::deserialize_from(&mut f).unwrap();
 
     let bs = BoxSize {
         x: 11.,
@@ -78,7 +78,7 @@ fn test_magnetic_field_against_cache() {
         let (ia, va) = idx;
         let (_, vb) = value;
 
-        let f = 2.0f64.powi(51);
+        let f = 2.0f32.powi(51);
 
         let va = (va * f).round() / f;
         let vb = (vb * f).round() / f;
@@ -103,7 +103,7 @@ fn test_magnetic_vector_gradient() {
     };
 
     // Construct fourier transformation of
-    let mut b: Array<Complex<f64>, Ix4> = Array::zeros([3, 10, 10, 10]);
+    let mut b: Array<Complex<f32>, Ix4> = Array::zeros([3, 10, 10, 10]);
 
     b[[0, 1, 0, 0]] = Complex::new(0., -0.5);
     b[[0, 9, 0, 0]] = Complex::new(0., 0.5);
@@ -113,7 +113,7 @@ fn test_magnetic_vector_gradient() {
     solver.director_field.field.assign(&b);
     solver.update_gradient();
 
-    let expected: Vec<Complex<f64>> = [
+    let expected: Vec<Complex<f32>> = [
         1.,
         0.8090169943749475,
         0.30901699437494745,
@@ -133,7 +133,7 @@ fn test_magnetic_vector_gradient() {
 
     assert_eq!(solver.gradient_meanb.slice(s![0, 0, .., 0, 0]), expected);
 
-    let zero = Array::<Complex<f64>, Ix1>::zeros([10]);
+    let zero = Array::<Complex<f32>, Ix1>::zeros([10]);
     let one = Array::from_elem([10], Complex::new(1., 0.));
 
     assert_eq!(solver.gradient_meanb.slice(s![1, 0, .., 0, 0]), zero);

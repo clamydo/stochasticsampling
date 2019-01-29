@@ -63,11 +63,11 @@ use test::Bencher;
 //         [0., -0.2071067811865475, 0.1666666666666667],
 //     ]);
 //
-//     fn round(a: f64, digit: i32) -> f64 {
-//         (a * 2f64.powi(digit)).round() * 2f64.powi(-digit)
+//     fn round(a: f32, digit: i32) -> f32 {
+//         (a * 2f32.powi(digit)).round() * 2f32.powi(-digit)
 //     }
 //
-//     fn check(should: Array<f64, Ix2>, stress: Array<f64, Ix2>) {
+//     fn check(should: Array<f32, Ix2>, stress: Array<f32, Ix2>) {
 //         for (a, b) in should.iter().zip(stress.iter()) {
 //             assert!(
 //                 // round to neglect numerical noise

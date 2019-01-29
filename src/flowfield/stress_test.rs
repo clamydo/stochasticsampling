@@ -11,7 +11,7 @@ use ndarray::{Array, Ix4};
 use crate::mesh::grid_width::GridWidth;
 // use particle::Particle;
 use crate::{BoxSize, GridSize};
-// use std::f64::consts::PI;
+// use std::f32::consts::PI;
 use crate::test_helper::equal_floats;
 
 // #[test]
@@ -47,7 +47,7 @@ use crate::test_helper::equal_floats;
 //     let i = Integrator::new(gs, bs, int_param);
 //     let spectral_solver = SpectralSolver::new(gs, bs, s);
 //
-//     let test_it = |d: &Distribution, expect: ArrayView<f64, Ix2>, case| {
+//     let test_it = |d: &Distribution, expect: ArrayView<f32, Ix2>, case| {
 //         println!("Distribution {}", d.dist);
 //
 //         let
@@ -65,7 +65,7 @@ use crate::test_helper::equal_floats;
 //
 //     let mut d2 = Distribution::new(gs, gw);
 // d2.dist = Array::from_elem([gs.x, gs.y, gs.phi], 1. / gw.phi / gs.phi as
-// f64);
+// f32);
 //
 //     let expect1 = arr2(&[
 //         [-0.49999999999999994, 0., 0.],
@@ -106,11 +106,11 @@ fn stress_kernel_test() {
     // bincode::serialize_into(::std::fs::File::create(cf).unwrap(), &sk).unwrap();
 
     // Deserialize from previously saved control file
-    let sk_control: Array<f64, Ix4> =
+    let sk_control: Array<f32, Ix4> =
         bincode::deserialize_from(::std::fs::File::open(cf).unwrap()).unwrap();
 
     // TODO, WARNING this is prone to heavy numerical noise
-    fn round(a: f64) -> f64 {
+    fn round(a: f32) -> f32 {
         (a * 1e12).round()
     }
 

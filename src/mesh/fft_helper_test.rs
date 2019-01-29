@@ -96,7 +96,7 @@ mod tests {
             ],
         ];
 
-        let expect: Vec<f64> = expect
+        let expect: Vec<f32> = expect
             .iter()
             .flat_map(|v| v.iter())
             .flat_map(|v| v.iter())
@@ -411,7 +411,7 @@ mod tests {
             ],
         ];
 
-        let expect: Vec<f64> = expect
+        let expect: Vec<f32> = expect
             .iter()
             .flat_map(|v| v.iter())
             .flat_map(|v| v.iter())

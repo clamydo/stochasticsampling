@@ -31,8 +31,8 @@ pub struct Settings {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiffusionConstants {
-    pub translational: f64,
-    pub rotational: f64,
+    pub translational: f32,
+    pub rotational: f32,
 }
 
 /// Holds prefactors for active and magnetic stress
@@ -40,7 +40,7 @@ pub struct DiffusionConstants {
 #[serde(deny_unknown_fields)]
 pub struct MagneticDipolePrefactors {
     #[serde(default)]
-    pub magnetic_dipole_dipole: f64,
+    pub magnetic_dipole_dipole: f32,
 }
 
 /// Holds phyiscal parameters
@@ -48,17 +48,17 @@ pub struct MagneticDipolePrefactors {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(default)]
-    pub magnetic_drag: f64,
+    pub magnetic_drag: f32,
     #[serde(default)]
-    pub shape: f64,
+    pub shape: f32,
     #[serde(default)]
-    pub hydro_screening: f64,
+    pub hydro_screening: f32,
     #[serde(default)]
-    pub interaction_threshold: Option<f64>,
+    pub interaction_threshold: Option<f32>,
     #[serde(default)]
-    pub volume_exclusion: f64,
+    pub volume_exclusion: f32,
     /// Assumes that b points in y-direction
-    pub magnetic_reorientation: f64,
+    pub magnetic_reorientation: f32,
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
     /// Magnetic moment of one particle including magnetic field constant
@@ -108,7 +108,7 @@ pub enum InitDistribution {
 pub struct SimulationSettings {
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub timestep: f64,
+    pub timestep: f32,
     #[serde(default = "default_init_distribution")]
     pub init_distribution: InitDistribution,
     pub seed: u64,

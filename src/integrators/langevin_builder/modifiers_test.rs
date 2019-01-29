@@ -56,12 +56,12 @@ fn translational_diffusion() {
 
 #[test]
 fn external_field_alignment() {
-    let p = Particle::new(0., 0., 0., 0., ::std::f64::consts::PI / 2., &BS);
+    let p = Particle::new(0., 0., 0., 0., ::std::f32::consts::PI / 2., &BS);
     let l = LangevinBuilder::new(&p);
     let p = l
         .with_param(super::external_field_alignment, 0.1)
         .finalize(&BS);
-    let expect = Particle::new(0., 0., 0., 0.09966865249116204, ::std::f64::consts::PI / 2., &BS);
+    let expect = Particle::new(0., 0., 0., 0.09966865249116204, ::std::f32::consts::PI / 2., &BS);
 
     assert_eq!(p, expect);
 }
