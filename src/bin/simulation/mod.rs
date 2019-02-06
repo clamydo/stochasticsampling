@@ -311,6 +311,9 @@ impl Simulation {
                     rotate_angle: r.rotate_angle,
                 };
 
+                (*p).position.z = 0.0;
+                (*p).orientation.theta = ::std::f32::consts::PI / 2.;
+
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
@@ -327,6 +330,9 @@ impl Simulation {
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
                     .finalize(&sim.box_size);
+
+                (*p).position.z = 0.0;
+                (*p).orientation.theta = ::std::f32::consts::PI / 2.;
             });
 
         // increment timestep counter to keep a continous identifier when resuming
