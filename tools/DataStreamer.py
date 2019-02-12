@@ -36,13 +36,11 @@ class Streamer(object):
     def __del__(self):
         self.__file.close()
 
-
     def parse(buffer):
         if self.type is 'Msgpack':
             return msgpack.unpackb(buf, encoding='utf-8')
         elif self.type is 'CBOR':
             return cbor.loads(buf)
-
 
     def __getitem__(self, given):
         if isinstance(given, slice):
@@ -220,6 +218,26 @@ def get_mean_orientation(dist, gw, gs):
     vz = np.sum(dist * z, axis=(3, 4)) * gw['theta'] * gw['phi'] / c
 
     return np.transpose(np.array([vx, vy, vz]), (1, 2, 3, 0))
+
+
+def magnetic_field_gradient(b, gw):
+    fftb = np.fft.fftn(bc, axes=(1, 2, 3), norm="ortho")
+    kx = np.fft.fftfreq(b.shape[1], gw['x'])
+    ky = np.fft.fftfreq(b.shape[2], gw['y'])
+    kz = np.fft.fftfreq(b.shape[3], gw['z'])
+
+    kx, ky, kz = np.meshgrid(kx, ky, kz, indexing="ij")
+
+    k = np.stack((kx, ky, kz), axis=-
+                 1).reshape(b.shape[1] * b.shape[2] * b.shape[3], 3)
+    fftb = np.transpose(fftb, (1, 2, 3, 0)).reshape(
+        b.shape[1] * b.shape[2] * b.shape[3], 3)
+
+    grad = np.array([np.outer(*x)
+                     for x in zip(k, fftb)]).reshape(3, 3, 3, 9) * 1j
+    grad = np.fft.ifftn(grad, axis(0, 1, 2), norm="ortho")
+
+    return grad
 
 
 def get_bs_gs_gw(sim_settings):
