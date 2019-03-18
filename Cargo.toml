@@ -9,7 +9,7 @@ edition = "2018"
 [features]
 fftw-threaded = ["fftw3/fftw-threaded"]
 fftw-static = ["fftw3/fftw-static"]
-double = []
+single = []
 
 [[bin]]
 name = "simulation"

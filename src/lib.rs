@@ -48,11 +48,11 @@ pub mod polarization;
 mod test_helper;
 pub mod vector;
 
-#[cfg(feature = "double")]
-type Float = f64;
-
-#[cfg(not(feature = "double"))]
+#[cfg(feature = "single")]
 type Float = f32;
+
+#[cfg(not(feature = "single"))]
+type Float = f64;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types

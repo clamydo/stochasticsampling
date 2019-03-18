@@ -269,6 +269,7 @@ impl Simulation {
         let sim = self.settings.simulation;
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
+        let gs = self.settings.simulation.grid_size;
 
         let (b, grad_b) = self.magnetic_solver.mean_magnetic_field(
             &self.state.distribution,
@@ -350,30 +351,6 @@ impl Iterator for Simulation {
     fn next(&mut self) -> Option<usize> {
         Some(self.do_timestep())
     }
-}
-
-fn get_cell_index(
-    p: &Particle,
-    grid_width: &GridWidth,
-    grid_size: &GridSize,
-) -> (usize, usize, usize) {
-    let mut ix = (p.position.x / grid_width.x).floor() as usize;
-    let mut iy = (p.position.y / grid_width.y).floor() as usize;
-    let mut iz = (p.position.z / grid_width.z).floor() as usize;
-
-    if ix == grid_size.x {
-        ix -= 1;
-    }
-
-    if iy == grid_size.y {
-        iy -= 1;
-    }
-
-    if iz == grid_size.z {
-        iz -= 1;
-    }
-
-    (ix, iy, iz)
 }
 
 fn vector_field_at_cell_c(
