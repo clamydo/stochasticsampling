@@ -1,10 +1,10 @@
-#![allow(clippy::float_cmp,clippy::unreadable_literal)]
+#![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::super::stress::stresses::*;
 use super::*;
 
 use crate::distribution::Distribution;
 use crate::particle::Particle;
-use test::Bencher;
+// use test::Bencher;
 use crate::test_helper::equal_floats;
 
 #[test]
@@ -191,35 +191,35 @@ fn test_compare_implementations() {
     }
 }
 
-#[bench]
-fn bench_calculate_flow(b: &mut Bencher) {
-    let bs = BoxSize {
-        x: 30.,
-        y: 30.,
-        z: 30.,
-    };
-    let gs = GridSize {
-        x: 30,
-        y: 30,
-        z: 30,
-        phi: 15,
-        theta: 15,
-    };
+// #[bench]
+// fn bench_calculate_flow(b: &mut Bencher) {
+//     let bs = BoxSize {
+//         x: 30.,
+//         y: 30.,
+//         z: 30.,
+//     };
+//     let gs = GridSize {
+//         x: 30,
+//         y: 30,
+//         z: 30,
+//         phi: 15,
+//         theta: 15,
+//     };
 
-    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
+//     let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
 
-    let mut ff_s = SpectralSolver::new(gs, bs, s);
+//     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
-    let p = Particle::create_isotropic(10000, &bs, 1);
+//     let p = Particle::create_isotropic(10000, &bs, 1);
 
-    let mut d = Distribution::new(gs, bs);
-    d.sample_from(&p);
-    d.dist *= bs.x * bs.y * bs.z;
+//     let mut d = Distribution::new(gs, bs);
+//     d.sample_from(&p);
+//     d.dist *= bs.x * bs.y * bs.z;
 
-    b.iter(|| {
-        ::test::black_box(ff_s.solve_flow_field(&d));
-    })
-}
+//     b.iter(|| {
+//         ::test::black_box(ff_s.solve_flow_field(&d));
+//     })
+// }
 
 // #[bench]
 // fn bench_calculate_flow_new(b: &mut Bencher) {

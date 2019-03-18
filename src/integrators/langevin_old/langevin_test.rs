@@ -6,7 +6,7 @@ use flowfield::spectral_solver::SpectralSolver;
 use magnetic_interaction::magnetic_solver::MagneticSolver;
 use particle::Particle;
 use settings::{MagneticDipolePrefactors, StressPrefactors};
-use test::Bencher;
+// use test::Bencher;
 
 // /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
 // /// function in parallel. Instead test with RUST_TEST_THREADS=1.

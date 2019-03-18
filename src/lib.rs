@@ -6,7 +6,6 @@
 #![crate_type = "staticlib"]
 // #![feature(euclidean_division)]
 #![recursion_limit = "1024"]
-#![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
 extern crate bincode;
@@ -17,20 +16,19 @@ extern crate quickcheck;
 
 #[macro_use]
 extern crate derive_more;
-#[cfg(test)]
-extern crate test;
 #[macro_use]
 extern crate error_chain;
 extern crate fftw3;
 #[macro_use]
 extern crate itertools;
+extern crate lerp;
 #[macro_use(s)]
 extern crate ndarray;
 extern crate ndarray_parallel;
 extern crate num_complex;
-extern crate rand_pcg;
 extern crate quaternion;
 extern crate rand;
+extern crate rand_pcg;
 extern crate rayon;
 // extern crate rustfft;
 extern crate serde;
@@ -51,7 +49,7 @@ pub mod vector;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
-    error_chain!{}
+    error_chain! {}
 }
 
 /// Size of the simulation box an arbitary physical dimensions.

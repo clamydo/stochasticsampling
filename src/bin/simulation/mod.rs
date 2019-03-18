@@ -27,6 +27,7 @@ use stochasticsampling::integrators::langevin_builder::modifiers::*;
 use stochasticsampling::integrators::langevin_builder::TimeStep;
 use stochasticsampling::integrators::LangevinBuilder;
 use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
+use stochasticsampling::mesh::get_cell_index;
 use stochasticsampling::mesh::grid_width::GridWidth;
 use stochasticsampling::particle::Particle;
 use stochasticsampling::vector::VectorD;
@@ -293,7 +294,7 @@ impl Simulation {
             .par_iter_mut()
             .zip(self.state.random_samples.par_iter())
             .for_each(|(p, r)| {
-                let idx = get_cell_index(&p, &gw);
+                let idx = get_cell_index(&p.position, &gw, &gs);
                 let flow = vector_field_at_cell_c(&flow_field.view(), idx);
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
@@ -351,10 +352,26 @@ impl Iterator for Simulation {
     }
 }
 
-fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize) {
-    let ix = (p.position.x / grid_width.x).floor() as usize;
-    let iy = (p.position.y / grid_width.y).floor() as usize;
-    let iz = (p.position.z / grid_width.z).floor() as usize;
+fn get_cell_index(
+    p: &Particle,
+    grid_width: &GridWidth,
+    grid_size: &GridSize,
+) -> (usize, usize, usize) {
+    let mut ix = (p.position.x / grid_width.x).floor() as usize;
+    let mut iy = (p.position.y / grid_width.y).floor() as usize;
+    let mut iz = (p.position.z / grid_width.z).floor() as usize;
+
+    if ix == grid_size.x {
+        ix -= 1;
+    }
+
+    if iy == grid_size.y {
+        iy -= 1;
+    }
+
+    if iz == grid_size.z {
+        iz -= 1;
+    }
 
     (ix, iy, iz)
 }
