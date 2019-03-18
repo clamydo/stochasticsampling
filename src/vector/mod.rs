@@ -1,6 +1,6 @@
 pub mod vorticity;
 
-use crate::float;
+use crate::Float;
 use num_traits::identities::Zero;
 use num_traits::{NumAssignOps, NumOps};
 use std::convert::From;
@@ -10,10 +10,10 @@ use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAssign};
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Default();
 pub type NumVectorD<N> = NumVector<Default, N>;
-pub type Vector<T> = NumVector<T, float>;
+pub type Vector<T> = NumVector<T, Float>;
 pub type VectorD = Vector<Default>;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -298,14 +298,20 @@ where
     }
 }
 
-impl<T> From<NumVector<T, float>> for [float; 3] {
-    fn from(a: NumVector<T, float>) -> [float; 3] {
+impl<T> From<NumVector<T, Float>> for [Float; 3] {
+    fn from(a: NumVector<T, Float>) -> [Float; 3] {
         a.v
     }
 }
 
 impl<T> From<NumVector<T, usize>> for [usize; 3] {
     fn from(a: NumVector<T, usize>) -> [usize; 3] {
+        a.v
+    }
+}
+
+impl<T> From<NumVector<T, i32>> for [i32; 3] {
+    fn from(a: NumVector<T, i32>) -> [i32; 3] {
         a.v
     }
 }

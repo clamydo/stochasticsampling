@@ -26,6 +26,7 @@ extern crate lerp;
 extern crate ndarray;
 extern crate ndarray_parallel;
 extern crate num_complex;
+extern crate num_traits;
 extern crate quaternion;
 extern crate rand;
 extern crate rand_pcg;
@@ -46,6 +47,12 @@ pub mod particle;
 pub mod polarization;
 mod test_helper;
 pub mod vector;
+
+#[cfg(feature = "double")]
+type Float = f64;
+
+#[cfg(not(feature = "double"))]
+type Float = f32;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
