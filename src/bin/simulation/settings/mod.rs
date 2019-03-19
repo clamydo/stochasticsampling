@@ -2,11 +2,12 @@
 
 pub mod si;
 
+use serde_derive::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::prelude::*;
 use stochasticsampling::flowfield::stress::StressPrefactors;
-use stochasticsampling::{BoxSize, GridSize};
 use stochasticsampling::Float;
+use stochasticsampling::{BoxSize, GridSize};
 use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 1;

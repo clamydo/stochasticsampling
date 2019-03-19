@@ -10,6 +10,7 @@ use std::io::prelude::*;
 use stochasticsampling::flowfield::stress::StressPrefactors;
 use toml;
 use stochasticsampling::Float;
+use serde_derive::{Serialize, Deserialize};
 
 error_chain! {
     foreign_links {

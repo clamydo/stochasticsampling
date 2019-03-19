@@ -8,6 +8,7 @@ use fftw3::fft;
 use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 
+use ndarray::s;
 use rand::distributions::StandardNormal;
 use rand::distributions::Uniform;
 use rand::Rng;
@@ -15,6 +16,7 @@ use rand::SeedableRng;
 use rand_pcg::Pcg32;
 use rayon;
 use rayon::prelude::*;
+use serde_derive::{Deserialize, Serialize};
 use std::env;
 use std::str::FromStr;
 use stochasticsampling::consts::TWOPI;
