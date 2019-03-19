@@ -5,9 +5,10 @@ mod fft_helper_test;
 
 use super::mesh3d;
 use crate::consts::TWOPI;
+use crate::Float;
+use crate::{BoxSize, GridSize};
 use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
 use num_complex::Complex;
-use crate::{BoxSize, GridSize};
 
 /// Returns a sampling of k values along all grid axes in FFTW standard form.
 /// In this case 3D.
@@ -22,8 +23,8 @@ use crate::{BoxSize, GridSize};
 ///     n = 10 => k = [0, 1, 2, 3, 4, (5, -5), -4, -3, -2, -1]
 ///     n = 11 => k = [0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1]
 ///
-fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f64>, Ix1>> {
-    let ks: Vec<Array<Complex<f64>, Ix1>> = [grid_size.x, grid_size.y, grid_size.z]
+fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<Float>, Ix1>> {
+    let ks: Vec<Array<Complex<Float>, Ix1>> = [grid_size.x, grid_size.y, grid_size.z]
         .iter()
         .zip([box_size.x, box_size.y, box_size.z].iter())
         .map(|(gs, bs)| {
@@ -31,9 +32,9 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
             let b = if gs % 2 == 0 { gs / 2 } else { gs / 2 + 1 } as isize;
             let step = TWOPI / bs;
 
-            let values: Array<Complex<f64>, Ix1> = Array::from_vec(
+            let values: Array<Complex<Float>, Ix1> = Array::from_vec(
                 (-(a as i64)..(b as i64))
-                    .map(|i| Complex::new((i as f64) * step, 0.))
+                    .map(|i| Complex::new((i as Float) * step, 0.))
                     .collect(),
             );
 
@@ -53,9 +54,9 @@ fn get_k_sampling(grid_size: GridSize, box_size: BoxSize) -> Vec<Array<Complex<f
 ///
 /// The first axis denotes the components of the k-vector:
 ///     `res[c, i, j, m] -> k_c[i, j, m]`
-pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix4> {
+pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<Float>, Ix4> {
     let ks = get_k_sampling(grid_size, box_size);
-    mesh3d::<Complex<f64>>(&ks)
+    mesh3d::<Complex<Float>>(&ks)
 }
 
 /// Returns a normalized meshgrid of k values for FFT, except for zero which is
@@ -63,9 +64,9 @@ pub fn get_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>,
 ///
 /// The first axis denotes the components of the k-vector:
 ///     `res[c, i, j, m] -> k_c[i, j, m]`
-pub fn get_norm_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<f64>, Ix4> {
+pub fn get_norm_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<Float>, Ix4> {
     let ks = get_k_sampling(grid_size, box_size);
-    let mesh = mesh3d::<Complex<f64>>(&ks);
+    let mesh = mesh3d::<Complex<Float>>(&ks);
 
     let kinv = get_inverse_norm(mesh.view());
 
@@ -75,7 +76,9 @@ pub fn get_norm_k_mesh(grid_size: GridSize, box_size: BoxSize) -> Array<Complex<
 /// Returns scalar field of inversed norm squared of k-vector-values.
 ///
 /// The inverse norm of k=0 is set to zero, i.e. 1/(k=0)^2 == 0
-pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<Complex<f64>, Ix3> {
+pub fn get_inverse_norm_squared(
+    k_mesh: ArrayView<Complex<Float>, Ix4>,
+) -> Array<Complex<Float>, Ix3> {
     let squared = &k_mesh * &k_mesh;
 
     let mut inorm = squared.sum_axis(Axis(0)).map(|v| 1. / v);
@@ -87,7 +90,7 @@ pub fn get_inverse_norm_squared(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<C
 /// Returns scalar field of inversed norm squared of k-vector-values.
 ///
 /// The inverse norm of k=0 is set to zero, i.e. 1/(k=0)^2 == 0
-pub fn get_inverse_norm(k_mesh: ArrayView<Complex<f64>, Ix4>) -> Array<Complex<f64>, Ix3> {
+pub fn get_inverse_norm(k_mesh: ArrayView<Complex<Float>, Ix4>) -> Array<Complex<Float>, Ix3> {
     let squared = &k_mesh * &k_mesh;
 
     let mut inorm = squared.sum_axis(Axis(0)).map(|v| (1. / v.re.sqrt()).into());

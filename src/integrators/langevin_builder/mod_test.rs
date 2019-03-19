@@ -1,6 +1,15 @@
 use super::modifiers::*;
 use super::*;
 use crate::test_helper::{equal_floats, equal_floats_eps};
+use crate::Float;
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(feature = "single")]
+use std::f32::EPSILON;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::EPSILON;
 
 #[test]
 fn test_langevin_builder_conversion() {
@@ -11,16 +20,10 @@ fn test_langevin_builder_conversion() {
     };
     let coord = [
         [0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., ::std::f64::consts::PI / 2.],
-        [0., 0., 0., 0., ::std::f64::consts::PI],
+        [0., 0., 0., 0., PI / 2.],
+        [0., 0., 0., 0., PI],
         [1., 2., 3., 0., 0.],
-        [
-            0.,
-            5.,
-            0.,
-            ::std::f64::consts::PI / 2.,
-            ::std::f64::consts::PI / 2.,
-        ],
+        [0., 5., 0., PI / 2., PI / 2.],
     ];
 
     let exp = [
@@ -61,14 +64,7 @@ fn test_langevin_builder_step() {
         z: 10.,
     };
     let p = Particle::new(0., 0., 0., 0., 0., &bs);
-    let c: ParticleVector = Particle::new(
-        1.,
-        2.,
-        3.,
-        3. / 2. * ::std::f64::consts::PI,
-        ::std::f64::consts::PI / 2.,
-        &bs,
-    ).into();
+    let c: ParticleVector = Particle::new(1., 2., 3., 3. / 2. * PI, PI / 2., &bs).into();
     let e = [[2., 4., 6.], [0., -2., 0.]];
 
     let m = LangevinBuilder::new(&p)
@@ -84,7 +80,7 @@ fn test_langevin_builder_step() {
     }
     for (a, b) in e[1].iter().zip(v.orientation.iter()) {
         assert!(
-            equal_floats_eps(*a, *b, 2. * ::std::f64::EPSILON),
+            equal_floats_eps(*a, *b, 2. * EPSILON),
             "left: {}, right: {}",
             *a,
             *b

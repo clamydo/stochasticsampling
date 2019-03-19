@@ -1,7 +1,14 @@
 #![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::*;
-use std::f64::consts::PI;
 use crate::test_helper::equal_floats;
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(feature = "single")]
+use std::f32::EPSILON;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::EPSILON;
 
 #[test]
 fn test_random_particles() {
@@ -25,11 +32,8 @@ fn test_random_particles() {
 #[test]
 fn test_modulo() {
     let input = [
-        [2. * ::std::f64::consts::PI, 2. * ::std::f64::consts::PI],
-        [
-            2. * ::std::f64::consts::PI + ::std::f64::EPSILON,
-            2. * ::std::f64::consts::PI,
-        ],
+        [2. * PI, 2. * PI],
+        [2. * PI + EPSILON, 2. * PI],
         [7., 4.],
         [7., -4.],
         [-7., 4.],
@@ -50,7 +54,7 @@ fn test_modulo() {
     }
 
     // CAUTION: This is due floating point roundoff error
-    assert!(modulo(-::std::f64::EPSILON, 2. * ::std::f64::consts::PI) != 0.9);
+    assert!(modulo(-EPSILON, 2. * PI) != 0.9);
 }
 
 #[test]
@@ -98,7 +102,7 @@ fn test_ang_pbc() {
 #[test]
 fn test_pdf_sin() {
     // TODO: Check statstics
-    use std::f64::consts::PI;
+    use PI;
     let input = [0., 1., 2.];
     let expect = [0., PI / 2., PI];
     let output: Vec<_> = input.iter().map(|x| pdf_sin(*x)).collect();

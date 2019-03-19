@@ -6,26 +6,30 @@ mod langevin_test;
 use crate::consts::TWOPI;
 use crate::distribution::Distribution;
 use crate::mesh::grid_width::GridWidth;
+use crate::Float;
+use crate::GridSize;
 use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
 use std::f64::consts::PI;
-use crate::GridSize;
 
 /// Holds prefactors for active and magnetic stress
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StressPrefactors {
-    pub active: f64,
-    pub magnetic: f64,
+    pub active: Float,
+    pub magnetic: Float,
 }
 
 /// Calculates approximation of discretized stress kernel, to be used in ///
 /// the expectation value to obtain the stress tensor.
-pub fn stress_kernel<F>(grid_size: GridSize, grid_width: GridWidth, stress: F) -> Array<f64, Ix4>
+pub fn stress_kernel<F>(grid_size: GridSize, grid_width: GridWidth, stress: F) -> Array<Float, Ix4>
 where
-    F: Fn(f64, f64) -> Array<f64, Ix2>,
+    F: Fn(Float, Float) -> Array<Float, Ix2>,
 {
-    let mut s = Array::<f64, _>::zeros((3, 3, grid_size.phi, grid_size.theta));
+    let mut s = Array::<Float, _>::zeros((3, 3, grid_size.phi, grid_size.theta));
     // Calculate discrete angles, considering the cell centered sample points of
     // the distribution
     let gw_half_phi = grid_width.phi / 2.;
@@ -53,10 +57,10 @@ where
 /// It consumes `stress_field` and updates it given a stress kernel `kernel`
 /// and a distribution `dist`. It returns the updated stress field.
 pub fn average_stress<'a>(
-    stress_field: ArrayViewMut<'a, Complex<f64>, Ix5>,
-    kernel: &ArrayView<f64, Ix4>,
+    stress_field: ArrayViewMut<'a, Complex<Float>, Ix5>,
+    kernel: &ArrayView<Float, Ix4>,
     dist: &Distribution,
-) -> ArrayViewMut<'a, Complex<f64>, Ix5> {
+) -> ArrayViewMut<'a, Complex<Float>, Ix5> {
     let dist_sh = dist.dim();
     let stress_sh = kernel.dim();
 
@@ -91,10 +95,11 @@ pub fn average_stress<'a>(
 }
 
 pub mod stresses {
+    use crate::Float;
     use ndarray::{Array, Ix2};
 
     /// Calculate active stress tensor for polar angles `phi` and `theta`.
-    pub fn stress_active(phi: f64, theta: f64) -> Array<f64, Ix2> {
+    pub fn stress_active(phi: Float, theta: Float) -> Array<Float, Ix2> {
         let mut s = Array::zeros((3, 3));
 
         s[[0, 0]] = -(1. / 3.) + phi.cos() * phi.cos() * theta.sin() * theta.sin();
@@ -116,7 +121,7 @@ pub mod stresses {
     /// Magnetic field points into y-direction to avoid binning instability in
     /// spherical coordinates at the poles.
     /// Calculates `0.5 (nb-bn)`, with `b = [0, 1, 0]` and orientation `n`.
-    pub fn stress_magnetic(phi: f64, theta: f64) -> Array<f64, Ix2> {
+    pub fn stress_magnetic(phi: Float, theta: Float) -> Array<Float, Ix2> {
         let mut s = Array::zeros((3, 3));
 
         s[[0, 0]] = 0.;
@@ -135,7 +140,7 @@ pub mod stresses {
     }
 
     /// Calculate magnetic stress tensor for polar angles `phi` and `theta`.
-    pub fn stress_magnetic_rods(phi: f64, theta: f64) -> Array<f64, Ix2> {
+    pub fn stress_magnetic_rods(phi: Float, theta: Float) -> Array<Float, Ix2> {
         let mut s = Array::zeros((3, 3));
 
         s[[0, 0]] = 2. * theta.cos() * phi.cos().powi(2) * theta.sin().powi(2);

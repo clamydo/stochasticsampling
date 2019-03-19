@@ -26,25 +26,26 @@
 // #[path = "./langevin_test.rs"]
 // mod langevin_test;
 
-use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
-use ndarray_parallel::prelude::*;
-use num_complex::Complex;
-use quaternion;
-use rayon::prelude::*;
 use crate::magnetic_interaction::mean_force;
 use crate::mesh::grid_width::GridWidth;
 use crate::particle::{CosSinOrientation, OrientationVector, Particle, Position};
 use crate::vector::vorticity::vorticity3d_dispatch;
 use crate::vector::{Vector, VectorD};
+use crate::Float;
 use crate::{BoxSize, GridSize};
+use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
+use ndarray_parallel::prelude::*;
+use num_complex::Complex;
+use quaternion;
+use rayon::prelude::*;
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub axis_angle: f64,
-    pub rotate_angle: f64,
+    pub x: Float,
+    pub y: Float,
+    pub z: Float,
+    pub axis_angle: Float,
+    pub rotate_angle: Float,
 }
 
 impl RandomVector {
@@ -56,12 +57,12 @@ impl RandomVector {
 /// Holds parameter needed for time step
 #[derive(Debug, Clone, Copy)]
 pub struct IntegrationParameter {
-    pub rot_diffusion: f64,
-    pub timestep: f64,
-    pub trans_diffusion: f64,
-    pub magnetic_reorientation: f64,
-    pub drag: f64,
-    pub magnetic_dipole_dipole: f64,
+    pub rot_diffusion: Float,
+    pub timestep: Float,
+    pub trans_diffusion: Float,
+    pub magnetic_reorientation: Float,
+    pub drag: Float,
+    pub magnetic_dipole_dipole: Float,
 }
 
 /// Holds precomuted values
@@ -104,9 +105,12 @@ impl Integrator {
         &self,
         p: &mut Particle,
         rv: &RandomVector,
-        flow_field: &ArrayView<f64, Ix4>,
-        vorticity: &ArrayView<f64, Ix4>,
-        magnetic_field: Option<(ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>)>,
+        flow_field: &ArrayView<Float, Ix4>,
+        vorticity: &ArrayView<Float, Ix4>,
+        magnetic_field: Option<(
+            ArrayView<Complex<Float>, Ix4>,
+            ArrayView<Complex<Float>, Ix5>,
+        )>,
     ) {
         let param = &self.parameter;
 
@@ -168,10 +172,10 @@ impl Integrator {
         &self,
         particles: &mut Vec<Particle>,
         random_samples: &[RandomVector],
-        flow_field: ArrayView<'a, f64, Ix4>,
+        flow_field: ArrayView<'a, Float, Ix4>,
         magnetic_field: Option<(
-            ArrayView<'a, Complex<f64>, Ix4>,
-            ArrayView<'a, Complex<f64>, Ix5>,
+            ArrayView<'a, Complex<Float>, Ix4>,
+            ArrayView<'a, Complex<Float>, Ix5>,
         )>,
     ) {
         // TODO move into caller
@@ -214,7 +218,7 @@ fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize)
     (ix, iy, iz)
 }
 
-fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+fn field_at_cell(field: &ArrayView<Float, Ix4>, idx: (usize, usize, usize)) -> VectorD {
     let f = unsafe {
         [
             *field.uget((0, idx.0, idx.1, idx.2)),
@@ -225,7 +229,7 @@ fn field_at_cell(field: &ArrayView<f64, Ix4>, idx: (usize, usize, usize)) -> Vec
     f.into()
 }
 
-fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
+fn field_at_cell_c(field: &ArrayView<Complex<Float>, Ix4>, idx: (usize, usize, usize)) -> VectorD {
     let f = unsafe {
         [
             (*field.uget((0, idx.0, idx.1, idx.2))).re,
@@ -237,9 +241,9 @@ fn field_at_cell_c(field: &ArrayView<Complex<f64>, Ix4>, idx: (usize, usize, usi
 }
 
 fn vector_gradient_at_cell(
-    field: &ArrayView<Complex<f64>, Ix5>,
+    field: &ArrayView<Complex<Float>, Ix5>,
     idx: (usize, usize, usize),
-) -> Array<f64, Ix2> {
+) -> Array<Float, Ix2> {
     field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }
 
@@ -248,7 +252,7 @@ fn rotational_diffusion_quat_mut(
     cs: &CosSinOrientation,
     r: &RandomVector,
 ) -> OrientationVector {
-    let rotational_axis = |alpha: f64| {
+    let rotational_axis = |alpha: Float| {
         let cos_ax = alpha.cos();
         let sin_ax = alpha.sin();
         // axis perpendicular to orientation vector
@@ -276,7 +280,8 @@ fn jeffrey(vector: &OrientationVector, vort: VectorD) -> VectorD {
         vort[1] * vector[2] - vort[2] * vector[1],
         vort[2] * vector[0] - vort[0] * vector[2],
         vort[0] * vector[1] - vort[1] * vector[0],
-    ].into();
+    ]
+    .into();
     r *= 0.5;
     r
 }

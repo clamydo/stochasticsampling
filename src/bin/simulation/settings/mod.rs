@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use stochasticsampling::flowfield::stress::StressPrefactors;
 use stochasticsampling::{BoxSize, GridSize};
+use stochasticsampling::Float;
 use toml;
 
 const DEFAULT_IO_QUEUE_SIZE: usize = 1;
@@ -31,8 +32,8 @@ pub struct Settings {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiffusionConstants {
-    pub translational: f64,
-    pub rotational: f64,
+    pub translational: Float,
+    pub rotational: Float,
 }
 
 /// Holds prefactors for active and magnetic stress
@@ -40,7 +41,7 @@ pub struct DiffusionConstants {
 #[serde(deny_unknown_fields)]
 pub struct MagneticDipolePrefactors {
     #[serde(default)]
-    pub magnetic_dipole_dipole: f64,
+    pub magnetic_dipole_dipole: Float,
 }
 
 /// Holds phyiscal parameters
@@ -48,17 +49,17 @@ pub struct MagneticDipolePrefactors {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(default)]
-    pub magnetic_drag: f64,
+    pub magnetic_drag: Float,
     #[serde(default)]
-    pub shape: f64,
+    pub shape: Float,
     #[serde(default)]
-    pub hydro_screening: f64,
+    pub hydro_screening: Float,
     #[serde(default)]
-    pub interaction_threshold: Option<f64>,
+    pub interaction_threshold: Option<Float>,
     #[serde(default)]
-    pub volume_exclusion: f64,
+    pub volume_exclusion: Float,
     /// Assumes that b points in y-direction
-    pub magnetic_reorientation: f64,
+    pub magnetic_reorientation: Float,
     pub diffusion: DiffusionConstants,
     pub stress: StressPrefactors,
     /// Magnetic moment of one particle including magnetic field constant
@@ -108,7 +109,7 @@ pub enum InitDistribution {
 pub struct SimulationSettings {
     pub number_of_particles: usize,
     pub number_of_timesteps: usize,
-    pub timestep: f64,
+    pub timestep: Float,
     #[serde(default = "default_init_distribution")]
     pub init_distribution: InitDistribution,
     pub seed: u64,

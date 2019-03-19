@@ -1,7 +1,7 @@
 
 use super::*;
 use ndarray::Array;
-use std::f64::consts::PI;
+use std::Float::consts::PI;
 use test_helper::equal_floats;
 
 #[test]
@@ -49,7 +49,7 @@ fn test_simpson() {
 #[test]
 fn test_simpson_map_axis() {
     let points = 100;
-    let h = PI / points as f64;
+    let h = PI / points as Float;
     let f = Array::range(0., PI, h)
         .map(|x| x.sin())
         .into_shape((1, 1, points))

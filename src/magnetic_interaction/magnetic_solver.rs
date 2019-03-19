@@ -7,6 +7,7 @@ use crate::distribution::Distribution;
 use crate::mesh::fft_helper::{get_k_mesh, get_norm_k_mesh};
 use crate::mesh::grid_width::GridWidth;
 use crate::polarization::director::DirectorField;
+use crate::Float;
 use crate::{BoxSize, GridSize};
 use fftw3::fft;
 use fftw3::fft::FFTPlan;
@@ -15,16 +16,16 @@ use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use std::sync::Arc;
 
-pub type MagneticField = Array<Complex<f64>, Ix4>;
+pub type MagneticField = Array<Complex<Float>, Ix4>;
 
 pub struct MagneticSolver {
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
-    k_mesh: Array<Complex<f64>, Ix4>,
-    k_norm_mesh: Array<Complex<f64>, Ix4>,
+    k_mesh: Array<Complex<Float>, Ix4>,
+    k_norm_mesh: Array<Complex<Float>, Ix4>,
     director_field: DirectorField,
-    gradient_meanb: Array<Complex<f64>, Ix5>,
-    // magnetic_field: Array<Complex<f64>, Ix4>,
+    gradient_meanb: Array<Complex<Float>, Ix5>,
+    // magnetic_field: Array<Complex<Float>, Ix4>,
 }
 
 impl MagneticSolver {
@@ -34,7 +35,7 @@ impl MagneticSolver {
         let mesh = get_k_mesh(grid_size, box_size);
         let norm_mesh = get_norm_k_mesh(grid_size, box_size);
 
-        let mut dummy: Array<Complex<f64>, Ix3> =
+        let mut dummy: Array<Complex<Float>, Ix3> =
             Array::default([grid_size.x, grid_size.y, grid_size.z]);
         let plan_forward = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
@@ -67,7 +68,7 @@ impl MagneticSolver {
     /// deal with that.
     ///
     /// Set k=0 mode to zero, since an constant offset field is unphysical.
-    fn fft_mean_magnetic_field(&mut self, dist: &Distribution, threshold: Option<f64>) {
+    fn fft_mean_magnetic_field(&mut self, dist: &Distribution, threshold: Option<Float>) {
         // let dist_sh = dist.dim();
 
         // calculate FFT of averaged stress field
@@ -82,7 +83,7 @@ impl MagneticSolver {
             .for_each(|mut v| fft.reexecute3d(&mut v));
 
         // FFT normalization
-        let norm = (sh.1 * sh.2 * sh.3) as f64;
+        let norm = (sh.1 * sh.2 * sh.3) as Float;
 
         Zip::from(p.lanes_mut(Axis(0)))
             .and(self.k_norm_mesh.lanes(Axis(0)))
@@ -138,8 +139,11 @@ impl MagneticSolver {
     pub fn mean_magnetic_field(
         &mut self,
         d: &Distribution,
-        threshold: Option<f64>,
-    ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
+        threshold: Option<Float>,
+    ) -> (
+        ArrayView<Complex<Float>, Ix4>,
+        ArrayView<Complex<Float>, Ix5>,
+    ) {
         // TODO refactor to make it more explicit and readable
         // calculate FFT of magnetic field and store result in self.director_field.field
         self.fft_mean_magnetic_field(d, threshold);
@@ -157,7 +161,7 @@ impl MagneticSolver {
         (self.director_field.field.view(), self.gradient_meanb.view())
     }
 
-    pub fn get_real_magnet_field(&self) -> Array<f64, Ix4> {
+    pub fn get_real_magnet_field(&self) -> Array<Float, Ix4> {
         self.director_field.field.map(|v| v.re)
     }
 }

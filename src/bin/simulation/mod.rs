@@ -31,20 +31,21 @@ use stochasticsampling::mesh::get_cell_index;
 use stochasticsampling::mesh::grid_width::GridWidth;
 use stochasticsampling::particle::Particle;
 use stochasticsampling::vector::VectorD;
+use stochasticsampling::Float;
 
 struct ParamCache {
-    trans_diff: f64,
-    rot_diff: f64,
+    trans_diff: Float,
+    rot_diff: Float,
     grid_width: GridWidth,
 }
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub axis_angle: f64,
-    pub rotate_angle: f64,
+    pub x: Float,
+    pub y: Float,
+    pub z: Float,
+    pub axis_angle: Float,
+    pub rotate_angle: Float,
 }
 
 /// Main data structure representing the simulation.
@@ -225,7 +226,7 @@ impl Simulation {
     }
 
     /// Returns magnetic field
-    pub fn get_magnetic_field(&self) -> Array<f64, Ix4> {
+    pub fn get_magnetic_field(&self) -> Array<Float, Ix4> {
         self.magnetic_solver.get_real_magnet_field()
     }
 
@@ -243,7 +244,7 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        let range = Uniform::new(0f64, 1.);
+        let range: rand::distributions::Uniform<Float> = Uniform::new(0., 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
@@ -257,9 +258,9 @@ impl Simulation {
             .for_each(|(c, rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: rng.sample(StandardNormal) * dt,
-                        y: rng.sample(StandardNormal) * dt,
-                        z: rng.sample(StandardNormal) * dt,
+                        x: rng.sample(StandardNormal) as Float * dt,
+                        y: rng.sample(StandardNormal) as Float * dt,
+                        z: rng.sample(StandardNormal) as Float * dt,
                         axis_angle: TWOPI * rng.sample(range),
                         rotate_angle: rayleigh_pdf(dr, rng.sample(range)),
                     };
@@ -341,8 +342,8 @@ impl Drop for Simulation {
     }
 }
 
-fn rayleigh_pdf(sigma: f64, x: f64) -> f64 {
-    sigma * f64::sqrt(-2. * f64::ln(1. - x))
+fn rayleigh_pdf(sigma: Float, x: Float) -> Float {
+    sigma * Float::sqrt(-2. * Float::ln(1. - x))
 }
 
 impl Iterator for Simulation {
@@ -354,7 +355,7 @@ impl Iterator for Simulation {
 }
 
 fn vector_field_at_cell_c(
-    field: &ArrayView<Complex<f64>, Ix4>,
+    field: &ArrayView<Complex<Float>, Ix4>,
     idx: (usize, usize, usize),
 ) -> VectorD {
     let f = unsafe {
@@ -368,8 +369,8 @@ fn vector_field_at_cell_c(
 }
 
 fn matrix_field_at_cell(
-    field: &ArrayView<Complex<f64>, Ix5>,
+    field: &ArrayView<Complex<Float>, Ix5>,
     idx: (usize, usize, usize),
-) -> Array<f64, Ix2> {
+) -> Array<Float, Ix2> {
     field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }

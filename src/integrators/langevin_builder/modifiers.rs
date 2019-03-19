@@ -17,6 +17,7 @@ use super::OriginalParticle;
 use crate::magnetic_interaction;
 use crate::particle::{OrientationVector, ParticleVector, PositionVector};
 use crate::vector::VectorD;
+use crate::Float;
 use ndarray::{Array, ArrayView, Ix2};
 use quaternion;
 
@@ -58,7 +59,7 @@ pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) ->
 pub fn magnetic_dipole_dipole_force(
     p: OriginalParticle,
     delta: ParticleVector,
-    (drag, grad_b): (f64, ArrayView<f64, Ix2>),
+    (drag, grad_b): (Float, ArrayView<Float, Ix2>),
 ) -> ParticleVector {
     delta
         + ParticleVector {
@@ -102,7 +103,7 @@ pub fn translational_diffusion(
 pub fn external_field_alignment(
     p: OriginalParticle,
     delta: ParticleVector,
-    realignment: f64,
+    realignment: Float,
 ) -> ParticleVector {
     // magnetic field points in y direction
     // CAUTION, changing this requires a change of magnetic stress as well
@@ -122,7 +123,7 @@ pub fn external_field_alignment(
 pub fn jeffrey_vorticity(
     p: OriginalParticle,
     delta: ParticleVector,
-    vortm: ArrayView<f64, Ix2>,
+    vortm: ArrayView<Float, Ix2>,
 ) -> ParticleVector {
     // (1-nn) . (-W[u] . n) == -W[u] . n == 0.5 * Curl[u] x n
 
@@ -146,7 +147,7 @@ pub fn jeffrey_vorticity(
 pub fn jeffrey_strain(
     p: OriginalParticle,
     delta: ParticleVector,
-    (shape, strainm): (f64, ArrayView<f64, Ix2>),
+    (shape, strainm): (Float, ArrayView<Float, Ix2>),
 ) -> ParticleVector {
     // (1-nn) . (g E[u] . n)
 
@@ -188,9 +189,9 @@ pub fn magnetic_dipole_dipole_rotation(
 pub struct RotDiff {
     /// Angle of rotation axis perpendicular to the current orientation with
     /// respect to the x axis.
-    pub axis_angle: f64,
+    pub axis_angle: Float,
     /// Angle of rotation around rotation axis.
-    pub rotate_angle: f64,
+    pub rotate_angle: Float,
 }
 
 /// Rotates particle according to rotational diffusion. Needs to come after
@@ -201,7 +202,7 @@ pub fn rotational_diffusion(
     delta: ParticleVector,
     r: &RotDiff,
 ) -> ParticleVector {
-    let rotational_axis = |alpha: f64| {
+    let rotational_axis = |alpha: Float| {
         let cs = p.orientation_angles;
         let cos_ax = alpha.cos();
         let sin_ax = alpha.sin();

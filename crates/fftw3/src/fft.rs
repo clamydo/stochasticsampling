@@ -2,13 +2,39 @@ use ndarray::{ArrayViewMut, Ix2, Ix3, IxDyn};
 use num_complex::Complex;
 use std;
 // TODO: Replace with AtomicPtr or Arc<Mutex<>>
+use crate::Float;
+#[cfg(not(feature = "single"))]
+use fftw3_ffi::fftw_plan_dft_2d;
+#[cfg(feature = "single")]
+use fftw3_ffi::fftwf_plan_dft_2d as fftw_plan_dft_2d;
 use std::ptr::NonNull;
 
+#[cfg(not(feature = "single"))]
+use fftw3_ffi::fftw_plan_dft_3d;
+#[cfg(feature = "single")]
+use fftw3_ffi::fftwf_plan_dft_3d as fftw_plan_dft_3d;
+
+#[cfg(not(feature = "single"))]
+use fftw3_ffi::fftw_execute;
+#[cfg(feature = "single")]
+use fftw3_ffi::fftwf_execute as fftw_execute;
+
+#[cfg(not(feature = "single"))]
+use fftw3_ffi::fftw_execute_dft;
+#[cfg(feature = "single")]
+use fftw3_ffi::fftwf_execute_dft as fftw_execute_dft;
+
+#[cfg(feature = "single")]
+pub type FFTWComplex = ::fftw3_ffi::fftwf_complex;
+#[cfg(not(feature = "single"))]
 pub type FFTWComplex = ::fftw3_ffi::fftw_complex;
 
 /// Wrapper to manage the state of an FFTW3 plan.
 pub struct FFTPlan {
-    plan:  NonNull<::fftw3_ffi::fftw_plan_s>,
+    #[cfg(feature = "single")]
+    plan: NonNull<::fftw3_ffi::fftwf_plan_s>,
+    #[cfg(not(feature = "single"))]
+    plan: NonNull<::fftw3_ffi::fftw_plan_s>,
 }
 
 unsafe impl Send for FFTPlan {}
@@ -35,8 +61,8 @@ impl FFTPlan {
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
     pub fn new_c2c_2d(
-        ina: &mut ArrayViewMut<Complex<f64>, Ix2>,
-        outa: &mut ArrayViewMut<Complex<f64>, Ix2>,
+        ina: &mut ArrayViewMut<Complex<Float>, Ix2>,
+        outa: &mut ArrayViewMut<Complex<Float>, Ix2>,
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
@@ -47,7 +73,7 @@ impl FFTPlan {
         let plan;
         // WARNING: Not thread safe!
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_2d(
+            plan = fftw_plan_dft_2d(
                 n0 as std::os::raw::c_int,
                 n1 as std::os::raw::c_int,
                 inp,
@@ -67,7 +93,7 @@ impl FFTPlan {
     /// of elements.
     /// TODO: Write test. Return Result, not Option.
     pub fn new_c2c_inplace_2d(
-        arr: &mut ArrayViewMut<Complex<f64>, Ix2>,
+        arr: &mut ArrayViewMut<Complex<Float>, Ix2>,
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
@@ -76,7 +102,7 @@ impl FFTPlan {
 
         let plan;
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_2d(
+            plan = fftw_plan_dft_2d(
                 n0 as std::os::raw::c_int,
                 n1 as std::os::raw::c_int,
                 p,
@@ -95,8 +121,8 @@ impl FFTPlan {
     /// backwards transformation will lead to input data scaled by the number
     /// of elements.
     pub fn new_c2c_3d(
-        ina: &mut ArrayViewMut<Complex<f64>, Ix3>,
-        outa: &mut ArrayViewMut<Complex<f64>, Ix3>,
+        ina: &mut ArrayViewMut<Complex<Float>, Ix3>,
+        outa: &mut ArrayViewMut<Complex<Float>, Ix3>,
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
@@ -107,7 +133,7 @@ impl FFTPlan {
         let plan;
         // WARNING: Not thread safe!
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_3d(
+            plan = fftw_plan_dft_3d(
                 n0 as std::os::raw::c_int,
                 n1 as std::os::raw::c_int,
                 n2 as std::os::raw::c_int,
@@ -128,7 +154,7 @@ impl FFTPlan {
     /// of elements.
     /// TODO: Write test. Return Result, not Option.
     pub fn new_c2c_inplace_3d(
-        arr: &mut ArrayViewMut<Complex<f64>, Ix3>,
+        arr: &mut ArrayViewMut<Complex<Float>, Ix3>,
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
@@ -137,7 +163,7 @@ impl FFTPlan {
 
         let plan;
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_3d(
+            plan = fftw_plan_dft_3d(
                 n0 as std::os::raw::c_int,
                 n1 as std::os::raw::c_int,
                 n2 as std::os::raw::c_int,
@@ -158,7 +184,7 @@ impl FFTPlan {
     /// of elements.
     /// TODO: Write test. Return Result, not Option.
     pub fn new_c2c_inplace_3d_dyn(
-        arr: &mut ArrayViewMut<Complex<f64>, IxDyn>,
+        arr: &mut ArrayViewMut<Complex<Float>, IxDyn>,
         direction: FFTDirection,
         flags: FFTFlags,
     ) -> Option<FFTPlan> {
@@ -167,7 +193,7 @@ impl FFTPlan {
 
         let plan;
         unsafe {
-            plan = ::fftw3_ffi::fftw_plan_dft_3d(
+            plan = fftw_plan_dft_3d(
                 dim[0] as std::os::raw::c_int,
                 dim[1] as std::os::raw::c_int,
                 dim[2] as std::os::raw::c_int,
@@ -183,24 +209,24 @@ impl FFTPlan {
 
     /// Execute FFTW# plan for associated given input and output.
     pub fn execute(&self) {
-        unsafe { ::fftw3_ffi::fftw_execute(self.plan.as_ptr()) }
+        unsafe { fftw_execute(self.plan.as_ptr()) }
     }
 
     /// Reuse plan for different arrays
     /// TODO: Write test.
-    pub fn reexecute2d(&self, a: &mut ArrayViewMut<Complex<f64>, Ix2>) {
+    pub fn reexecute2d(&self, a: &mut ArrayViewMut<Complex<Float>, Ix2>) {
         let p = a.as_ptr() as *mut FFTWComplex;
         unsafe {
-            ::fftw3_ffi::fftw_execute_dft(self.plan.as_ptr(), p, p);
+            fftw_execute_dft(self.plan.as_ptr(), p, p);
         }
     }
 
     /// Reuse plan for different arrays
     /// TODO: Write test.
-    pub fn reexecute3d(&self, a: &mut ArrayViewMut<Complex<f64>, Ix3>) {
+    pub fn reexecute3d(&self, a: &mut ArrayViewMut<Complex<Float>, Ix3>) {
         let p = a.as_ptr() as *mut FFTWComplex;
         unsafe {
-            ::fftw3_ffi::fftw_execute_dft(self.plan.as_ptr(), p, p);
+            fftw_execute_dft(self.plan.as_ptr(), p, p);
         }
     }
 }
@@ -209,6 +235,9 @@ impl FFTPlan {
 impl Drop for FFTPlan {
     fn drop(&mut self) {
         unsafe {
+            #[cfg(feature = "single")]
+            ::fftw3_ffi::fftwf_destroy_plan(self.plan.as_mut());
+            #[cfg(not(feature = "single"))]
             ::fftw3_ffi::fftw_destroy_plan(self.plan.as_mut());
         }
     }
@@ -218,10 +247,16 @@ pub fn fftw_init(nthreads: Option<usize>) -> Result<(), i32> {
     if cfg!(feature = "fftw-threaded") {
         if let Some(n) = nthreads {
             unsafe {
+                #[cfg(feature = "single")]
+                let code = ::fftw3_ffi::fftwf_init_threads();
+                #[cfg(not(feature = "single"))]
                 let code = ::fftw3_ffi::fftw_init_threads();
                 if code == 0 {
                     return Err(code);
                 };
+                #[cfg(feature = "single")]
+                ::fftw3_ffi::fftwf_plan_with_nthreads(n as i32);
+                #[cfg(not(feature = "single"))]
                 ::fftw3_ffi::fftw_plan_with_nthreads(n as i32);
             }
         }
@@ -233,7 +268,10 @@ pub fn fftw_init(nthreads: Option<usize>) -> Result<(), i32> {
 pub fn fttw_finalize() {
     if cfg!(feature = "fftw-threaded") {
         unsafe {
+            #[cfg(feature = "single")]
             ::fftw3_ffi::fftw_cleanup_threads();
+            #[cfg(not(feature = "single"))]
+            ::fftw3_ffi::fftwf_cleanup_threads();
         };
     }
 }

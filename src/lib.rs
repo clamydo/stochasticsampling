@@ -49,10 +49,10 @@ mod test_helper;
 pub mod vector;
 
 #[cfg(feature = "single")]
-type Float = f32;
+pub type Float = f32;
 
 #[cfg(not(feature = "single"))]
-type Float = f64;
+pub type Float = f64;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
@@ -63,9 +63,9 @@ mod errors {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BoxSize {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: Float,
+    pub y: Float,
+    pub z: Float,
 }
 /// Size of the discrete grid.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

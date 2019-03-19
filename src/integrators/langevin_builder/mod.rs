@@ -7,6 +7,7 @@ pub mod modifiers;
 
 use crate::particle::{CosSinOrientation, Particle, ParticleVector};
 use crate::BoxSize;
+use crate::Float;
 
 #[derive(Clone, Copy)]
 pub struct OriginalParticle {
@@ -55,7 +56,7 @@ impl LangevinBuilder {
     }
 }
 
-pub struct TimeStep(pub f64);
+pub struct TimeStep(pub Float);
 
 impl Modification {
     pub fn with(self, f: fn(OriginalParticle, ParticleVector) -> ParticleVector) -> Modification {

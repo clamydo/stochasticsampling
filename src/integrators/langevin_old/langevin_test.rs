@@ -6,6 +6,8 @@ use flowfield::spectral_solver::SpectralSolver;
 use magnetic_interaction::magnetic_solver::MagneticSolver;
 use particle::Particle;
 use settings::{MagneticDipolePrefactors, StressPrefactors};
+use crate::Float;
+
 // use test::Bencher;
 
 // /// WARNING: Since fftw3 is not thread safe by default, DO NOT test this
@@ -63,11 +65,11 @@ use settings::{MagneticDipolePrefactors, StressPrefactors};
 //         [0., -0.2071067811865475, 0.1666666666666667],
 //     ]);
 //
-//     fn round(a: f64, digit: i32) -> f64 {
-//         (a * 2f64.powi(digit)).round() * 2f64.powi(-digit)
+//     fn round(a: Float, digit: i32) -> Float {
+//         (a * 2Float.powi(digit)).round() * 2Float.powi(-digit)
 //     }
 //
-//     fn check(should: Array<f64, Ix2>, stress: Array<f64, Ix2>) {
+//     fn check(should: Array<Float, Ix2>, stress: Array<Float, Ix2>) {
 //         for (a, b) in should.iter().zip(stress.iter()) {
 //             assert!(
 //                 // round to neglect numerical noise

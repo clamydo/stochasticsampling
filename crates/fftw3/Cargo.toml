@@ -7,6 +7,7 @@ authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 default = []
 fftw-threaded = []
 fftw-static = []
+single = []
 
 
 [dependencies]
