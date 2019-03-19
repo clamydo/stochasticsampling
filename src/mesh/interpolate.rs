@@ -4,12 +4,18 @@ use crate::vector::{NumVectorD, VectorD};
 use crate::Float;
 use lerp::Lerp;
 use ndarray::{arr3, Array3, ArrayView, Axis, Ix3, Ix4};
+use num_traits::identities::Zero;
+use num_traits::{NumAssignOps, NumOps};
+use std::iter::Sum;
 
-pub fn interpolate_vector_field(
+pub fn interpolate_vector_field<T>(
     position: &Position,
-    v: &ArrayView<Float, Ix4>,
+    v: &ArrayView<T, Ix4>,
     gw: &GridWidth,
-) -> VectorD {
+) -> NumVectorD<T>
+where
+    T: Lerp<Float> + Copy + Zero + Sum + NumAssignOps + NumOps,
+{
     let p = Position {
         x: (position.x / gw.x + 0.5) % 1.0,
         y: (position.y / gw.y + 0.5) % 1.0,
@@ -51,11 +57,14 @@ fn relidx(lhs: NumVectorD<i32>, rhs: [i32; 3], dim: (usize, usize, usize)) -> [u
     wrap_idx(idx, dim)
 }
 
-fn get_neighbouring_cell_values(
-    v: &ArrayView<Float, Ix3>,
+fn get_neighbouring_cell_values<T>(
+    v: &ArrayView<T, Ix3>,
     position: &Position,
     gw: &GridWidth,
-) -> Array3<Float> {
+) -> Array3<T>
+where
+    T: Lerp<Float> + Copy + Zero + Sum + NumAssignOps + NumOps,
+{
     let mut p = position.to_vector();
     let gw: VectorD = [gw.x, gw.y, gw.z].into();
     p /= gw;
@@ -92,7 +101,10 @@ fn get_neighbouring_cell_values(
     ])
 }
 
-fn trilinear_interpolation(relative_position: Position, values: Array3<Float>) -> Float {
+fn trilinear_interpolation<T>(relative_position: Position, values: Array3<T>) -> T
+where
+    T: Lerp<Float> + Copy,
+{
     let c00 = values[[0, 0, 0]].lerp(values[[1, 0, 0]], relative_position.x);
     let c01 = values[[0, 0, 1]].lerp(values[[1, 0, 1]], relative_position.x);
     let c10 = values[[0, 1, 0]].lerp(values[[1, 1, 0]], relative_position.x);

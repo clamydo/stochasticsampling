@@ -31,8 +31,9 @@ use stochasticsampling::integrators::LangevinBuilder;
 use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
 use stochasticsampling::mesh::get_cell_index;
 use stochasticsampling::mesh::grid_width::GridWidth;
+use stochasticsampling::mesh::interpolate::interpolate_vector_field;
 use stochasticsampling::particle::Particle;
-use stochasticsampling::vector::VectorD;
+use stochasticsampling::vector::{NumVectorD, VectorD};
 use stochasticsampling::Float;
 
 struct ParamCache {
@@ -303,7 +304,11 @@ impl Simulation {
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
 
-                let densg = vector_field_at_cell_c(&dens_grad, idx) * (-param.volume_exclusion);
+                let densg = vec_to_real(interpolate_vector_field(
+                    &p.position,
+                    &dens_grad.view(),
+                    &gw,
+                )) * (-param.volume_exclusion);
 
                 let b =
                     vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
@@ -368,6 +373,10 @@ fn vector_field_at_cell_c(
         ]
     };
     f.into()
+}
+
+fn vec_to_real(vec: NumVectorD<Complex<Float>>) -> VectorD {
+    [vec[0].re, vec[1].re, vec[2].re].into()
 }
 
 fn matrix_field_at_cell(
