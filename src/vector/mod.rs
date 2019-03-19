@@ -1,6 +1,7 @@
 pub mod vorticity;
 
 use crate::Float;
+use itertools::izip;
 use num_traits::identities::Zero;
 use num_traits::{NumAssignOps, NumOps};
 use std::convert::From;

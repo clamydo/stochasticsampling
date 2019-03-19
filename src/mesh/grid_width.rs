@@ -3,6 +3,7 @@
 use crate::consts::TWOPI;
 use crate::Float;
 use crate::{BoxSize, GridSize};
+use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "single")]
 use std::f32::consts::PI;
 #[cfg(not(feature = "single"))]

@@ -3,6 +3,7 @@ use super::*;
 use crate::distribution::Distribution;
 use crate::particle::Particle;
 use crate::test_helper::equal_floats;
+use ndarray::s;
 use ndarray::{Array, Ix1, Ix4};
 #[cfg(feature = "single")]
 use std::f32::consts::PI;

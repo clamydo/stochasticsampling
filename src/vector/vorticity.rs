@@ -1,5 +1,6 @@
 use crate::mesh::grid_width::GridWidth;
 use crate::Float;
+use ndarray::s;
 use ndarray::{Array, ArrayView, Axis, Ix3, Ix4};
 
 pub type VectorField3D = Array<Float, Ix4>;

@@ -7,7 +7,7 @@ use super::mesh3d;
 use crate::consts::TWOPI;
 use crate::Float;
 use crate::{BoxSize, GridSize};
-use ndarray::{Array, ArrayView, Axis, Ix1, Ix3, Ix4};
+use ndarray::{s, Array, ArrayView, Axis, Ix1, Ix3, Ix4};
 use num_complex::Complex;
 
 /// Returns a sampling of k values along all grid axes in FFTW standard form.

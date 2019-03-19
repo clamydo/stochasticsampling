@@ -4,6 +4,7 @@ use crate::particle::Particle;
 use crate::test_helper::equal_floats;
 use crate::Float;
 use crate::{BoxSize, GridSize};
+use ndarray::s;
 
 #[test]
 fn test_polarization_from_distribution() {

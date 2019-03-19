@@ -10,6 +10,7 @@ use crate::Float;
 use crate::GridSize;
 use ndarray::{Array, ArrayView, ArrayViewMut, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
+use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "single")]
 use std::f32::consts::PI;
 #[cfg(not(feature = "single"))]

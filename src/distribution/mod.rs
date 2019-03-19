@@ -12,6 +12,7 @@ use crate::particle::Particle;
 use crate::Float;
 use crate::{BoxSize, GridSize};
 use ndarray::{Array, Ix, Ix5};
+use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "single")]
 use std::f32::consts::PI;
 #[cfg(not(feature = "single"))]

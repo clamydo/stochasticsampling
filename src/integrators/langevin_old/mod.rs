@@ -33,6 +33,7 @@ use crate::vector::vorticity::vorticity3d_dispatch;
 use crate::vector::{Vector, VectorD};
 use crate::Float;
 use crate::{BoxSize, GridSize};
+use ndarray::s;
 use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
