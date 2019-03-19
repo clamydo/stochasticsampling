@@ -6,6 +6,7 @@ use std::f32::{EPSILON, MAX};
 #[cfg(not(feature = "single"))]
 use std::f64::{EPSILON, MAX};
 
+#[cfg(test)]
 use crate::Float;
 
 #[cfg(test)]

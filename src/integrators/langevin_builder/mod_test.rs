@@ -12,6 +12,7 @@ use std::f64::consts::PI;
 use std::f64::EPSILON;
 
 #[test]
+/// Tests conversion between struct and Vector representation
 fn test_langevin_builder_conversion() {
     let bs = BoxSize {
         x: 10.,
