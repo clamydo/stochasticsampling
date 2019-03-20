@@ -1,6 +1,6 @@
 [package]
 name = "stochasticsampling"
-version = "2.1.0-rc7"
+version = "2.1.0-rc9"
 authors = ["fkoessel <fkoessel@uni-mainz.de>"]
 build = "build.rs"
 autobins = false
@@ -10,6 +10,7 @@ edition = "2018"
 fftw-threaded = ["fftw3/fftw-threaded"]
 fftw-static = ["fftw3/fftw-static"]
 single = ["fftw3/single"]
+quasi2d = []
 
 [[bin]]
 name = "simulation"
@@ -52,7 +53,7 @@ ndarray-rand = "0.9.0"
 criterion = "0.2.10"
 
 [build-dependencies]
-vergen = "2.0"
+vergen = "2.1.3"
 
 [workspace]
 members = ["crates/fftw3"]

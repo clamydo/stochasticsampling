@@ -31,7 +31,14 @@ use stochasticsampling::output::OutputEntry;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn version() -> String {
-    format!("{}-{}", VERSION, env!("VERGEN_SHA_SHORT"))
+    let mut s = String::from("");
+    if cfg!(feature = "single") {
+        s.push_str("-s");
+    }
+    if cfg!(feature = "quasi2d") {
+        s.push_str("-q2d");
+    };
+    format!("{}-{}{}", VERSION, env!("VERGEN_SHA_SHORT"), s)
 }
 
 fn main() {

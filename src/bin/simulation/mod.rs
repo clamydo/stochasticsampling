@@ -36,6 +36,11 @@ use stochasticsampling::particle::Particle;
 use stochasticsampling::vector::{NumVectorD, VectorD};
 use stochasticsampling::Float;
 
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
+
 struct ParamCache {
     trans_diff: Float,
     rot_diff: Float,
@@ -87,6 +92,10 @@ impl Simulation {
         // helper bindings for brevity
         let sim = settings.simulation;
         let param = settings.parameters;
+
+        if cfg!(feature = "quasi2d") && sim.grid_size.z != 1 {
+            panic!("z-direction must only contain 1 cell if feature 'quasi2d' is activated.");
+        }
 
         let stress = |phi, theta| {
             param.stress.active * stress_active(phi, theta)
@@ -335,6 +344,11 @@ impl Simulation {
                     .with_param(translational_diffusion, [r.x, r.y, r.z].into())
                     .with_param(rotational_diffusion, &dr)
                     .finalize(&sim.box_size);
+
+                if cfg!(feature = "quasi2d") {
+                    (*p).position.z = 0.0;
+                    (*p).orientation.theta = PI / 2.;
+                }
             });
 
         // increment timestep counter to keep a continous identifier when resuming
