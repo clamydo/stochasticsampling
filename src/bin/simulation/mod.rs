@@ -332,7 +332,7 @@ impl Simulation {
                 // )) * (-param.volume_exclusion);
                 let density = dens[[idx.0, idx.1, idx.2]];
 
-                let volex = -param.volume_exclusion * density;
+                let volex = param.volume_exclusion * density;
 
                 let b =
                     vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
