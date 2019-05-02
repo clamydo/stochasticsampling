@@ -5,7 +5,7 @@ pub mod settings;
 
 use self::settings::Settings;
 use fftw3::fft;
-use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
+use ndarray::{Array, ArrayView, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 
 use ndarray::s;
@@ -31,7 +31,7 @@ use stochasticsampling::integrators::LangevinBuilder;
 use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
 use stochasticsampling::mesh::get_cell_index;
 use stochasticsampling::mesh::grid_width::GridWidth;
-use stochasticsampling::mesh::interpolate::interpolate_vector_field;
+// use stochasticsampling::mesh::interpolate::interpolate_vector_field;
 use stochasticsampling::particle::Particle;
 use stochasticsampling::vector::{NumVectorD, VectorD};
 use stochasticsampling::Float;
@@ -42,8 +42,8 @@ use std::f32::consts::PI;
 use std::f64::consts::PI;
 
 struct ParamCache {
-    trans_diff: Float,
-    rot_diff: Float,
+    // trans_diff: Float,
+    // rot_diff: Float,
     grid_width: GridWidth,
 }
 
@@ -152,8 +152,8 @@ impl Simulation {
             settings: settings,
             state: state,
             pcache: ParamCache {
-                trans_diff: (2. * param.diffusion.translational * sim.timestep).sqrt(),
-                rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+                // trans_diff: (2. * param.diffusion.translational * sim.timestep).sqrt(),
+                // rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
                 grid_width: GridWidth::new(sim.grid_size, sim.box_size),
             },
         }
@@ -260,8 +260,14 @@ impl Simulation {
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
-        let dt = self.pcache.trans_diff;
-        let dr = self.pcache.rot_diff;
+        // let dt = (2.
+        //     * self.settings.parameters.diffusion.translational
+        //     * self.settings.simulation.timestep)
+        //     .sqrt();
+        let dr = (2.
+            * self.settings.parameters.diffusion.rotational
+            * self.settings.simulation.timestep)
+            .sqrt();
 
         self.state
             .random_samples
@@ -270,9 +276,9 @@ impl Simulation {
             .for_each(|(c, rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: rng.sample(StandardNormal) as Float * dt,
-                        y: rng.sample(StandardNormal) as Float * dt,
-                        z: rng.sample(StandardNormal) as Float * dt,
+                        x: rng.sample(StandardNormal) as Float,
+                        y: rng.sample(StandardNormal) as Float,
+                        z: rng.sample(StandardNormal) as Float,
                         axis_angle: TWOPI * rng.sample(range),
                         rotate_angle: rayleigh_pdf(dr, rng.sample(range)),
                     };
@@ -301,7 +307,13 @@ impl Simulation {
         let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
         let strain_mat = strain_mat.view();
 
-        let dens_grad = self.density_gradient.get_gradient(&self.state.distribution);
+        // let dens_grad = self.density_gradient.get_gradient(&self.state.distribution);
+        // Calculate density
+        let dens = self.state.distribution.dist.view();
+        let sh = dens.dim();
+        let dens = dens.into_shape([sh.0, sh.1, sh.2, sh.3 * sh.4]).unwrap();
+        let dthph = self.pcache.grid_width.theta * self.pcache.grid_width.phi;
+        let dens = dens.sum_axis(Axis(3)) * dthph;
 
         self.state
             .particles
@@ -313,11 +325,14 @@ impl Simulation {
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
 
-                let densg = vec_to_real(interpolate_vector_field(
-                    &p.position,
-                    &dens_grad.view(),
-                    &gw,
-                )) * (-param.volume_exclusion);
+                // let densg = vec_to_real(interpolate_vector_field(
+                //     &p.position,
+                //     &dens_grad.view(),
+                //     &gw,
+                // )) * (-param.volume_exclusion);
+                let density = dens[[idx.0, idx.1, idx.2]];
+
+                let volex = -param.volume_exclusion * density;
 
                 let b =
                     vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
@@ -328,6 +343,8 @@ impl Simulation {
                     rotate_angle: r.rotate_angle,
                 };
 
+                let diff = (2. * sim.timestep * (param.diffusion.translational + volex)).sqrt();
+
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
@@ -335,13 +352,13 @@ impl Simulation {
                         magnetic_dipole_dipole_force,
                         (param.magnetic_drag, grad_b.view()),
                     )
-                    .with_param(volume_exclusion_force, densg)
+                    // .with_param(volume_exclusion_force, densg)
                     .with_param(external_field_alignment, param.magnetic_reorientation)
                     .with_param(magnetic_dipole_dipole_rotation, b)
                     .with_param(jeffrey_vorticity, vortm.view())
                     .with_param(jeffrey_strain, (param.shape, strainm.view()))
                     .step(&TimeStep(sim.timestep))
-                    .with_param(translational_diffusion, [r.x, r.y, r.z].into())
+                    .with_param(translational_diffusion, ([r.x, r.y, r.z].into(), diff))
                     .with_param(rotational_diffusion, &dr)
                     .finalize(&sim.box_size);
 

@@ -53,7 +53,7 @@ fn main() {
             error!("caused by: {}", e);
         }
 
-        // The backtrace is not always generated. Try to run this  with
+        // The backtrace is not always generated. Try to run this with
         // `RUST_BACKTRACE=1`.
         if let Some(backtrace) = e.backtrace() {
             error!("backtrace: {:?}", backtrace);

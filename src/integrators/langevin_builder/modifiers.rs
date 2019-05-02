@@ -89,11 +89,11 @@ pub fn volume_exclusion_force(
 pub fn translational_diffusion(
     _p: OriginalParticle,
     delta: ParticleVector,
-    random_vector: VectorD,
+    (random_vector, std_dev): (VectorD, Float),
 ) -> ParticleVector {
     delta
         + ParticleVector {
-            position: random_vector.to(),
+            position: random_vector.to() * std_dev,
             orientation: OrientationVector::zero(),
         }
 }
