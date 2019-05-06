@@ -164,4 +164,8 @@ impl MagneticSolver {
     pub fn get_real_magnet_field(&self) -> Array<Float, Ix4> {
         self.director_field.field.map(|v| v.re)
     }
+
+    pub fn get_real_mean_gradb(&self) -> Array<Float, Ix5> {
+        self.gradient_meanb.map(|v| v.re)
+    }
 }
