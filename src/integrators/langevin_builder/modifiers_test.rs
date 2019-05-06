@@ -55,7 +55,7 @@ fn magnetic_dipole_dipole_force() {
 
 #[test]
 fn translational_diffusion() {
-    quicktest_modifier!(translational_diffusion; [1., 1., 0.].into(); (1., 1., 0., 0., 0.));
+    quicktest_modifier!(translational_diffusion; ([1., 1., 0.].into(), 1.0); (1., 1., 0., 0., 0.));
 }
 
 #[test]
