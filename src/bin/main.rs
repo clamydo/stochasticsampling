@@ -3,7 +3,6 @@
 
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types

@@ -301,6 +301,7 @@ impl Simulation {
             .mean_flow_field(param.hydro_screening, &self.state.distribution);
 
         let mut grad_ff_t = grad_ff.clone();
+        // transpose
         grad_ff_t.swap_axes(0, 1);
         let vorticity_mat = (&grad_ff - &grad_ff_t) * 0.5;
         let vorticity_mat = vorticity_mat.view();
