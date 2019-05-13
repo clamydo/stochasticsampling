@@ -32,7 +32,7 @@ fn test_polarization_from_distribution() {
 
     let mut p = DirectorField::new(gs, gw);
 
-    p.from_distribution(&d, None);
+    p.from_distribution(&d);
 
     assert_eq!(p.field[[0, 0, 0, 0]].re, -1.0 / n);
     assert_eq!((p.field[[1, 0, 0, 0]].re * 10e14).round(), 0.0 / n);

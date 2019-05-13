@@ -20,7 +20,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::env;
 use std::str::FromStr;
 use stochasticsampling::consts::TWOPI;
-use stochasticsampling::distribution::density_gradient::DensityGradient;
+// use stochasticsampling::distribution::density_gradient::DensityGradient;
 use stochasticsampling::distribution::Distribution;
 use stochasticsampling::flowfield::spectral_solver::SpectralSolver;
 use stochasticsampling::flowfield::stress::stresses::*;
@@ -33,7 +33,7 @@ use stochasticsampling::mesh::get_cell_index;
 use stochasticsampling::mesh::grid_width::GridWidth;
 // use stochasticsampling::mesh::interpolate::interpolate_vector_field;
 use stochasticsampling::particle::Particle;
-use stochasticsampling::vector::{NumVectorD, VectorD};
+use stochasticsampling::vector::VectorD;
 use stochasticsampling::Float;
 
 #[cfg(feature = "single")]
@@ -60,7 +60,7 @@ pub struct RandomVector {
 pub struct Simulation {
     spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
-    density_gradient: DensityGradient,
+    // density_gradient: DensityGradient,
     settings: Settings,
     state: SimulationState,
     pcache: ParamCache,
@@ -105,7 +105,7 @@ impl Simulation {
 
         let spectral_solver = SpectralSolver::new(sim.grid_size, sim.box_size, stress);
         let magnetic_solver = MagneticSolver::new(sim.grid_size, sim.box_size);
-        let density_gradient = DensityGradient::new(sim.grid_size, sim.box_size);
+        // let density_gradient = DensityGradient::new(sim.grid_size, sim.box_size);
 
         // normal distribution with variance timestep
         let seed = sim.seed;
@@ -148,7 +148,7 @@ impl Simulation {
         Simulation {
             spectral_solver: spectral_solver,
             magnetic_solver: magnetic_solver,
-            density_gradient: density_gradient,
+            // density_gradient: density_gradient,
             settings: settings,
             state: state,
             pcache: ParamCache {
@@ -405,10 +405,6 @@ fn vector_field_at_cell_c(
         ]
     };
     f.into()
-}
-
-fn vec_to_real(vec: NumVectorD<Complex<Float>>) -> VectorD {
-    [vec[0].re, vec[1].re, vec[2].re].into()
 }
 
 fn matrix_field_at_cell(

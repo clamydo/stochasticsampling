@@ -5,12 +5,12 @@ use std::f32::consts::PI;
 #[cfg(not(feature = "single"))]
 use std::f64::consts::PI;
 
+use serde_derive::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::prelude::*;
 use stochasticsampling::flowfield::stress::StressPrefactors;
-use toml;
 use stochasticsampling::Float;
-use serde_derive::{Serialize, Deserialize};
+use toml;
 
 error_chain! {
     foreign_links {
@@ -64,7 +64,6 @@ pub struct Particle {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     pub hydro_screening: Float,
-    pub interaction_threshold: Option<Float>,
     pub volume_exclusion: Float,
     pub viscocity: Float,
     pub temperature: Float,
@@ -177,7 +176,6 @@ impl SettingsSI {
                         * PI
                         * self.parameters.particle.magnetic_dipole_moment.powi(2),
                 },
-                interaction_threshold: self.parameters.interaction_threshold,
                 volume_exclusion: self.parameters.volume_exclusion,
                 shape: self.parameters.particle.shape,
                 hydro_screening: self.parameters.hydro_screening,
