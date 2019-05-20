@@ -1,7 +1,6 @@
 use super::modifiers::*;
 use super::*;
 use crate::test_helper::{equal_floats, equal_floats_eps};
-use crate::Float;
 #[cfg(feature = "single")]
 use std::f32::consts::PI;
 #[cfg(feature = "single")]

@@ -33,7 +33,7 @@ fn test_magnetic() {
     d.sample_from(&p);
 
     let mut solver = MagneticSolver::new(gs, bs);
-    let (_b, _gb) = solver.mean_magnetic_field(&d, None);
+    let (_b, _gb) = solver.mean_magnetic_field(&d);
 
     // println!("{:?}", b);
     // println!("{:?}", gb);
@@ -72,7 +72,7 @@ fn test_magnetic_field_against_cache() {
     d.dist *= bs.x * bs.y * bs.z;
 
     let mut solver = MagneticSolver::new(gs, bs);
-    let (b, _) = solver.mean_magnetic_field(&d, None);
+    let (b, _) = solver.mean_magnetic_field(&d);
 
     let b = b.map(|v| v.re);
 

@@ -138,8 +138,7 @@ impl MagneticSolver {
     /// field and the (flattened) vector gradient field of it.
     pub fn mean_magnetic_field(
         &mut self,
-        d: &Distribution,
-        threshold: Option<Float>,
+        d: &Distribution
     ) -> (
         ArrayView<Complex<Float>, Ix4>,
         ArrayView<Complex<Float>, Ix5>,
