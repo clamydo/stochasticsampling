@@ -15,7 +15,6 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_pcg::Pcg64Mcg;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_derive::{Deserialize, Serialize};
 use std::convert::From;
 #[cfg(feature = "single")]
 use std::f32::consts::PI;

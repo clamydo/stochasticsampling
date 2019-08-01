@@ -9,7 +9,7 @@ use ndarray::{Array, ArrayView, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 
 use ndarray::s;
-use rand::distributions::StandardNormal;
+use rand_distr::StandardNormal;
 use rand::distributions::Uniform;
 use rand::Rng;
 use rand::SeedableRng;
@@ -276,9 +276,9 @@ impl Simulation {
             .for_each(|(c, rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: rng.sample(StandardNormal) as Float,
-                        y: rng.sample(StandardNormal) as Float,
-                        z: rng.sample(StandardNormal) as Float,
+                        x: rng.sample::<Float, _>(StandardNormal),
+                        y: rng.sample::<Float, _>(StandardNormal),
+                        z: rng.sample::<Float, _>(StandardNormal),
                         axis_angle: TWOPI * rng.sample(range),
                         rotate_angle: rayleigh_pdf(dr, rng.sample(range)),
                     };

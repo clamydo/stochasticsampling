@@ -170,7 +170,7 @@ fn dispatch(
 
                 match format {
                     OutputFormat::CBOR => {
-                        serde_cbor::ser::to_writer_sd(&mut snapshot_file, &s).chain_err(|| {
+                        serde_cbor::ser::to_writer(&mut snapshot_file, &s).chain_err(|| {
                             format!(
                                 "Cannot write snapshot with number {} (CBOR)",
                                 snapshot_counter
@@ -217,7 +217,7 @@ fn dispatch(
 
                 // write all snapshots into one cbor file
                 match format {
-                    OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut writer, &v)
+                    OutputFormat::CBOR => serde_cbor::ser::to_writer(&mut writer, &v)
                         .chain_err(|| "Cannot write simulation output (format: CBOR).")?,
                     OutputFormat::Bincode => bincode::serialize_into(&mut writer, &v)
                         .chain_err(|| "Cannot write simulation output (format: Bincode).")?,
@@ -234,7 +234,7 @@ fn dispatch(
                 debug!("Write parameters into output file.");
                 // Serialize settings as first object in file
                 match format {
-                    OutputFormat::CBOR => serde_cbor::ser::to_writer_sd(&mut file, &v).unwrap(),
+                    OutputFormat::CBOR => serde_cbor::ser::to_writer(&mut file, &v).unwrap(),
                     OutputFormat::MsgPack => rmp_serde::encode::write_named(&mut file, &v).unwrap(),
                     OutputFormat::Bincode => bincode::serialize_into(&mut file, &v).unwrap(),
                 }
