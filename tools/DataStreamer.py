@@ -36,13 +36,11 @@ class Streamer(object):
     def __del__(self):
         self.__file.close()
 
-
     def parse(buffer):
         if self.type is 'Msgpack':
             return msgpack.unpackb(buf, encoding='utf-8')
         elif self.type is 'CBOR':
             return cbor.loads(buf)
-
 
     def __getitem__(self, given):
         if isinstance(given, slice):
@@ -210,8 +208,6 @@ def get_mean_orientation(dist, gw, gs):
     x = np.sin(th) * np.cos(ph)
     y = np.sin(th) * np.sin(ph)
     z = np.cos(th)
-
-    n = gs['x'] * gs['y'] * gs['z']
 
     c = dist_to_concentration3d(dist, gw)
 
