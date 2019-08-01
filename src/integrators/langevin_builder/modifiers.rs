@@ -14,11 +14,12 @@
 mod modifiers_test;
 
 use super::OriginalParticle;
-use ndarray::{Array, ArrayView, Ix2};
-use quaternion;
 use crate::magnetic_interaction;
 use crate::particle::{OrientationVector, ParticleVector, PositionVector};
 use crate::vector::VectorD;
+use crate::Float;
+use ndarray::{Array, ArrayView, Ix2};
+use quaternion;
 
 /// Does not change anything, just returns the given `delta`.
 #[inline(always)]
@@ -36,19 +37,21 @@ pub fn constant(_p: OriginalParticle, _delta: ParticleVector, c: ParticleVector)
 /// orentation.
 #[inline(always)]
 pub fn self_propulsion(p: OriginalParticle, delta: ParticleVector) -> ParticleVector {
-    delta + ParticleVector {
-        position: p.vector.orientation.to(),
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: p.vector.orientation.to(),
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Translates the particle in the convective local flow field.
 #[inline(always)]
 pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) -> ParticleVector {
-    delta + ParticleVector {
-        position: flow.to(),
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: flow.to(),
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Translates the particle due to magnetic dipole forces.
@@ -56,12 +59,27 @@ pub fn convection(_p: OriginalParticle, delta: ParticleVector, flow: VectorD) ->
 pub fn magnetic_dipole_dipole_force(
     p: OriginalParticle,
     delta: ParticleVector,
-    (drag, grad_b): (f64, ArrayView<f64, Ix2>),
+    (drag, grad_b): (Float, ArrayView<Float, Ix2>),
 ) -> ParticleVector {
-    delta + ParticleVector {
-        position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to() * drag,
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: magnetic_interaction::mean_force(grad_b, &p.vector.orientation).to() * drag,
+            orientation: OrientationVector::zero(),
+        }
+}
+
+/// Translates the particle due to magnetic dipole forces.
+#[inline(always)]
+pub fn volume_exclusion_force(
+    _p: OriginalParticle,
+    delta: ParticleVector,
+    grad_d: VectorD,
+) -> ParticleVector {
+    delta
+        + ParticleVector {
+            position: grad_d.to(),
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Translates according to translational diffusion. CAUTION: Must be called
@@ -71,12 +89,13 @@ pub fn magnetic_dipole_dipole_force(
 pub fn translational_diffusion(
     _p: OriginalParticle,
     delta: ParticleVector,
-    random_vector: VectorD,
+    (random_vector, std_dev): (VectorD, Float),
 ) -> ParticleVector {
-    delta + ParticleVector {
-        position: random_vector.to(),
-        orientation: OrientationVector::zero(),
-    }
+    delta
+        + ParticleVector {
+            position: random_vector.to() * std_dev,
+            orientation: OrientationVector::zero(),
+        }
 }
 
 /// Rotates particle to align with external magnetic field.
@@ -84,17 +103,18 @@ pub fn translational_diffusion(
 pub fn external_field_alignment(
     p: OriginalParticle,
     delta: ParticleVector,
-    realignment: f64,
+    realignment: Float,
 ) -> ParticleVector {
     // magnetic field points in y direction
     // CAUTION, changing this requires a change of magnetic stress as well
     let mut b: VectorD = [0., realignment, 0.].into();
     b -= p.vector.orientation * p.vector.orientation.dot(&b);
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: b.to(),
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: b.to(),
+        }
 }
 
 /// Rotates the particle due to coupling to the flow's vorticity. Anti-symmetric
@@ -103,7 +123,7 @@ pub fn external_field_alignment(
 pub fn jeffrey_vorticity(
     p: OriginalParticle,
     delta: ParticleVector,
-    vortm: ArrayView<f64, Ix2>,
+    vortm: ArrayView<Float, Ix2>,
 ) -> ParticleVector {
     // (1-nn) . (-W[u] . n) == -W[u] . n == 0.5 * Curl[u] x n
 
@@ -112,16 +132,13 @@ pub fn jeffrey_vorticity(
     let n = Array::from_vec(n.v.to_vec());
     let f = vortm.dot(&n) * (-1.);
 
-    let r = unsafe{[
-        *f.uget(0),
-        *f.uget(1),
-        *f.uget(2),
-    ]}.into();
+    let r = unsafe { [*f.uget(0), *f.uget(1), *f.uget(2)] }.into();
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: r,
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: r,
+        }
 }
 
 /// Rotates the particle due to coupling to the flow's strain. Symmetric
@@ -130,7 +147,7 @@ pub fn jeffrey_vorticity(
 pub fn jeffrey_strain(
     p: OriginalParticle,
     delta: ParticleVector,
-    (shape, strainm): (f64, ArrayView<f64, Ix2>),
+    (shape, strainm): (Float, ArrayView<Float, Ix2>),
 ) -> ParticleVector {
     // (1-nn) . (g E[u] . n)
 
@@ -142,16 +159,13 @@ pub fn jeffrey_strain(
     let nne = &n * f.dot(&n);
     f -= &nne;
 
-    let r = unsafe{[
-        *f.uget(0),
-        *f.uget(1),
-        *f.uget(2),
-    ]}.into();
+    let r = unsafe { [*f.uget(0), *f.uget(1), *f.uget(2)] }.into();
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: r,
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: r,
+        }
 }
 
 /// Rotates the particle in the mean magnetic field of all other particles.
@@ -164,19 +178,20 @@ pub fn magnetic_dipole_dipole_rotation(
     let mut b = b;
     b -= p.vector.orientation * p.vector.orientation.dot(&b);
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        orientation: b.to(),
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            orientation: b.to(),
+        }
 }
 
 /// Parameters for rotational diffusion
 pub struct RotDiff {
     /// Angle of rotation axis perpendicular to the current orientation with
     /// respect to the x axis.
-    pub axis_angle: f64,
+    pub axis_angle: Float,
     /// Angle of rotation around rotation axis.
-    pub rotate_angle: f64,
+    pub rotate_angle: Float,
 }
 
 /// Rotates particle according to rotational diffusion. Needs to come after
@@ -187,7 +202,7 @@ pub fn rotational_diffusion(
     delta: ParticleVector,
     r: &RotDiff,
 ) -> ParticleVector {
-    let rotational_axis = |alpha: f64| {
+    let rotational_axis = |alpha: Float| {
         let cs = p.orientation_angles;
         let cos_ax = alpha.cos();
         let sin_ax = alpha.sin();
@@ -207,9 +222,10 @@ pub fn rotational_diffusion(
     let v = p.vector.orientation.v;
     let new: OrientationVector = quaternion::rotate_vector(q, v).into();
 
-    delta + ParticleVector {
-        position: PositionVector::zero(),
-        // required to make order of modifiers independent
-        orientation: new - p.vector.orientation,
-    }
+    delta
+        + ParticleVector {
+            position: PositionVector::zero(),
+            // required to make order of modifiers independent
+            orientation: new - p.vector.orientation,
+        }
 }

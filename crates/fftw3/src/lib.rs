@@ -5,20 +5,36 @@ extern crate quickcheck;
 extern crate ndarray;
 extern crate num_complex;
 
+#[cfg(feature = "single")]
+type Float = f32;
+#[cfg(not(feature = "single"))]
+type Float = f64;
+
 pub mod fft;
-#[cfg(feature = "default")]
-mod fftw3_ffi;
+#[cfg(all(feature = "default", not(feature = "single")))]
+mod fftw3_ffi_double;
+#[cfg(all(feature = "default", not(feature = "single")))]
+use fftw3_ffi_double as fftw3_ffi;
+#[cfg(all(feature = "default", feature = "single"))]
+mod fftw3_ffi_single;
+#[cfg(all(feature = "default", feature = "single"))]
+use fftw3_ffi_single as fftw3_ffi;
 #[cfg(feature = "fftw-threaded")]
 mod fftw3_threads_ffi;
 pub mod fftw_ndarray;
 
 #[cfg(test)]
 mod tests {
+    use crate::Float;
     use fft;
     use fft::FFTPlan;
     use fftw_ndarray::{FFTData2D, FFTData3D};
     use ndarray;
     use num_complex::Complex;
+
+    #[cfg(feature = "single")]
+    use std::f32::EPSILON;
+    #[cfg(not(feature = "single"))]
     use std::f64::EPSILON;
 
     /// Transforming for and back should be an identity operation (except for
@@ -51,13 +67,15 @@ mod tests {
             &mut fft.data,
             fft::FFTDirection::Forward,
             fft::FFTFlags::Measure,
-        ).unwrap();
+        )
+        .unwrap();
         let plan_backward = FFTPlan::new_c2c_2d(
             &mut fft.data,
             &mut ifft.data,
             fft::FFTDirection::Backward,
             fft::FFTFlags::Measure,
-        ).unwrap();
+        )
+        .unwrap();
 
         plan_forward.execute();
         plan_backward.execute();
@@ -67,7 +85,7 @@ mod tests {
 
             // Since transform is not normalized, we have to divide by the number of
             // elements to get back the original input
-            let diff = *left - *right / (shape[0] * shape[1]) as f64;
+            let diff = *left - *right / (shape[0] * shape[1]) as Float;
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.
@@ -117,13 +135,15 @@ mod tests {
             &mut fft.data,
             fft::FFTDirection::Forward,
             fft::FFTFlags::Measure,
-        ).unwrap();
+        )
+        .unwrap();
         let plan_backward = FFTPlan::new_c2c_3d(
             &mut fft.data,
             &mut ifft.data,
             fft::FFTDirection::Backward,
             fft::FFTFlags::Measure,
-        ).unwrap();
+        )
+        .unwrap();
 
         plan_forward.execute();
         plan_backward.execute();
@@ -133,7 +153,7 @@ mod tests {
 
             // Since transform is not normalized, we have to divide by the number of
             // elements to get back the original input
-            let diff = *left - *right / (shape[0] * shape[1] * shape[2]) as f64;
+            let diff = *left - *right / (shape[0] * shape[1] * shape[2]) as Float;
 
             // Compare input to identity operation. Compare to machine precision to take
             // numerical roundoff errors into account.

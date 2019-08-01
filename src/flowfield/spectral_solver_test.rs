@@ -1,11 +1,16 @@
-#![allow(clippy::float_cmp,clippy::unreadable_literal)]
+#![allow(clippy::float_cmp, clippy::unreadable_literal)]
 use super::super::stress::stresses::*;
 use super::*;
 
 use crate::distribution::Distribution;
 use crate::particle::Particle;
-use test::Bencher;
+// use test::Bencher;
 use crate::test_helper::equal_floats;
+use crate::Float;
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
 
 #[test]
 #[ignore]
@@ -35,14 +40,7 @@ fn test_calculate_flow_field_against_cache() {
 
     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
-    let p = vec![Particle::new(
-        0.0,
-        0.0,
-        0.0,
-        ::std::f64::consts::PI / 2.,
-        ::std::f64::consts::PI / 2.,
-        &bs,
-    )];
+    let p = vec![Particle::new(0.0, 0.0, 0.0, PI / 2., PI / 2., &bs)];
     let mut d = Distribution::new(gs, bs);
     d.sample_from(&p);
     d.dist *= bs.x * bs.y * bs.z;
@@ -57,7 +55,7 @@ fn test_calculate_flow_field_against_cache() {
         let (ia, va) = a;
         let (_, vb) = b;
 
-        let f = 2.0f64.powi(51);
+        let f: Float = (2.0 as Float).powi(51);
 
         let va = (va * f).round() / f;
         let vb = (vb * f).round() / f;
@@ -95,14 +93,14 @@ fn test_calculate_flow_field_against_cache() {
 //
 //     let i = Integrator::new(gs, bs, int_param);
 //
-// let p = vec![Particle::new(0.0, 0.0, 0.0, 0.0, ::std::f64::consts::PI /
+// let p = vec![Particle::new(0.0, 0.0, 0.0, 0.0, PI /
 // 2., 1.5707963267948966, bs)];
 //     let mut d = Distribution::new(gs, GridWidth::new(gs, bs));
 //     d.sample_from(&p);
 //
 //     let u = i.calculate_flow_field(&d);
 //
-//     let theory = |x1: f64, x2: f64| {
+//     let theory = |x1: Float, x2: Float| {
 //         [
 // (x1 * (x1 * x1 - 2. * x2 * x2)) / (8. * PI * (x1 * x1 + x2 *
 // x2).powf(5. / 2.)),
@@ -182,7 +180,7 @@ fn test_compare_implementations() {
         let (ia, va) = a;
         let (_, vb) = b;
 
-        let f = 2.0f64.powi(51);
+        let f: Float = (2.0 as Float).powi(51);
 
         let va = (va * f).round() / f;
         let vb = (vb * f).round() / f;
@@ -191,35 +189,35 @@ fn test_compare_implementations() {
     }
 }
 
-#[bench]
-fn bench_calculate_flow(b: &mut Bencher) {
-    let bs = BoxSize {
-        x: 30.,
-        y: 30.,
-        z: 30.,
-    };
-    let gs = GridSize {
-        x: 30,
-        y: 30,
-        z: 30,
-        phi: 15,
-        theta: 15,
-    };
+// #[bench]
+// fn bench_calculate_flow(b: &mut Bencher) {
+//     let bs = BoxSize {
+//         x: 30.,
+//         y: 30.,
+//         z: 30.,
+//     };
+//     let gs = GridSize {
+//         x: 30,
+//         y: 30,
+//         z: 30,
+//         phi: 15,
+//         theta: 15,
+//     };
 
-    let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
+//     let s = |phi, theta| 1. * stress_active(phi, theta) + 0. * stress_magnetic(phi, theta);
 
-    let mut ff_s = SpectralSolver::new(gs, bs, s);
+//     let mut ff_s = SpectralSolver::new(gs, bs, s);
 
-    let p = Particle::create_isotropic(10000, &bs, 1);
+//     let p = Particle::create_isotropic(10000, &bs, 1);
 
-    let mut d = Distribution::new(gs, bs);
-    d.sample_from(&p);
-    d.dist *= bs.x * bs.y * bs.z;
+//     let mut d = Distribution::new(gs, bs);
+//     d.sample_from(&p);
+//     d.dist *= bs.x * bs.y * bs.z;
 
-    b.iter(|| {
-        ::test::black_box(ff_s.solve_flow_field(&d));
-    })
-}
+//     b.iter(|| {
+//         ::test::black_box(ff_s.solve_flow_field(&d));
+//     })
+// }
 
 // #[bench]
 // fn bench_calculate_flow_new(b: &mut Bencher) {

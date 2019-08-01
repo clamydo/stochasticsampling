@@ -6,36 +6,10 @@
 #![crate_type = "staticlib"]
 // #![feature(euclidean_division)]
 #![recursion_limit = "1024"]
-#![cfg_attr(test, feature(test))]
 
-#[cfg(test)]
-extern crate bincode;
-#[cfg(test)]
-extern crate ndarray_rand;
-#[cfg(test)]
-extern crate quickcheck;
-
-#[macro_use]
-extern crate derive_more;
-#[cfg(test)]
-extern crate test;
 #[macro_use]
 extern crate error_chain;
-extern crate fftw3;
-#[macro_use]
-extern crate itertools;
-#[macro_use(s)]
-extern crate ndarray;
-extern crate ndarray_parallel;
-extern crate num_complex;
-extern crate rand_pcg;
-extern crate quaternion;
-extern crate rand;
-extern crate rayon;
-// extern crate rustfft;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
+use serde_derive::{Deserialize, Serialize};
 
 pub mod consts;
 pub mod distribution;
@@ -49,18 +23,24 @@ pub mod polarization;
 mod test_helper;
 pub mod vector;
 
+#[cfg(feature = "single")]
+pub type Float = f32;
+
+#[cfg(not(feature = "single"))]
+pub type Float = f64;
+
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
-    error_chain!{}
+    error_chain! {}
 }
 
 /// Size of the simulation box an arbitary physical dimensions.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BoxSize {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: Float,
+    pub y: Float,
+    pub z: Float,
 }
 /// Size of the discrete grid.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

@@ -1,35 +1,8 @@
 #![crate_type = "bin"]
 #![recursion_limit = "1024"]
 
-extern crate bincode;
-#[macro_use]
-extern crate clap;
-extern crate colored;
-extern crate env_logger;
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
-extern crate log;
-extern crate lzma;
-extern crate pbr;
-extern crate rmp_serde;
-extern crate serde;
-extern crate serde_cbor;
-#[macro_use]
-extern crate serde_derive;
-extern crate stochasticsampling;
-extern crate time;
-extern crate toml;
-#[macro_use(s)]
-extern crate ndarray;
-extern crate fftw3;
-extern crate ndarray_parallel;
-extern crate num_complex;
-extern crate quaternion;
-extern crate rand;
-extern crate rand_pcg;
-extern crate rayon;
-// extern crate rustfft;
 
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
@@ -42,12 +15,14 @@ mod timedisplay;
 
 use self::simulation::settings::{self, Settings};
 use self::simulation::Simulation;
-use clap::App;
-use colored::*;
 use crate::errors::*;
 use crate::init::InitType;
 use crate::output::path::OutputPath;
 use crate::output::worker::Worker;
+use clap::load_yaml;
+use clap::App;
+use colored::*;
+use log::{debug, error, info};
 use pbr::ProgressBar;
 use std::path::Path;
 use stochasticsampling::output::OutputEntry;
@@ -55,7 +30,14 @@ use stochasticsampling::output::OutputEntry;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn version() -> String {
-    format!("{}-{}", VERSION, env!("VERGEN_SHA_SHORT"))
+    let mut s = String::from("");
+    if cfg!(feature = "single") {
+        s.push_str("-s");
+    }
+    if cfg!(feature = "quasi2d") {
+        s.push_str("-q2d");
+    };
+    format!("{}-{}{}", VERSION, env!("VERGEN_SHA_SHORT"), s)
 }
 
 fn main() {
@@ -70,7 +52,7 @@ fn main() {
             error!("caused by: {}", e);
         }
 
-        // The backtrace is not always generated. Try to run this  with
+        // The backtrace is not always generated. Try to run this with
         // `RUST_BACKTRACE=1`.
         if let Some(backtrace) = e.backtrace() {
             error!("backtrace: {:?}", backtrace);

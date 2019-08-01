@@ -5,19 +5,22 @@ pub mod settings;
 
 use self::settings::Settings;
 use fftw3::fft;
-use ndarray::{Array, ArrayView, Ix2, Ix4, Ix5};
+use ndarray::{Array, ArrayView, Axis, Ix2, Ix4, Ix5};
 use num_complex::Complex;
 
-use rand_pcg::Pcg64Mcg;
+use ndarray::s;
+use rand_distr::StandardNormal;
 use rand::distributions::Uniform;
-use rand::distributions::StandardNormal;
-use rand::SeedableRng;
 use rand::Rng;
+use rand::SeedableRng;
+use rand_pcg::Pcg32;
 use rayon;
 use rayon::prelude::*;
+use serde_derive::{Deserialize, Serialize};
 use std::env;
 use std::str::FromStr;
 use stochasticsampling::consts::TWOPI;
+// use stochasticsampling::distribution::density_gradient::DensityGradient;
 use stochasticsampling::distribution::Distribution;
 use stochasticsampling::flowfield::spectral_solver::SpectralSolver;
 use stochasticsampling::flowfield::stress::stresses::*;
@@ -26,29 +29,38 @@ use stochasticsampling::integrators::langevin_builder::modifiers::*;
 use stochasticsampling::integrators::langevin_builder::TimeStep;
 use stochasticsampling::integrators::LangevinBuilder;
 use stochasticsampling::magnetic_interaction::magnetic_solver::MagneticSolver;
+use stochasticsampling::mesh::get_cell_index;
 use stochasticsampling::mesh::grid_width::GridWidth;
+// use stochasticsampling::mesh::interpolate::interpolate_vector_field;
 use stochasticsampling::particle::Particle;
 use stochasticsampling::vector::VectorD;
+use stochasticsampling::Float;
+
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
 
 struct ParamCache {
-    trans_diff: f64,
-    rot_diff: f64,
+    // trans_diff: Float,
+    // rot_diff: Float,
     grid_width: GridWidth,
 }
 
 #[derive(Clone, Copy)]
 pub struct RandomVector {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub axis_angle: f64,
-    pub rotate_angle: f64,
+    pub x: Float,
+    pub y: Float,
+    pub z: Float,
+    pub axis_angle: Float,
+    pub rotate_angle: Float,
 }
 
 /// Main data structure representing the simulation.
 pub struct Simulation {
     spectral_solver: SpectralSolver,
     magnetic_solver: MagneticSolver,
+    // density_gradient: DensityGradient,
     settings: Settings,
     state: SimulationState,
     pcache: ParamCache,
@@ -59,17 +71,16 @@ struct SimulationState {
     distribution: Distribution,
     particles: Vec<Particle>,
     random_samples: Vec<RandomVector>,
-    rng: Vec<Pcg64Mcg>,
+    rng: Vec<Pcg32>,
     /// count timesteps
     timestep: usize,
 }
-
 
 /// Captures the full state of the simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     particles: Vec<Particle>,
-    rng_state: Vec<Pcg64Mcg>,
+    rng_state: Vec<Pcg32>,
     /// current timestep number
     timestep: usize,
 }
@@ -82,6 +93,10 @@ impl Simulation {
         let sim = settings.simulation;
         let param = settings.parameters;
 
+        if cfg!(feature = "quasi2d") && sim.grid_size.z != 1 {
+            panic!("z-direction must only contain 1 cell if feature 'quasi2d' is activated.");
+        }
+
         let stress = |phi, theta| {
             param.stress.active * stress_active(phi, theta)
                 + param.stress.magnetic * stress_magnetic(phi, theta)
@@ -89,8 +104,8 @@ impl Simulation {
         };
 
         let spectral_solver = SpectralSolver::new(sim.grid_size, sim.box_size, stress);
-
         let magnetic_solver = MagneticSolver::new(sim.grid_size, sim.box_size);
+        // let density_gradient = DensityGradient::new(sim.grid_size, sim.box_size);
 
         // normal distribution with variance timestep
         let seed = sim.seed;
@@ -133,11 +148,12 @@ impl Simulation {
         Simulation {
             spectral_solver: spectral_solver,
             magnetic_solver: magnetic_solver,
+            // density_gradient: density_gradient,
             settings: settings,
             state: state,
             pcache: ParamCache {
-                trans_diff: (2. * param.diffusion.translational * sim.timestep).sqrt(),
-                rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
+                // trans_diff: (2. * param.diffusion.translational * sim.timestep).sqrt(),
+                // rot_diff: (2. * param.diffusion.rotational * sim.timestep).sqrt(),
                 grid_width: GridWidth::new(sim.grid_size, sim.box_size),
             },
         }
@@ -192,7 +208,6 @@ impl Simulation {
 
     /// Returns a fill Snapshot
     pub fn get_snapshot(&self) -> Snapshot {
-
         Snapshot {
             particles: self.state.particles.clone(),
             // assuming little endianess
@@ -223,7 +238,7 @@ impl Simulation {
     }
 
     /// Returns magnetic field
-    pub fn get_magnetic_field(&self) -> Array<f64, Ix4> {
+    pub fn get_magnetic_field(&self) -> Array<Float, Ix4> {
         self.magnetic_solver.get_real_magnet_field()
     }
 
@@ -241,12 +256,18 @@ impl Simulation {
             * self.settings.simulation.box_size.y
             * self.settings.simulation.box_size.z;
 
-        let range = Uniform::new(0f64, 1.);
+        let range: rand::distributions::Uniform<Float> = Uniform::new(0., 1.);
 
         let chunksize = self.state.random_samples.len() / self.state.rng.len() + 1;
 
-        let dt = self.pcache.trans_diff;
-        let dr = self.pcache.rot_diff;
+        // let dt = (2.
+        //     * self.settings.parameters.diffusion.translational
+        //     * self.settings.simulation.timestep)
+        //     .sqrt();
+        let dr = (2.
+            * self.settings.parameters.diffusion.rotational
+            * self.settings.simulation.timestep)
+            .sqrt();
 
         self.state
             .random_samples
@@ -255,9 +276,9 @@ impl Simulation {
             .for_each(|(c, rng)| {
                 for r in c.iter_mut() {
                     *r = RandomVector {
-                        x: rng.sample(StandardNormal) * dt,
-                        y: rng.sample(StandardNormal) * dt,
-                        z: rng.sample(StandardNormal) * dt,
+                        x: rng.sample::<Float, _>(StandardNormal),
+                        y: rng.sample::<Float, _>(StandardNormal),
+                        z: rng.sample::<Float, _>(StandardNormal),
                         axis_angle: TWOPI * rng.sample(range),
                         rotate_angle: rayleigh_pdf(dr, rng.sample(range)),
                     };
@@ -267,72 +288,84 @@ impl Simulation {
         let sim = self.settings.simulation;
         let param = self.settings.parameters;
         let gw = self.pcache.grid_width;
+        let gs = self.settings.simulation.grid_size;
 
-        let b_mag = param.magnetic_dipole.magnetic_dipole_dipole != 0.0 || param.magnetic_drag != 0.0;
+        let (b, grad_b) = self
+            .magnetic_solver
+            .mean_magnetic_field(&self.state.distribution);
 
         // Calculate flow field from distribution.
         let (flow_field, grad_ff) = self
             .spectral_solver
             .mean_flow_field(param.hydro_screening, &self.state.distribution);
 
-        let mag_field = if b_mag {
-            Some(
-                self.magnetic_solver
-                    .mean_magnetic_field(&self.state.distribution),
-            )
-        } else {
-            None
-        };
-
         let mut grad_ff_t = grad_ff.clone();
+        // transpose
         grad_ff_t.swap_axes(0, 1);
         let vorticity_mat = (&grad_ff - &grad_ff_t) * 0.5;
         let vorticity_mat = vorticity_mat.view();
         let strain_mat = (&grad_ff + &grad_ff_t) * 0.5;
         let strain_mat = strain_mat.view();
 
+        // let dens_grad = self.density_gradient.get_gradient(&self.state.distribution);
+        // Calculate density
+        let dens = self.state.distribution.dist.view();
+        let sh = dens.dim();
+        let dens = dens.into_shape([sh.0, sh.1, sh.2, sh.3 * sh.4]).unwrap();
+        let dthph = self.pcache.grid_width.theta * self.pcache.grid_width.phi;
+        let dens = dens.sum_axis(Axis(3)) * dthph;
+
         self.state
             .particles
             .par_iter_mut()
             .zip(self.state.random_samples.par_iter())
             .for_each(|(p, r)| {
-                let idx = get_cell_index(&p, &gw);
+                let idx = get_cell_index(&p.position, &gw, &gs);
                 let flow = vector_field_at_cell_c(&flow_field.view(), idx);
                 let vortm = matrix_field_at_cell(&vorticity_mat, idx);
                 let strainm = matrix_field_at_cell(&strain_mat, idx);
 
-                let dd = match mag_field {
-                    Some((b, grad_b)) => {
-                        let b = vector_field_at_cell_c(&b, idx)
-                            * param.magnetic_dipole.magnetic_dipole_dipole;
-                        let grad_b = matrix_field_at_cell(&grad_b, idx);
-                        (Some((param.magnetic_drag, grad_b)), Some(b))
-                    }
-                    None => (None, None),
-                };
+                // let densg = vec_to_real(interpolate_vector_field(
+                //     &p.position,
+                //     &dens_grad.view(),
+                //     &gw,
+                // )) * (-param.volume_exclusion);
+                let density = dens[[idx.0, idx.1, idx.2]];
+
+                let volex = param.volume_exclusion * density;
+
+                let b =
+                    vector_field_at_cell_c(&b, idx) * param.magnetic_dipole.magnetic_dipole_dipole;
+                let grad_b = matrix_field_at_cell(&grad_b, idx);
 
                 let dr = RotDiff {
                     axis_angle: r.axis_angle,
                     rotate_angle: r.rotate_angle,
                 };
 
-                let dd_f = match dd.0 {
-                    Some((p, ref g)) => Some((p, g.view())),
-                    None => None,
-                };
+                let diff = (2. * sim.timestep * (param.diffusion.translational + volex)).sqrt();
 
                 *p = LangevinBuilder::new(&p)
                     .with(self_propulsion)
                     .with_param(convection, flow)
-                    .conditional_with_param(b_mag, magnetic_dipole_dipole_force, dd_f)
+                    .with_param(
+                        magnetic_dipole_dipole_force,
+                        (param.magnetic_drag, grad_b.view()),
+                    )
+                    // .with_param(volume_exclusion_force, densg)
                     .with_param(external_field_alignment, param.magnetic_reorientation)
-                    .conditional_with_param(b_mag, magnetic_dipole_dipole_rotation, dd.1)
+                    .with_param(magnetic_dipole_dipole_rotation, b)
                     .with_param(jeffrey_vorticity, vortm.view())
                     .with_param(jeffrey_strain, (param.shape, strainm.view()))
                     .step(&TimeStep(sim.timestep))
-                    .with_param(translational_diffusion, [r.x, r.y, r.z].into())
+                    .with_param(translational_diffusion, ([r.x, r.y, r.z].into(), diff))
                     .with_param(rotational_diffusion, &dr)
                     .finalize(&sim.box_size);
+
+                if cfg!(feature = "quasi2d") {
+                    (*p).position.z = 0.0;
+                    (*p).orientation.theta = PI / 2.;
+                }
             });
 
         // increment timestep counter to keep a continous identifier when resuming
@@ -347,8 +380,8 @@ impl Drop for Simulation {
     }
 }
 
-fn rayleigh_pdf(sigma: f64, x: f64) -> f64 {
-    sigma * f64::sqrt(-2. * f64::ln(1. - x))
+fn rayleigh_pdf(sigma: Float, x: Float) -> Float {
+    sigma * Float::sqrt(-2. * Float::ln(1. - x))
 }
 
 impl Iterator for Simulation {
@@ -359,16 +392,8 @@ impl Iterator for Simulation {
     }
 }
 
-fn get_cell_index(p: &Particle, grid_width: &GridWidth) -> (usize, usize, usize) {
-    let ix = (p.position.x / grid_width.x).floor() as usize;
-    let iy = (p.position.y / grid_width.y).floor() as usize;
-    let iz = (p.position.z / grid_width.z).floor() as usize;
-
-    (ix, iy, iz)
-}
-
 fn vector_field_at_cell_c(
-    field: &ArrayView<Complex<f64>, Ix4>,
+    field: &ArrayView<Complex<Float>, Ix4>,
     idx: (usize, usize, usize),
 ) -> VectorD {
     let f = unsafe {
@@ -382,8 +407,8 @@ fn vector_field_at_cell_c(
 }
 
 fn matrix_field_at_cell(
-    field: &ArrayView<Complex<f64>, Ix5>,
+    field: &ArrayView<Complex<Float>, Ix5>,
     idx: (usize, usize, usize),
-) -> Array<f64, Ix2> {
+) -> Array<Float, Ix2> {
     field.slice(s![.., .., idx.0, idx.1, idx.2]).map(|v| v.re)
 }

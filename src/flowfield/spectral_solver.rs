@@ -4,52 +4,55 @@
 mod spectral_solver_test;
 
 use crate::distribution::Distribution;
-use fftw3::fft;
-use fftw3::fft::FFTPlan;
 use crate::flowfield::stress::{average_stress, stress_kernel};
 use crate::flowfield::FlowField3D;
 use crate::mesh::fft_helper::{get_inverse_norm_squared, get_k_mesh, get_norm_k_mesh};
 use crate::mesh::grid_width::GridWidth;
+use crate::Float;
+use crate::{BoxSize, GridSize};
+use fftw3::fft;
+use fftw3::fft::FFTPlan;
 use ndarray::{Array, ArrayView, Axis, Ix2, Ix3, Ix4, Ix5, Zip};
 use ndarray_parallel::prelude::*;
 use num_complex::Complex;
 use std::sync::Arc;
-use crate::{BoxSize, GridSize};
 
 pub struct SpectralSolver {
-    flow_field: Array<Complex<f64>, Ix4>,
+    flow_field: Array<Complex<Float>, Ix4>,
     fft_plan_forward: Arc<FFTPlan>,
     fft_plan_backward: Arc<FFTPlan>,
-    k_invnormsquared: Array<Complex<f64>, Ix3>,
-    k_mesh: Array<Complex<f64>, Ix4>,
-    k_normed_mesh: Array<Complex<f64>, Ix4>,
-    stress_kernel: Array<f64, Ix4>,
-    stress_field: Array<Complex<f64>, Ix5>,
-    gradient_meanf: Array<Complex<f64>, Ix5>,
+    k_invnormsquared: Array<Complex<Float>, Ix3>,
+    k_mesh: Array<Complex<Float>, Ix4>,
+    k_normed_mesh: Array<Complex<Float>, Ix4>,
+    stress_kernel: Array<Float, Ix4>,
+    stress_field: Array<Complex<Float>, Ix5>,
+    gradient_meanf: Array<Complex<Float>, Ix5>,
 }
 
 impl SpectralSolver {
     pub fn new<F>(grid_size: GridSize, box_size: BoxSize, stress: F) -> SpectralSolver
     where
-        F: Fn(f64, f64) -> Array<f64, Ix2>,
+        F: Fn(Float, Float) -> Array<Float, Ix2>,
     {
         let grid_width = GridWidth::new(grid_size, box_size);
 
         let mesh = get_k_mesh(grid_size, box_size);
 
-        let mut dummy: Array<Complex<f64>, Ix3> =
+        let mut dummy: Array<Complex<Float>, Ix3> =
             Array::default([grid_size.x, grid_size.y, grid_size.z]);
         let plan_stress = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Forward,
             fft::FFTFlags::Patient,
-        ).unwrap();
+        )
+        .unwrap();
 
         let plan_ff = FFTPlan::new_c2c_inplace_3d(
             &mut dummy.view_mut(),
             fft::FFTDirection::Backward,
             fft::FFTFlags::Patient,
-        ).unwrap();
+        )
+        .unwrap();
 
         SpectralSolver {
             k_invnormsquared: get_inverse_norm_squared(mesh.view()),
@@ -105,7 +108,8 @@ impl SpectralSolver {
 
         // calculate divergence of average stress field in Fourier space
         let sigmak = ((&stress_field * &self.k_mesh.view()).sum_axis(Axis(1))
-            * &self.k_invnormsquared.view()) * Complex::new(0., 1.);
+            * &self.k_invnormsquared.view())
+            * Complex::new(0., 1.);
 
         // convolve with free Green's function (Oseen tensor)
         let ksigmak = (&self.k_mesh.view() * &sigmak.view()).sum_axis(Axis(0))
@@ -120,13 +124,13 @@ impl SpectralSolver {
             .into_par_iter()
             .for_each(|mut v| fft.reexecute3d(&mut v));
 
-        let norm = (dist_sh.0 * dist_sh.1 * dist_sh.2) as f64;
+        let norm = (dist_sh.0 * dist_sh.1 * dist_sh.2) as Float;
 
         // convert to real vector field
         u.map(|v| v.re / norm)
     }
 
-    pub fn fft_mean_flow_field(&mut self, screening: f64, dist: &Distribution) {
+    pub fn fft_mean_flow_field(&mut self, screening: Float, dist: &Distribution) {
         let dist_sh = dist.dim();
         let stress_sh = self.stress_kernel.dim();
         let n_stress = stress_sh.0 * stress_sh.1;
@@ -162,7 +166,7 @@ impl SpectralSolver {
         let ik2 = self.k_invnormsquared.view();
         let ik2 = ik2.into_shape([n]).unwrap();
 
-        let norm = n as f64;
+        let norm = n as Float;
 
         Zip::from(ff.axis_iter_mut(Axis(1)))
             .and(stress_field.axis_iter(Axis(2)))
@@ -228,9 +232,12 @@ impl SpectralSolver {
     /// field and the (flattened) vector gradient field of it.
     pub fn mean_flow_field(
         &mut self,
-        screening: f64,
+        screening: Float,
         d: &Distribution,
-    ) -> (ArrayView<Complex<f64>, Ix4>, ArrayView<Complex<f64>, Ix5>) {
+    ) -> (
+        ArrayView<Complex<Float>, Ix4>,
+        ArrayView<Complex<Float>, Ix5>,
+    ) {
         // calculate FFT of of flow field, which is stored in self.flow_field
         self.fft_mean_flow_field(screening, d);
         // use stored value of FFT of magnetic field to calculate vector gradient and
@@ -246,7 +253,7 @@ impl SpectralSolver {
         (self.flow_field.view(), self.gradient_meanf.view())
     }
 
-    pub fn get_real_flow_field(&self) -> Array<f64, Ix4> {
+    pub fn get_real_flow_field(&self) -> Array<Float, Ix4> {
         self.flow_field.map(|v| v.re)
     }
 }

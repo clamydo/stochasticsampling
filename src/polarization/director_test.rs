@@ -2,7 +2,9 @@
 use super::*;
 use crate::particle::Particle;
 use crate::test_helper::equal_floats;
+use crate::Float;
 use crate::{BoxSize, GridSize};
+use ndarray::s;
 
 #[test]
 fn test_polarization_from_distribution() {
@@ -25,21 +27,21 @@ fn test_polarization_from_distribution() {
     let p2 = Particle::new(1.5, 2.5, 0.0, 0.269279370307697, 0.942477796076938, &bs);
     let mut d = Distribution::new(gs, bs);
     let p = vec![p1, p2];
-    let n = p.len() as f64;
+    let n = p.len() as Float;
     d.sample_from(&p);
 
     let mut p = DirectorField::new(gs, gw);
 
     p.from_distribution(&d);
 
-    assert_eq!(p.field[[0, 0, 0, 0]].re, -1.0_f64 / n);
-    assert_eq!((p.field[[1, 0, 0, 0]].re * 10e14).round(), 0.0_f64 / n);
-    assert_eq!((p.field[[2, 0, 0, 0]].re * 10e14).round(), 0.0_f64 / n);
+    assert_eq!(p.field[[0, 0, 0, 0]].re, -1.0 / n);
+    assert_eq!((p.field[[1, 0, 0, 0]].re * 10e14).round(), 0.0 / n);
+    assert_eq!((p.field[[2, 0, 0, 0]].re * 10e14).round(), 0.0 / n);
 
     // set singular entry to zero
     p.field
         .slice_mut(s![.., 0, 0, 0])
-        .map_inplace(|v| *v = 0.0_f64.into());
+        .map_inplace(|v| *v = (0.0).into());
 
     assert!(equal_floats(
         p.field[[0, 1, 2, 0]].re,
@@ -57,12 +59,12 @@ fn test_polarization_from_distribution() {
     // set singular entry to zero
     p.field
         .slice_mut(s![.., 1, 2, 0])
-        .map_inplace(|v| *v = 0.0_f64.into());
+        .map_inplace(|v| *v = (0.0).into());
 
     // check the rest
     for (i, v) in p.field.iter().enumerate() {
         assert!(
-            *v == 0.0f64.into(),
+            *v == (0.0).into(),
             "Value at index {} should be zero, but is {}.",
             i,
             v

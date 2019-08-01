@@ -4,20 +4,24 @@
 mod director_test;
 
 use crate::consts::TWOPI;
-use ndarray::{Array, Axis, Ix3, Ix4, Zip};
-use ndarray_parallel::prelude::*;
-use num_complex::Complex;
 use crate::distribution::Distribution;
 use crate::mesh::grid_width::GridWidth;
 use crate::particle::Orientation;
+use crate::Float;
 use crate::GridSize;
+use ndarray::{Array, Axis, Ix3, Ix4, Zip};
+use ndarray_parallel::prelude::*;
+use num_complex::Complex;
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
 use std::f64::consts::PI;
 
 pub struct DirectorField {
-    pub field: Array<Complex<f64>, Ix4>,
+    pub field: Array<Complex<Float>, Ix4>,
     pub grid_width: GridWidth,
     /// precomputed kernel for angular expectation value
-    kernel: Array<f64, Ix3>,
+    kernel: Array<Float, Ix3>,
 }
 
 impl DirectorField {
@@ -51,7 +55,7 @@ impl DirectorField {
             .and(dist.outer_iter())
             .par_apply(|mut f, d| {
                 for (f, kern) in f.iter_mut().zip(kernel.outer_iter()) {
-                    *f = Complex::from(kern.dot(&d) * measure);
+                    *f =  Complex::from(kern.dot(&d) * measure);
                 }
             });
     }
@@ -62,8 +66,8 @@ impl DirectorField {
 ///
 /// It returns n(theta, sin) = [sin(theta) cos(phi), sin(theta) sin(phi),
 /// cos(theta)] as a discrete field over angles.
-fn orientation_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<f64, Ix3> {
-    let mut s = Array::<f64, _>::zeros((3, grid_size.phi, grid_size.theta));
+fn orientation_kernel(grid_size: GridSize, grid_width: GridWidth) -> Array<Float, Ix3> {
+    let mut s = Array::<Float, _>::zeros((3, grid_size.phi, grid_size.theta));
     // Calculate discrete angles, considering the cell centered sample points of
     // the distribution
     let gw_half_phi = grid_width.phi / 2.;

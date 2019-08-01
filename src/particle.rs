@@ -5,20 +5,25 @@
 mod particle_test;
 
 use crate::consts::TWOPI;
-use rand_pcg::Pcg64Mcg;
-use rand::distributions::Uniform;
-use rand::SeedableRng;
-use rand::Rng;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::convert::From;
-use std::f64::consts::PI;
 use crate::vector::Vector;
 use crate::BoxSize;
+use crate::Float;
+use derive_more::{Add, AddAssign, Div, Mul, Sub};
 use quaternion;
+use rand::distributions::Uniform;
+use rand::Rng;
+use rand::SeedableRng;
+use rand_pcg::Pcg64Mcg;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::convert::From;
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
 
-const PIHALF: f64 = PI / 2.;
+const PIHALF: Float = PI / 2.;
 
-pub fn modulo(f: f64, m: f64) -> f64 {
+pub fn modulo(f: Float, m: Float) -> Float {
     let r = f % m;
     if r < 0.0 {
         r + m.abs()
@@ -29,7 +34,7 @@ pub fn modulo(f: f64, m: f64) -> f64 {
     // f.rem_euclid(m)
 }
 
-pub fn ang_pbc(phi: f64, theta: f64) -> (f64, f64) {
+pub fn ang_pbc(phi: Float, theta: Float) -> (Float, Float) {
     let theta = modulo(theta, TWOPI);
     if theta > PI {
         (modulo(phi + PI, TWOPI), TWOPI - theta)
@@ -42,13 +47,13 @@ pub type PositionVector = Vector<Position>;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Position {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: Float,
+    pub y: Float,
+    pub z: Float,
 }
 
 impl Position {
-    pub fn new(x: f64, y: f64, z: f64, bs: &BoxSize) -> Position {
+    pub fn new(x: Float, y: Float, z: Float, bs: &BoxSize) -> Position {
         Position {
             x: modulo(x, bs.x),
             y: modulo(y, bs.y),
@@ -85,12 +90,12 @@ pub type OrientationVector = Vector<Orientation>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Orientation {
-    pub phi: f64,
-    pub theta: f64,
+    pub phi: Float,
+    pub theta: Float,
 }
 
 impl Orientation {
-    pub fn new(phi: f64, theta: f64) -> Orientation {
+    pub fn new(phi: Float, theta: Float) -> Orientation {
         let (phi, theta) = ang_pbc(phi, theta);
         Orientation {
             phi: phi,
@@ -141,10 +146,10 @@ impl Orientation {
 
 #[derive(Clone, Copy)]
 pub struct CosSinOrientation {
-    pub cos_phi: f64,
-    pub sin_phi: f64,
-    pub cos_theta: f64,
-    pub sin_theta: f64,
+    pub cos_phi: Float,
+    pub sin_phi: Float,
+    pub cos_theta: Float,
+    pub sin_theta: Float,
 }
 
 impl CosSinOrientation {
@@ -162,7 +167,8 @@ impl CosSinOrientation {
             self.sin_theta * self.cos_phi,
             self.sin_theta * self.sin_phi,
             self.cos_theta,
-        ].into()
+        ]
+        .into()
     }
 }
 
@@ -177,7 +183,14 @@ pub struct Particle {
 
 impl Particle {
     /// Returns a `Particle` with given coordinates. Automatically applies pbc.
-    pub fn new(x: f64, y: f64, z: f64, phi: f64, theta: f64, box_size: &BoxSize) -> Particle {
+    pub fn new(
+        x: Float,
+        y: Float,
+        z: Float,
+        phi: Float,
+        theta: Float,
+        box_size: &BoxSize,
+    ) -> Particle {
         let mut p = Particle {
             position: Position::new(x, y, z, box_size),
             orientation: Orientation::new(phi, theta),
@@ -189,7 +202,11 @@ impl Particle {
 
     /// Returns a `Particle` from a given position and orientation.
     /// Automatically applies pbc.
-    pub fn from_position_orientation(pos: Position, o: Orientation, box_size: &BoxSize) -> Particle {
+    pub fn from_position_orientation(
+        pos: Position,
+        o: Orientation,
+        box_size: &BoxSize,
+    ) -> Particle {
         let mut p = Particle {
             position: pos,
             orientation: o,
@@ -206,7 +223,7 @@ impl Particle {
 
     pub fn place_isotropic<F>(r: &mut F, bs: &BoxSize) -> Particle
     where
-        F: FnMut() -> f64,
+        F: FnMut() -> Float,
     {
         Particle::new(
             bs.x * r(),
@@ -226,7 +243,7 @@ impl Particle {
 
         // initialise random particle position
         let mut rng = Pcg64Mcg::seed_from_u64(seed);
-        let range = Uniform::new(0f64, 1.);
+        let range: rand::distributions::Uniform<Float> = Uniform::new(0., 1.);
 
         let mut r = || rng.sample(range);
 
@@ -238,9 +255,9 @@ impl Particle {
         particles
     }
 
-    pub fn place_homogeneous<F>(r: &mut F, kappa: f64, bs: &BoxSize) -> Particle
+    pub fn place_homogeneous<F>(r: &mut F, kappa: Float, bs: &BoxSize) -> Particle
     where
-        F: FnMut() -> f64,
+        F: FnMut() -> Float,
     {
         let mut p = Particle::new(
             bs.x * r(),
@@ -260,12 +277,12 @@ impl Particle {
     }
 
     /// Places n particles according the the spatial homogeneous distribution
-    pub fn create_homogeneous(n: usize, kappa: f64, bs: &BoxSize, seed: u64) -> Vec<Particle> {
+    pub fn create_homogeneous(n: usize, kappa: Float, bs: &BoxSize, seed: u64) -> Vec<Particle> {
         let mut particles = Vec::with_capacity(n);
 
         // initialise random particle position
         let mut rng = Pcg64Mcg::seed_from_u64(seed);
-        let range = Uniform::new(0f64, 1.);
+        let range: rand::distributions::Uniform<Float> = Uniform::new(0., 1.);
 
         let mut r = || rng.sample(range);
 
@@ -320,19 +337,19 @@ impl From<ParticleVector> for Particle {
     }
 }
 
-pub fn pdf_sin(x: f64) -> f64 {
+pub fn pdf_sin(x: Float) -> Float {
     (1. - x).acos()
 }
 
 /// Samples the polar angle of the spatial homogeneous distribution, given by
 /// $\sin(\theta) \psi(\kappa, \theta)$.
 /// Including the measure of spherical coordinates $\sin(\theta)$ is crucial.
-pub fn pdf_homogeneous_fixpoint(kappa: f64, x: f64) -> f64 {
+pub fn pdf_homogeneous_fixpoint(kappa: Float, x: Float) -> Float {
     assert!(
         kappa != 0.0,
         "Alignment of zero is the isotropic state. Please use that instead."
     );
-    let r = f64::acos(f64::ln(f64::exp(kappa) - 2. * x * f64::sinh(kappa)) / kappa);
+    let r = Float::acos(Float::ln(Float::exp(kappa) - 2. * x * Float::sinh(kappa)) / kappa);
 
     assert!(
         !(r.is_nan()),
@@ -354,7 +371,8 @@ impl Serialize for Particle {
             self.position.z,
             self.orientation.phi,
             self.orientation.theta,
-        ].serialize(serializer)
+        ]
+        .serialize(serializer)
     }
 }
 

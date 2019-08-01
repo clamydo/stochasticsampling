@@ -1,11 +1,12 @@
-use bincode;
 use crate::errors::*;
+use crate::simulation::settings::{InitDistribution, Settings};
+use crate::Simulation;
+use bincode;
+use log::info;
 use lzma::LzmaReader;
 use rmp_serde;
 use serde::de::DeserializeOwned;
 use serde_cbor;
-use crate::simulation::settings::{InitDistribution, Settings};
-use crate::Simulation;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -20,14 +21,16 @@ pub enum InitType {
 }
 
 fn read_from_file<T: DeserializeOwned>(fname: &Path) -> Result<T> {
-    let f = File::open(fname).chain_err(|| format!("Unable to open file '{}'.", fname.display()))?;
+    let f =
+        File::open(fname).chain_err(|| format!("Unable to open file '{}'.", fname.display()))?;
 
     let mut r = LzmaReader::new_decompressor(f).chain_err(|| "LZMA reader cannot be created.")?;
 
     match Path::new(&fname).extension() {
         Some(ext) => match ext.to_str().unwrap() {
             "cbor-lzma" => {
-                Ok(serde_cbor::de::from_reader(r).chain_err(|| "CBOR, cannot decode given file.")?)
+                Ok(serde_cbor::de::from_reader(r)
+                    .chain_err(|| "CBOR, cannot decode given file.")?)
             }
             "bincode-lzma" => Ok(bincode::deserialize_from(&mut r)
                 .chain_err(|| "Bincode, cannot decode given file.")?),
@@ -104,8 +107,8 @@ pub fn init_simulation(settings: &Settings, init_type: InitType) -> Result<Simul
             info!("Reading snapshot from {}", *fname);
             let path = Path::new(&fname);
 
-            let s =
-                read_from_file(&path).chain_err(|| "Cannot read snapshot, resuming not possible.")?;
+            let s = read_from_file(&path)
+                .chain_err(|| "Cannot read snapshot, resuming not possible.")?;
             simulation.resume(s);
         }
     };

@@ -4,8 +4,9 @@ use super::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::arr3;
     use crate::test_helper::equal_floats;
+    use crate::Float;
+    use ndarray::arr3;
 
     #[test]
     #[allow(clippy::approx_constant)]
@@ -96,7 +97,7 @@ mod tests {
             ],
         ];
 
-        let expect: Vec<f64> = expect
+        let expect: Vec<Float> = expect
             .iter()
             .flat_map(|v| v.iter())
             .flat_map(|v| v.iter())
@@ -411,7 +412,7 @@ mod tests {
             ],
         ];
 
-        let expect: Vec<f64> = expect
+        let expect: Vec<Float> = expect
             .iter()
             .flat_map(|v| v.iter())
             .flat_map(|v| v.iter())

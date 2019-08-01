@@ -1,14 +1,22 @@
 //! A representation for the probability distribution function.
 
+pub mod density_gradient;
+
 // Move unit test into own file
 #[cfg(test)]
 #[path = "./distribution_test.rs"]
 mod distribution_test;
 
-use ndarray::{Array, Ix, Ix5};
 use crate::mesh::grid_width::GridWidth;
 use crate::particle::Particle;
+use crate::Float;
 use crate::{BoxSize, GridSize};
+use ndarray::{Array, Ix, Ix5};
+use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "single")]
+use std::f32::consts::PI;
+#[cfg(not(feature = "single"))]
+use std::f64::consts::PI;
 use std::ops::Index;
 
 /// Holds a normalised sampled distribution function on a grid, assuming the
@@ -20,7 +28,7 @@ use std::ops::Index;
 pub struct Distribution {
     /// `dist` contains the probability for a particle in the box at position of
     /// first two axis and the direction of the last axis.
-    pub dist: Array<f64, Ix5>,
+    pub dist: Array<Float, Ix5>,
     /// `grid_width` contains the size of a unit cell of the grid.
     grid_width: GridWidth,
     box_size: BoxSize,
@@ -95,15 +103,11 @@ impl Distribution {
         );
 
         debug_assert!(
-            p.orientation.phi <= 2. * ::std::f64::consts::PI,
+            p.orientation.phi <= 2. * PI,
             "Theta is not in range> {:?}",
             p
         );
-        debug_assert!(
-            p.orientation.theta <= ::std::f64::consts::PI,
-            "Theta is not in range> {:?}",
-            p
-        );
+        debug_assert!(p.orientation.theta <= PI, "Theta is not in range> {:?}", p);
 
         let mut gx = (p.position.x / self.grid_width.x).floor() as Ix;
         let mut gy = (p.position.y / self.grid_width.y).floor() as Ix;
@@ -158,7 +162,7 @@ impl Distribution {
     /// Estimates the approximate values for the distribution function at the
     /// grid points using grid cell averages.
     pub fn sample_from(&mut self, particles: &[Particle]) {
-        let n = self.histogram_from(particles) as f64;
+        let n = self.histogram_from(particles) as Float;
 
         // Scale by grid cell volume, in order to arrive at a sampled function,
         // averaged over a grid cell. Missing this would result into the
@@ -182,9 +186,9 @@ impl Distribution {
 
 /// Implement index operator that wraps around for periodic boundaries.
 impl Index<[i32; 5]> for Distribution {
-    type Output = f64;
+    type Output = Float;
 
-    fn index(&self, index: [i32; 5]) -> &f64 {
+    fn index(&self, index: [i32; 5]) -> &Float {
         fn wrap(i: i32, b: i32) -> usize {
             (((i % b) + b) % b) as usize
         }
