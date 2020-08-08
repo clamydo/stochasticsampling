@@ -1,5 +1,3 @@
-[![build status](https://gitlab.physik.uni-mainz.de/fkoessel/mc-kinetics/badges/master/build.svg)](https://gitlab.physik.uni-mainz.de/fkoessel/mc-kinetics/commits/master)
-
 Implementation of a Monte-Carlo like statistical sampling method for a time
 integration of a Fokker-Planck equation, coupled to a hydrodynamic field.
 
