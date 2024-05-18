@@ -1,6 +1,10 @@
 Implementation of a Monte-Carlo like statistical sampling method for a time
 integration of a Fokker-Planck equation, coupled to a hydrodynamic field.
 
+# TERMS OF USE
+
+In addition to the terms of the GPLv3, any publications that make use of this work or derived work must cite http://doi.org/10.25358/openscience-3103.
+
 # Build prerequisits
 * rustc >= 1.21-nightly
 * FFTW3 3.x
